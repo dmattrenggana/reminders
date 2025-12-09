@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@farcaster/frame-sdk": "latest",
     "@farcaster/hub-web": "^0.3.0",
     "@farcaster/miniapp-sdk": "latest",
     "@hookform/resolvers": "^3.10.0",

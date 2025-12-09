@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     checkWalletConnection()
     checkFarcasterConnection()
+    autoConnectMiniapp()
   }, [])
 
   useEffect(() => {
@@ -135,12 +136,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const connectFarcaster = async () => {
     try {
       if (typeof window !== "undefined") {
+        // Try to import and use the Farcaster SDK
+        try {
+          const { sdk } = await import("@farcaster/frame-sdk")
+          const context = await sdk.context
+
+          if (context?.user) {
+            const user = context.user
+            const farcasterUser: FarcasterUser = {
+              fid: user.fid ?? 0,
+              username: user.username ?? "user",
+              displayName: user.displayName ?? user.username ?? "User",
+              pfpUrl: user.pfpUrl ?? "/abstract-profile.png",
+            }
+
+            setFarcasterUser(farcasterUser)
+            localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+            return
+          }
+        } catch (sdkError) {
+          console.log("Farcaster SDK not available, trying alternative methods")
+        }
+
+        // Fallback: try to get context from window (without accessing parent)
         const frameContext =
           (window as any).farcasterFrameContext ||
           (window as any).farcaster?.context ||
           (window as any).frameContext ||
-          (window as any).__frameContext ||
-          (window as any).parent?.farcasterFrameContext
+          (window as any).__frameContext
 
         if (frameContext?.user) {
           const user = frameContext.user
@@ -156,16 +179,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        const isInFrame = typeof window !== "undefined" && window.parent !== window
+        const isInFrame = typeof window !== "undefined" && window.self !== window.top
         if (isInFrame) {
-          alert("Unable to retrieve Farcaster user context. Make sure this app is running as a Farcaster miniapp.")
-        } else {
-          alert("This app is designed to run as a Farcaster miniapp.")
+          console.log("Running in frame but unable to retrieve Farcaster context")
         }
       }
     } catch (error) {
       console.error("Error connecting Farcaster:", error)
-      alert("Failed to connect Farcaster. Please try again.")
     }
   }
 
@@ -206,6 +226,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         console.error("Error switching network:", error)
+      }
+    }
+  }
+
+  const autoConnectMiniapp = async () => {
+    if (typeof window !== "undefined") {
+      const inFrame = window.self !== window.top
+
+      // Check for frame context in current window only
+      const frameContext =
+        (window as any).farcasterFrameContext ||
+        (window as any).farcaster?.context ||
+        (window as any).frameContext ||
+        (window as any).__frameContext
+
+      if ((inFrame || frameContext) && !farcasterUser) {
+        await connectFarcaster()
       }
     }
   }

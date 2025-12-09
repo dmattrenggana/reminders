@@ -1,8 +1,7 @@
 "use client"
 
 import { AuthGuard } from "@/components/auth/auth-guard"
-import { ConnectWalletButton } from "@/components/auth/connect-wallet-button"
-import { ConnectFarcasterButton } from "@/components/auth/connect-farcaster-button"
+import { UnifiedConnectButton } from "@/components/auth/unified-connect-button"
 import { ReminderDashboard } from "@/components/reminders/reminder-dashboard"
 import { useAuth } from "@/lib/auth/auth-context"
 import Image from "next/image"
@@ -10,7 +9,7 @@ import { useEffect } from "react"
 import { sdk } from "@farcaster/miniapp-sdk"
 
 export default function HomePage() {
-  const { isConnected, isFarcasterConnected, connectFarcaster } = useAuth()
+  const { isConnected, isFarcasterConnected } = useAuth()
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.parent !== window) {
@@ -20,12 +19,9 @@ export default function HomePage() {
         console.error("Error initializing miniapp:", error)
       }
     }
+  }, [])
 
-    const frameContext = (window as any).farcasterFrameContext
-    if (frameContext?.user && !isFarcasterConnected) {
-      connectFarcaster()
-    }
-  }, [isFarcasterConnected, connectFarcaster])
+  const isAuthenticated = isConnected || isFarcasterConnected
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,19 +44,16 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-1.5 md:gap-2 flex-shrink-0">
-              <ConnectFarcasterButton />
-              <ConnectWalletButton />
-            </div>
+            <UnifiedConnectButton />
           </div>
         </div>
       </header>
 
       <main>
-        {isConnected && isFarcasterConnected ? (
+        {isAuthenticated ? (
           <ReminderDashboard />
         ) : (
-          <AuthGuard requireWallet requireFarcaster>
+          <AuthGuard requireWallet={false} requireFarcaster={false}>
             <ReminderDashboard />
           </AuthGuard>
         )}
