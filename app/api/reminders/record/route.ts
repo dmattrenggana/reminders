@@ -5,10 +5,12 @@ export async function POST(request: NextRequest) {
   try {
     const { reminderId, farcasterFid, walletAddress } = await request.json()
 
-    // Get Neynar score for the user
-    const neynarClient = new NeynarAPIClient({
-      apiKey: process.env.FARCASTER_API_KEY!,
-    })
+    const apiKey = process.env.NEYNAR_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: "Neynar API key not configured" }, { status: 500 })
+    }
+
+    const neynarClient = new NeynarAPIClient({ apiKey })
 
     const userdata = await neynarClient.fetchBulkUsers([farcasterFid])
     const user = userdata.users[0]

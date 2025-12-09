@@ -136,13 +136,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const connectFarcaster = async () => {
     try {
       if (typeof window !== "undefined") {
-        // Try to import and use the Farcaster SDK
         try {
           const { sdk } = await import("@farcaster/frame-sdk")
           const context = await sdk.context
 
           if (context?.user) {
             const user = context.user
+
+            try {
+              const response = await fetch(`/api/farcaster/user?fid=${user.fid}`)
+              if (response.ok) {
+                const neynarData = await response.json()
+                const farcasterUser: FarcasterUser = {
+                  fid: neynarData.fid,
+                  username: neynarData.username,
+                  displayName: neynarData.displayName,
+                  pfpUrl: neynarData.pfpUrl,
+                }
+                setFarcasterUser(farcasterUser)
+                localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+                return
+              }
+            } catch (apiError) {
+              console.log("Neynar API not available, using SDK data only")
+            }
+
+            // Fallback to SDK data if Neynar API fails
             const farcasterUser: FarcasterUser = {
               fid: user.fid ?? 0,
               username: user.username ?? "user",
