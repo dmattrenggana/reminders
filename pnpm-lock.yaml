@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@farcaster/frame-sdk':
-        specifier: latest
+        specifier: 0.1.12
         version: 0.1.12(bufferutil@4.0.9)(typescript@5.0.2)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@farcaster/hub-web':
         specifier: ^0.3.0
@@ -22,7 +22,7 @@ importers:
         version: 3.10.0(react-hook-form@7.60.0(react@19.2.0))
       '@neynar/nodejs-sdk':
         specifier: latest
-        version: 3.101.0(@types/node@22.0.0)(bufferutil@4.0.9)(typescript@5.0.2)(utf-8-validate@5.0.10)(zod@3.25.76)
+        version: 3.108.0(@types/node@22.0.0)(bufferutil@4.0.9)(typescript@5.0.2)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@radix-ui/react-accordion':
         specifier: 1.2.2
         version: 1.2.2(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -610,8 +610,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@neynar/nodejs-sdk@3.101.0':
-    resolution: {integrity: sha512-xhyiZrP/K47Wt2Er7n/88De2AAPwbi2NT/1eTjS6Ey8bPles7pUpYD/Ql11jbipbk0TF1JZdzfyPDe6c0w/sLA==}
+  '@neynar/nodejs-sdk@3.108.0':
+    resolution: {integrity: sha512-Ve/TB226ZbrhdEUPdb6UUVL6NvDKl2/eZ3lYgE4c07g4YNEXsBubAEGS/JQprrxCpEQ9v47jeoKZJ2NKoCgUmw==}
     engines: {node: '>=19.9.0'}
 
   '@noble/ciphers@1.3.0':
@@ -3523,7 +3523,7 @@ snapshots:
   '@next/swc-win32-x64-msvc@16.0.7':
     optional: true
 
-  '@neynar/nodejs-sdk@3.101.0(@types/node@22.0.0)(bufferutil@4.0.9)(typescript@5.0.2)(utf-8-validate@5.0.10)(zod@3.25.76)':
+  '@neynar/nodejs-sdk@3.108.0(@types/node@22.0.0)(bufferutil@4.0.9)(typescript@5.0.2)(utf-8-validate@5.0.10)(zod@3.25.76)':
     dependencies:
       '@openapitools/openapi-generator-cli': 2.25.2(@types/node@22.0.0)
       axios: 1.13.2
