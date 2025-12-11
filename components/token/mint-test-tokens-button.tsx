@@ -6,7 +6,6 @@ import { useAuth } from "@/lib/auth/auth-context"
 import { Loader2, Coins } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { CONTRACT_ADDRESSES } from "@/lib/contracts/config"
-import { ethers } from "ethers"
 
 const TOKEN_ABI = [
   "function mint(address to, uint256 amount) public",
@@ -31,13 +30,15 @@ export function MintTestTokensButton() {
     try {
       setIsMinting(true)
 
+      const { BrowserProvider, Contract, parseEther } = await import("ethers")
+
       // @ts-ignore - ethereum is injected by MetaMask
-      const provider = new ethers.BrowserProvider(window.ethereum)
+      const provider = new BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
 
-      const token = new ethers.Contract(CONTRACT_ADDRESSES.COMMIT_TOKEN, TOKEN_ABI, signer)
+      const token = new Contract(CONTRACT_ADDRESSES.COMMIT_TOKEN, TOKEN_ABI, signer)
 
-      const amount = ethers.parseEther("1000") // 1000 tokens
+      const amount = parseEther("1000") // 1000 tokens
       const tx = await token.mint(walletAddress, amount)
 
       toast({
