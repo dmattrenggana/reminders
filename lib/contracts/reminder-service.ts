@@ -1,4 +1,3 @@
-import { Contract } from "ethers"
 import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V2_ABI } from "./config"
 import { parseUnits, formatUnits } from "@/lib/utils/ethers-utils"
 
@@ -22,12 +21,18 @@ export interface ReminderRecord {
 }
 
 export class ReminderService {
-  private vaultContract: Contract
-  private tokenContract: Contract
-  private signer: any // Using any instead of JsonRpcSigner to avoid type import
+  private vaultContract: any
+  private tokenContract: any
+  private signer: any
 
   constructor(signer: any) {
     this.signer = signer
+    const Contract = signer.constructor.name.includes("JsonRpc") ? require("ethers").Contract : null
+
+    if (!Contract) {
+      throw new Error("Invalid signer provided")
+    }
+
     this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, signer)
     this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
   }
