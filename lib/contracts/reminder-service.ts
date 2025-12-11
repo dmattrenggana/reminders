@@ -1,16 +1,24 @@
 import { Contract, parseUnits, formatUnits } from "ethers"
-import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_ABI } from "./config"
+import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V2_ABI } from "./config"
 import type { JsonRpcSigner } from "ethers"
 
 export interface ReminderData {
   id: number
   user: string
-  tokenAmount: bigint
+  commitmentAmount: bigint
+  rewardPoolAmount: bigint
   reminderTime: bigint
   confirmationDeadline: bigint
   confirmed: boolean
   burned: boolean
   description: string
+  totalReminders: number
+}
+
+export interface ReminderRecord {
+  remindedBy: string[]
+  scores: bigint[]
+  claimed: boolean[]
 }
 
 export class ReminderService {
@@ -20,7 +28,7 @@ export class ReminderService {
 
   constructor(signer: JsonRpcSigner) {
     this.signer = signer
-    this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_ABI, signer)
+    this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, signer)
     this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
   }
 
@@ -157,16 +165,81 @@ export class ReminderService {
       return {
         id: reminderId,
         user: data[0],
-        tokenAmount: data[1],
-        reminderTime: data[2],
-        confirmationDeadline: data[3],
-        confirmed: data[4],
-        burned: data[5],
-        description: data[6],
+        commitmentAmount: data[1],
+        rewardPoolAmount: data[2],
+        reminderTime: data[3],
+        confirmationDeadline: data[4],
+        confirmed: data[5],
+        burned: data[6],
+        description: data[7],
+        totalReminders: Number(data[8]),
       }
     } catch (error) {
       console.error("[v0] Error getting reminder:", error)
       throw error
+    }
+  }
+
+  async getReminderRecords(reminderId: number): Promise<ReminderRecord> {
+    try {
+      const data = await this.vaultContract.getReminders(reminderId)
+      return {
+        remindedBy: data[0],
+        scores: data[1],
+        claimed: data[2],
+      }
+    } catch (error) {
+      console.error("[v0] Error getting reminder records:", error)
+      throw error
+    }
+  }
+
+  async recordReminder(reminderId: number, remindedBy: string, neynarScore: number): Promise<void> {
+    try {
+      console.log("[v0] Recording reminder:", { reminderId, remindedBy, neynarScore })
+      const tx = await this.vaultContract.recordReminder(reminderId, remindedBy, neynarScore)
+      await tx.wait()
+      console.log("[v0] Reminder recorded successfully")
+    } catch (error: any) {
+      console.error("[v0] Error recording reminder:", error)
+      if (error.code === "ACTION_REJECTED") {
+        throw new Error("Transaction rejected by user")
+      }
+      throw error
+    }
+  }
+
+  async claimReward(reminderId: number): Promise<void> {
+    try {
+      console.log("[v0] Claiming reward for reminder:", reminderId)
+      const tx = await this.vaultContract.claimReward(reminderId)
+      await tx.wait()
+      console.log("[v0] Reward claimed successfully")
+    } catch (error: any) {
+      console.error("[v0] Error claiming reward:", error)
+      if (error.code === "ACTION_REJECTED") {
+        throw new Error("Transaction rejected by user")
+      }
+      throw error
+    }
+  }
+
+  async calculateReward(reminderId: number, claimer: string): Promise<string> {
+    try {
+      const reward = await this.vaultContract.calculateReward(reminderId, claimer)
+      return Math.floor(Number(formatUnits(reward, 18))).toString()
+    } catch (error) {
+      console.error("[v0] Error calculating reward:", error)
+      return "0"
+    }
+  }
+
+  async canClaimReward(reminderId: number, claimer: string): Promise<boolean> {
+    try {
+      return await this.vaultContract.canClaimReward(reminderId, claimer)
+    } catch (error) {
+      console.error("[v0] Error checking canClaimReward:", error)
+      return false
     }
   }
 

@@ -5,7 +5,8 @@ import { CreateReminderDialog } from "./create-reminder-dialog"
 import { ReminderList } from "./reminder-list"
 import { ReminderStats } from "./reminder-stats"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Users } from "lucide-react"
+import Link from "next/link"
 
 export function ReminderDashboard() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -28,10 +29,18 @@ export function ReminderDashboard() {
             <h2 className="text-2xl font-bold tracking-tight">Your Reminders</h2>
             <p className="text-sm text-muted-foreground mt-1">Manage your commitment-based reminders</p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} size="lg">
-            <Plus className="h-5 w-5 mr-2" />
-            New Reminder
-          </Button>
+          <div className="flex gap-2">
+            <Link href="/feed">
+              <Button variant="outline" size="lg">
+                <Users className="h-5 w-5 mr-2" />
+                Public Feed
+              </Button>
+            </Link>
+            <Button onClick={() => setIsCreateOpen(true)} size="lg">
+              <Plus className="h-5 w-5 mr-2" />
+              New Reminder
+            </Button>
+          </div>
         </div>
 
         {/* Reminders List */}

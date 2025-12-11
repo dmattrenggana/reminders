@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ethers } from "ethers"
-import { CONTRACTS, REMINDER_VAULT_ABI } from "@/lib/contracts/config"
+import { CONTRACTS, REMINDER_VAULT_V2_ABI } from "@/lib/contracts/config"
 
 export const maxDuration = 60
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL)
     const wallet = new ethers.Wallet(process.env.CRON_WALLET_PRIVATE_KEY, provider)
-    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_ABI, wallet)
+    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, wallet)
 
     const currentTime = Math.floor(Date.now() / 1000)
     const processedReminders = []
@@ -28,7 +28,17 @@ export async function GET(request: NextRequest) {
     for (let i = 0; i < Number(reminderCount); i++) {
       try {
         const reminder = await vaultContract.getReminder(i)
-        const [user, tokenAmount, reminderTime, confirmationDeadline, confirmed, burned] = reminder
+        const [
+          user,
+          commitmentAmount,
+          rewardPoolAmount,
+          reminderTime,
+          confirmationDeadline,
+          confirmed,
+          burned,
+          description,
+          totalReminders,
+        ] = reminder
 
         if (confirmed || burned) continue
 
@@ -36,14 +46,16 @@ export async function GET(request: NextRequest) {
           const shouldBurn = await vaultContract.shouldBurn(i)
 
           if (shouldBurn) {
+            // Burns commitment tokens and returns unclaimed reward pool to user
             const tx = await vaultContract.burnMissedReminder(i)
             await tx.wait()
 
             processedReminders.push({
               id: i,
-              action: "burned",
+              action: "burned_and_returned",
               user,
-              tokenAmount: ethers.formatUnits(tokenAmount, 18),
+              commitmentBurned: ethers.formatUnits(commitmentAmount, 18),
+              rewardPoolReturned: ethers.formatUnits(rewardPoolAmount, 18),
               txHash: tx.hash,
             })
           }

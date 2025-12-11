@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/auth/auth-context"
 import Image from "next/image"
 import { useEffect } from "react"
 import { sdk } from "@farcaster/miniapp-sdk"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default function HomePage() {
   const { isConnected, isFarcasterConnected } = useAuth()
@@ -44,7 +46,16 @@ export default function HomePage() {
               </div>
             </div>
 
-            <UnifiedConnectButton />
+            <div className="flex items-center gap-2">
+              {isAuthenticated && (
+                <Link href="/feed">
+                  <Button variant="ghost" size="sm" className="hidden sm:flex">
+                    Public Feed
+                  </Button>
+                </Link>
+              )}
+              <UnifiedConnectButton />
+            </div>
           </div>
         </div>
       </header>

@@ -41,7 +41,28 @@ export const COMMIT_TOKEN_ABI = [
   "function burn(address from, uint256 amount)",
 ] as const
 
-export const REMINDER_VAULT_ABI = [
+export const REMINDER_VAULT_V2_ABI = [
+  "function createReminder(uint256 tokenAmount, uint256 reminderTime, string memory description) returns (uint256)",
+  "function confirmReminder(uint256 reminderId)",
+  "function burnMissedReminder(uint256 reminderId)",
+  "function recordReminder(uint256 reminderId, address remindedBy, uint256 neynarScore)",
+  "function claimReward(uint256 reminderId)",
+  "function getUserReminders(address user) view returns (uint256[])",
+  "function getReminder(uint256 reminderId) view returns (address user, uint256 commitmentAmount, uint256 rewardPoolAmount, uint256 reminderTime, uint256 confirmationDeadline, bool confirmed, bool burned, string memory description, uint256 totalReminders)",
+  "function getReminders(uint256 reminderId) view returns (address[] memory remindedBy, uint256[] memory scores, bool[] memory claimed)",
+  "function canConfirm(uint256 reminderId) view returns (bool)",
+  "function shouldBurn(uint256 reminderId) view returns (bool)",
+  "function canClaimReward(uint256 reminderId, address claimer) view returns (bool)",
+  "function calculateReward(uint256 reminderId, address claimer) view returns (uint256)",
+  "event ReminderCreated(uint256 indexed reminderId, address indexed user, uint256 commitmentAmount, uint256 rewardPoolAmount, uint256 reminderTime, string description)",
+  "event ReminderConfirmed(uint256 indexed reminderId, address indexed user, uint256 timestamp)",
+  "event CommitmentBurned(uint256 indexed reminderId, address indexed user, uint256 amount)",
+  "event RewardPoolReturned(uint256 indexed reminderId, address indexed user, uint256 amount)",
+  "event ReminderRecorded(uint256 indexed reminderId, address indexed remindedBy, uint256 neynarScore)",
+  "event RewardClaimed(uint256 indexed reminderId, address indexed claimer, uint256 amount)",
+] as const
+
+export const REMINDER_VAULT_V1_ABI = [
   "function createReminder(uint256 tokenAmount, uint256 reminderTime, string memory description) returns (uint256)",
   "function confirmReminder(uint256 reminderId)",
   "function burnMissedReminder(uint256 reminderId)",
@@ -54,3 +75,5 @@ export const REMINDER_VAULT_ABI = [
   "event TokensBurned(uint256 indexed reminderId, address indexed user, uint256 tokenAmount)",
   "event TokensReclaimed(uint256 indexed reminderId, address indexed user, uint256 tokenAmount)",
 ] as const
+
+export const REMINDER_VAULT_ABI = REMINDER_VAULT_V2_ABI
