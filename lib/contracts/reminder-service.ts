@@ -1,6 +1,5 @@
 import { Contract, parseUnits, formatUnits } from "ethers"
 import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V2_ABI } from "./config"
-import type { JsonRpcSigner } from "ethers"
 
 export interface ReminderData {
   id: number
@@ -24,9 +23,9 @@ export interface ReminderRecord {
 export class ReminderService {
   private vaultContract: Contract
   private tokenContract: Contract
-  private signer: JsonRpcSigner
+  private signer: any // Using any instead of JsonRpcSigner to avoid type import
 
-  constructor(signer: JsonRpcSigner) {
+  constructor(signer: any) {
     this.signer = signer
     this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, signer)
     this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
