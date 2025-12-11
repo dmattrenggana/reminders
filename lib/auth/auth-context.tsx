@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 
 interface AuthContextType {
   // Wallet state
+  walletAddress: string | null
   address: string | null
   signer: any
   isConnected: boolean
@@ -269,6 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
+        walletAddress: address,
         address,
         signer,
         isConnected,
