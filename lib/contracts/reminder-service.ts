@@ -1,5 +1,6 @@
-import { Contract, parseUnits, formatUnits } from "ethers"
+import { Contract } from "ethers"
 import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V2_ABI } from "./config"
+import { parseUnits, formatUnits } from "@/lib/utils/ethers-utils"
 
 export interface ReminderData {
   id: number

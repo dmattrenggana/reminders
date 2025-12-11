@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/lib/auth/auth-context"
 import { useReminderService } from "./use-reminder-service"
 import type { ReminderData } from "@/lib/contracts/reminder-service"
-import { formatUnits } from "ethers"
+import { formatUnits } from "@/lib/utils/ethers-utils"
 
 export interface Reminder {
   id: number
