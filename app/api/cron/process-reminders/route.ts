@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { ethers } from "ethers"
 import { CONTRACTS, REMINDER_VAULT_V2_ABI } from "@/lib/contracts/config"
 
 export const maxDuration = 60
@@ -11,11 +10,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (!process.env.BASE_SEPOLIA_RPC_URL || !process.env.CRON_WALLET_PRIVATE_KEY) {
-      return NextResponse.json({ error: "Missing required environment variables" }, { status: 500 })
+    if (!process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || !process.env.CRON_WALLET_PRIVATE_KEY) {
+      return NextResponse.json(
+        {
+          error: "Missing required environment variables",
+          details: "Please set NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL and CRON_WALLET_PRIVATE_KEY",
+        },
+        { status: 500 },
+      )
     }
 
-    const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL)
+    const { ethers } = await import("ethers")
+
+    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL)
     const wallet = new ethers.Wallet(process.env.CRON_WALLET_PRIVATE_KEY, provider)
     const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, wallet)
 
