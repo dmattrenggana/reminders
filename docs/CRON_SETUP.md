@@ -2,7 +2,7 @@
 
 ## Overview
 
-The reminder system uses Vercel Cron Jobs to automatically process expired reminders and burn tokens when users miss their commitments.
+The reminder system uses automated cron jobs to process expired reminders and burn tokens when users miss their commitments.
 
 ## How It Works
 
@@ -22,7 +22,7 @@ Add these to your Vercel project:
 
 ### `CRON_WALLET_PRIVATE_KEY`
 - Private key of a wallet that will execute transactions
-- This wallet needs small amount of ETH for gas fees
+- This wallet needs a small amount of ETH for gas fees
 - **Keep this SECRET** - never expose publicly
 - Get from MetaMask: Account Details → Export Private Key
 
@@ -47,7 +47,36 @@ Add these to your Vercel project:
 
 3. **Deploy**
    - Push to Vercel
-   - Cron will automatically start running
+   - Cron will automatically start running if using Vercel Pro plan
+
+## Vercel Plans & Cron Jobs
+
+### Free Hobby Plan (Current)
+
+The Vercel Hobby plan does **NOT support** automated cron jobs. You have two options:
+
+#### Option 1: Use External Free Cron Service (Recommended)
+
+Services like **cron-job.org** or **EasyCron** can trigger your endpoint for free:
+
+1. **Sign up** at cron-job.org (free)
+2. **Create new cron job**:
+   - URL: `https://your-app.vercel.app/api/cron/process-reminders`
+   - Schedule: Every hour
+   - HTTP Method: GET
+   - Add Header: `Authorization: Bearer your-cron-secret`
+3. **Save and activate**
+
+#### Option 2: Manual Processing
+
+Add a manual "Process Reminders" button in your admin UI that calls the cron endpoint.
+
+### Pro Plan ($20/month)
+
+Upgrade to Vercel Pro for native cron job support:
+- Automatic hourly processing
+- Better reliability
+- Integrated monitoring
 
 ## Testing
 
@@ -68,7 +97,7 @@ View cron logs in Vercel dashboard:
 
 ## Limitations
 
-- **Vercel Hobby**: Runs every hour max
+- **Vercel Hobby**: Runs every hour max (if using external cron service)
 - **Gas Costs**: Cron wallet needs ETH for transactions
 - **Rate Limits**: Processes all reminders each run
 
