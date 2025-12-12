@@ -6,7 +6,6 @@ import { ReminderDashboard } from "@/components/reminders/reminder-dashboard"
 import { useAuth } from "@/lib/auth/auth-context"
 import Image from "next/image"
 import { useEffect } from "react"
-import { sdk } from "@farcaster/miniapp-sdk"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -15,11 +14,15 @@ export default function HomePage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.parent !== window) {
-      try {
-        sdk.actions.ready()
-      } catch (error) {
-        console.error("Error initializing miniapp:", error)
+      const initializeMiniapp = async () => {
+        try {
+          const { sdk } = await import("@farcaster/miniapp-sdk")
+          await sdk.actions.ready()
+        } catch (error) {
+          console.log("Farcaster miniapp SDK not available")
+        }
       }
+      initializeMiniapp()
     }
   }, [])
 
