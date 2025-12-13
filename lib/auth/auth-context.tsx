@@ -27,6 +27,8 @@ interface FarcasterUser {
   username: string
   displayName: string
   pfpUrl: string
+  custody?: string
+  verifications?: string[]
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -96,7 +98,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkFarcasterConnection = () => {
     const stored = localStorage.getItem("farcaster_user")
     if (stored) {
-      setFarcasterUser(JSON.parse(stored))
+      try {
+        setFarcasterUser(JSON.parse(stored))
+      } catch (error) {
+        console.error("Error parsing stored Farcaster user:", error)
+        localStorage.removeItem("farcaster_user")
+      }
     }
   }
 
@@ -138,13 +145,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (typeof window !== "undefined" && window.parent !== window) {
         try {
-          // Try to get Farcaster context from window
           const farcasterContext = (window as any).farcaster?.context || (window as any).frameContext
 
           if (farcasterContext?.user) {
             const user = farcasterContext.user
 
-            // Try to enrich with Neynar API
             try {
               const response = await fetch(`/api/farcaster/user?fid=${user.fid}`)
               if (response.ok) {
@@ -163,7 +168,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.log("Neynar API not available, using context data only")
             }
 
-            // Fallback to context data
             const farcasterUser: FarcasterUser = {
               fid: user.fid ?? 0,
               username: user.username ?? "user",
@@ -180,9 +184,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      alert("Please open this app in Warpcast to connect your Farcaster account")
+      alert("Please open this app in Warpcast to connect with Farcaster, or connect with your wallet instead.")
     } catch (error) {
       console.error("Error connecting Farcaster:", error)
+      alert("Failed to connect with Farcaster. Please try again.")
     }
   }
 
