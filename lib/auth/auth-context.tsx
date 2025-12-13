@@ -136,14 +136,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const connectFarcaster = async () => {
     try {
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && window.parent !== window) {
         try {
-          // Try Farcaster miniapp SDK
-          const { sdk } = await import("@farcaster/miniapp-sdk")
-          const context = await sdk.context
+          // Try to get Farcaster context from window
+          const farcasterContext = (window as any).farcaster?.context || (window as any).frameContext
 
-          if (context?.user) {
-            const user = context.user
+          if (farcasterContext?.user) {
+            const user = farcasterContext.user
 
             // Try to enrich with Neynar API
             try {
@@ -161,10 +160,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return
               }
             } catch (apiError) {
-              console.log("Neynar API not available, using SDK data only")
+              console.log("Neynar API not available, using context data only")
             }
 
-            // Fallback to SDK data
+            // Fallback to context data
             const farcasterUser: FarcasterUser = {
               fid: user.fid ?? 0,
               username: user.username ?? "user",
@@ -176,10 +175,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
             return
           }
-        } catch (sdkError) {
-          console.log("Farcaster SDK not available")
+        } catch (contextError) {
+          console.log("Farcaster context not available")
         }
       }
+
+      alert("Please open this app in Warpcast to connect your Farcaster account")
     } catch (error) {
       console.error("Error connecting Farcaster:", error)
     }
@@ -230,7 +231,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined" && !farcasterUser) {
       const inFrame = window.self !== window.top
       if (inFrame) {
-        await connectFarcaster()
+        setTimeout(() => {
+          connectFarcaster()
+        }, 500)
       }
     }
   }

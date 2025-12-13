@@ -14,15 +14,11 @@ export default function HomePage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.parent !== window) {
-      const initializeMiniapp = async () => {
-        try {
-          const { sdk } = await import("@farcaster/miniapp-sdk")
-          await sdk.actions.ready()
-        } catch (error) {
-          console.log("Farcaster miniapp SDK not available")
-        }
+      try {
+        window.parent.postMessage({ type: "frame-ready" }, "*")
+      } catch (error) {
+        console.log("Could not notify parent frame")
       }
-      initializeMiniapp()
     }
   }, [])
 
