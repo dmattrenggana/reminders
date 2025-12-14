@@ -51,7 +51,7 @@ export default function FeedPage() {
     }
 
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      const appUrl = "https://remindersbase.vercel.app"
       const reminderUrl = `${appUrl}/feed?reminder=${reminder.id}`
 
       const timeStr = new Date(reminder.reminderTime).toLocaleString("en-US", {
@@ -79,6 +79,7 @@ Help them stay accountable: ${reminderUrl}`
       console.log("[v0] Post text:", postText)
       console.log("[v0] Reminder URL:", reminderUrl)
       console.log("[v0] Reminder ID:", reminder.id)
+      console.log("[v0] Full reminder object:", reminder)
 
       window.open(warpcastUrl, "_blank")
       setPostedReminders((prev) => new Set(prev).add(reminder.id))

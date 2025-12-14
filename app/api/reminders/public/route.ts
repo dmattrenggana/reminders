@@ -15,19 +15,26 @@ export async function GET(request: NextRequest) {
     const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, provider)
 
     const activeReminderIds = await vaultContract.getActiveReminders()
-    console.log("[API] Active reminder IDs:", activeReminderIds)
+    console.log("[API] Active reminder IDs (raw):", activeReminderIds)
+
+    const reminderIdsArray = Array.isArray(activeReminderIds)
+      ? activeReminderIds.map((id) => Number(id.toString()))
+      : []
+
+    console.log("[API] Active reminder IDs (converted):", reminderIdsArray)
 
     const reminders = []
 
-    for (const id of activeReminderIds) {
+    for (const id of reminderIdsArray) {
       try {
-        const reminderData = await vaultContract.reminders(Number(id))
-        const canRemindNow = await vaultContract.canRemind(Number(id))
+        console.log(`[API] Fetching reminder with ID: ${id}`)
+        const reminderData = await vaultContract.reminders(id)
+        const canRemindNow = await vaultContract.canRemind(id)
 
         let hasRecorded = false
         if (walletAddress) {
           try {
-            const claimData = await vaultContract.remindClaims(Number(id), walletAddress)
+            const claimData = await vaultContract.remindClaims(id, walletAddress)
             hasRecorded = claimData.claimed
           } catch (error) {
             console.log(`[API] Could not check claim status for ${walletAddress}:`, error)
@@ -41,10 +48,14 @@ export async function GET(request: NextRequest) {
             ? rawFarcasterUsername
             : reminderData[0].slice(0, 6) + "..." + reminderData[0].slice(-4)
 
-        console.log(`[API] Reminder ${id} farcasterUsername:`, farcasterUsername, "raw:", rawFarcasterUsername)
+        console.log(`[API] Reminder ${id} data loaded:`, {
+          id,
+          farcasterUsername,
+          description: reminderData[7],
+        })
 
         reminders.push({
-          id: Number(id),
+          id: id, // Use the converted number directly
           user: reminderData[0],
           farcasterUsername,
           description: reminderData[7],
@@ -59,7 +70,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log("[API] Loaded", reminders.length, "active reminders")
+    console.log(
+      "[API] Final reminders array:",
+      reminders.map((r) => ({ id: r.id, description: r.description })),
+    )
 
     return NextResponse.json({
       success: true,
