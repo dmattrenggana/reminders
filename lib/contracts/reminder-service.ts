@@ -98,14 +98,17 @@ export class ReminderService {
         description,
       })
 
-      // First approve tokens
+      console.log("[v0] Step 1: Approving tokens...")
       await this.approveTokens(tokenAmount)
+      console.log("[v0] Step 1: Token approval complete")
 
-      // Then create reminder
+      console.log("[v0] Step 2: Creating reminder on contract...")
       const tx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description)
+      console.log("[v0] Step 2: Transaction sent, hash:", tx.hash)
 
+      console.log("[v0] Step 3: Waiting for transaction confirmation...")
       const receipt = await tx.wait()
-      console.log("[v0] Reminder created, transaction hash:", receipt.hash)
+      console.log("[v0] Step 3: Transaction confirmed, receipt:", receipt.hash)
 
       // Extract reminder ID from event
       const event = receipt.logs.find((log: any) => {
@@ -119,7 +122,7 @@ export class ReminderService {
       if (event) {
         const parsed = this.vaultContract.interface.parseLog(event)
         const reminderId = Number(parsed?.args[0])
-        console.log("[v0] Reminder ID:", reminderId)
+        console.log("[v0] Reminder created successfully with ID:", reminderId)
         return reminderId
       }
 
@@ -129,7 +132,13 @@ export class ReminderService {
       if (error.code === "ACTION_REJECTED") {
         throw new Error("Transaction rejected by user")
       }
-      throw error
+      if (error.message?.includes("insufficient allowance")) {
+        throw new Error("Token approval failed. Please try again.")
+      }
+      if (error.message?.includes("insufficient funds")) {
+        throw new Error("Insufficient gas or token balance")
+      }
+      throw new Error(error.message || "Failed to create reminder")
     }
   }
 
