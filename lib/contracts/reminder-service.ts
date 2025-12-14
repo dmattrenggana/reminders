@@ -285,7 +285,23 @@ export class ReminderService {
   async getReminder(reminderId: number): Promise<ReminderData> {
     try {
       await this.ensureContracts()
-      const data = await this.vaultContract.getReminder(reminderId)
+      console.log("[v0] Fetching reminder data for ID:", reminderId)
+      const data = await this.vaultContract.reminders(reminderId)
+
+      console.log("[v0] Reminder data received:", {
+        user: data[0],
+        commitAmount: data[1].toString(),
+        rewardPoolAmount: data[2].toString(),
+        reminderTime: data[3].toString(),
+        confirmationDeadline: data[4].toString(),
+        confirmed: data[5],
+        burned: data[6],
+        description: data[7],
+        farcasterUsername: data[8],
+        totalReminders: Number(data[9]),
+        rewardsClaimed: data[10].toString(),
+      })
+
       return {
         id: reminderId,
         user: data[0],
@@ -301,7 +317,7 @@ export class ReminderService {
         rewardsClaimed: data[10],
       }
     } catch (error) {
-      console.error("[v0] Error getting reminder:", error)
+      console.error("[v0] Error getting reminder:", reminderId, error)
       throw error
     }
   }
