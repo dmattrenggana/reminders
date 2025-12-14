@@ -108,13 +108,18 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       console.log("[v0] DIALOG: Description:", description)
       console.log("[v0] DIALOG: Farcaster username:", farcasterUser?.username || "none")
 
-      setTxStatus("Step 1/2: Approving tokens...")
       console.log("[v0] DIALOG: Calling service.createReminder...")
 
-      // Add a small delay to let the UI update
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const reminderId = await service.createReminder(tokenAmount, reminderDate, description, farcasterUser?.username)
+      const reminderId = await service.createReminder(
+        tokenAmount,
+        reminderDate,
+        description,
+        farcasterUser?.username,
+        (status) => {
+          console.log("[v0] DIALOG: Progress update:", status)
+          setTxStatus(status)
+        },
+      )
 
       console.log("[v0] DIALOG: ✅ Reminder created successfully! ID:", reminderId)
       setTxStatus("✅ Reminder created!")
@@ -133,7 +138,11 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       setTime("")
       setHours("")
       setMinutes("")
-      setTxStatus("")
+
+      setTimeout(() => {
+        setTxStatus("")
+        onOpenChange(false)
+      }, 2000)
 
       console.log("[v0] DIALOG: ===== DIALOG: handleCreate completed successfully =====")
     } catch (error: any) {

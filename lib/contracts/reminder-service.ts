@@ -93,9 +93,12 @@ export class ReminderService {
     reminderTime: Date,
     description: string,
     farcasterUsername?: string,
+    onProgress?: (status: string) => void,
   ): Promise<number> {
     try {
       console.log("[v0] ========== STARTING REMINDER CREATION ==========")
+      onProgress?.("Initializing contracts...")
+
       console.log("[v0] Step 0: Ensuring contracts are initialized...")
       await this.ensureContracts()
       console.log("[v0] ✅ Contracts ready")
@@ -116,15 +119,20 @@ export class ReminderService {
       console.log("[v0] Vault contract:", CONTRACTS.REMINDER_VAULT)
       console.log("[v0] Token contract:", CONTRACTS.COMMIT_TOKEN)
 
+      onProgress?.("Checking token allowance...")
       console.log("[v0] Step 1: Checking current token allowance...")
       const currentAllowance = await this.tokenContract.allowance(userAddress, CONTRACTS.REMINDER_VAULT)
       console.log("[v0] Current allowance:", currentAllowance.toString(), "Required:", amountInWei.toString())
 
       if (currentAllowance < amountInWei) {
+        onProgress?.("Step 1/2: Requesting token approval...")
         console.log("[v0] Step 2: Insufficient allowance, requesting approval...")
         console.log("[v0] 🔵 USER ACTION REQUIRED: Please approve the token transaction in your wallet")
+
         const approveTx = await this.tokenContract.approve(CONTRACTS.REMINDER_VAULT, amountInWei)
         console.log("[v0] Approval transaction sent:", approveTx.hash)
+
+        onProgress?.("Step 1/2: Waiting for approval confirmation...")
         console.log("[v0] Waiting for approval confirmation...")
 
         const approveReceipt = await approveTx.wait()
@@ -136,13 +144,17 @@ export class ReminderService {
         if (newAllowance < amountInWei) {
           throw new Error("Approval failed: allowance not set correctly")
         }
+
+        onProgress?.("Step 1/2: Approval complete! Preparing createReminder...")
       } else {
         console.log("[v0] Step 2: Sufficient allowance already exists, skipping approval")
+        onProgress?.("Sufficient allowance exists, preparing transaction...")
       }
 
       console.log("[v0] Waiting 2 seconds for blockchain state to settle...")
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
+      onProgress?.("Step 2/2: Creating reminder on vault contract...")
       console.log("[v0] Step 3: Calling createReminder on vault contract...")
       console.log("[v0] Contract address:", this.vaultContract.target || this.vaultContract.address)
 
@@ -162,6 +174,8 @@ export class ReminderService {
 
         createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description, username)
         console.log("[v0] ✅✅✅ CreateReminder transaction sent successfully:", createTx.hash)
+
+        onProgress?.("Step 2/2: Waiting for confirmation...")
       } catch (vaultError: any) {
         console.error("[v0] ❌❌❌ Error calling vault.createReminder:", vaultError)
         console.error("[v0] Error code:", vaultError.code)
@@ -178,6 +192,8 @@ export class ReminderService {
       console.log("[v0] Step 4: Waiting for createReminder confirmation...")
       const receipt = await createTx.wait()
       console.log("[v0] ✅ CreateReminder confirmed in block:", receipt.blockNumber)
+
+      onProgress?.("Reminder created successfully!")
 
       // Extract reminder ID from event
       const event = receipt.logs.find((log: any) => {
