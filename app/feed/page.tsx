@@ -78,10 +78,16 @@ export default function FeedPage() {
     try {
       const url = walletAddress ? `/api/reminders/public?walletAddress=${walletAddress}` : "/api/reminders/public"
       const response = await fetch(url)
+      if (!response.ok) {
+        console.error("[v0] Failed to fetch reminders:", response.statusText)
+        setReminders([])
+        return
+      }
       const data = await response.json()
-      setReminders(data.reminders)
+      setReminders(Array.isArray(data.reminders) ? data.reminders : [])
     } catch (error) {
       console.error("Error loading public reminders:", error)
+      setReminders([])
     } finally {
       setLoading(false)
     }

@@ -9,6 +9,11 @@ export function ConnectFarcasterButton() {
   const { isFarcasterConnected, farcasterUser, connectFarcaster, disconnectFarcaster } = useAuth()
 
   if (isFarcasterConnected && farcasterUser) {
+    const avatarSrc =
+      typeof farcasterUser.pfpUrl === "string" && farcasterUser.pfpUrl.length > 0
+        ? farcasterUser.pfpUrl
+        : "/placeholder.svg"
+
     return (
       <Button
         variant="outline"
@@ -17,8 +22,8 @@ export function ConnectFarcasterButton() {
         className="gap-1 md:gap-1.5 bg-transparent h-7 md:h-10 px-2 md:px-4 text-xs md:text-sm"
       >
         <Avatar className="h-4 w-4 md:h-5 md:w-5">
-          <AvatarImage src={farcasterUser.pfpUrl || "/placeholder.svg"} alt={farcasterUser.username} />
-          <AvatarFallback>{farcasterUser.username[0]?.toUpperCase() || "F"}</AvatarFallback>
+          <AvatarImage src={avatarSrc || "/placeholder.svg"} alt={String(farcasterUser.username || "User")} />
+          <AvatarFallback>{farcasterUser.username?.[0]?.toUpperCase() || "F"}</AvatarFallback>
         </Avatar>
         <span className="truncate max-w-[80px]">{farcasterUser.username}</span>
       </Button>

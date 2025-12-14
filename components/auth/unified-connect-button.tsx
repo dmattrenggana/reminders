@@ -28,11 +28,27 @@ export function UnifiedConnectButton() {
         !!(window as any).farcaster?.context ||
         !!(window as any).frameContext
 
-      setIsMiniapp(inFrame || hasFrameContext)
+      const isMiniappFrame = inFrame || hasFrameContext
+      setIsMiniapp(isMiniappFrame)
     }
   }, [])
 
   if (isFarcasterConnected && farcasterUser) {
+    const avatarSrc =
+      typeof farcasterUser.pfpUrl === "string" && farcasterUser.pfpUrl.length > 0
+        ? farcasterUser.pfpUrl
+        : "/abstract-profile.png"
+
+    const displayName =
+      typeof farcasterUser.displayName === "string" && farcasterUser.displayName.length > 0
+        ? farcasterUser.displayName
+        : typeof farcasterUser.username === "string" && farcasterUser.username.length > 0
+          ? farcasterUser.username
+          : "User"
+
+    const username =
+      typeof farcasterUser.username === "string" && farcasterUser.username.length > 0 ? farcasterUser.username : "user"
+
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -42,24 +58,25 @@ export function UnifiedConnectButton() {
             className="h-7 md:h-10 px-2 md:px-4 text-xs md:text-sm gap-2 bg-transparent"
           >
             <Image
-              src={farcasterUser.pfpUrl || "/abstract-profile.png"}
-              alt={farcasterUser.displayName}
+              src={avatarSrc || "/placeholder.svg"}
+              alt={displayName}
               width={20}
               height={20}
               className="rounded-full"
             />
-            <span className="hidden sm:inline truncate max-w-[120px]">{farcasterUser.displayName}</span>
-            <span className="sm:hidden truncate max-w-[80px]">@{farcasterUser.username}</span>
+            <span className="hidden sm:inline truncate max-w-[120px]">{displayName}</span>
+            <span className="sm:hidden truncate max-w-[80px]">@{username}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={disconnectFarcaster}>Disconnect Farcaster</DropdownMenuItem>
+          {!isMiniapp && <DropdownMenuItem onClick={disconnectFarcaster}>Disconnect Farcaster</DropdownMenuItem>}
+          {isMiniapp && <DropdownMenuItem disabled>Connected via Farcaster</DropdownMenuItem>}
         </DropdownMenuContent>
       </DropdownMenu>
     )
   }
 
-  if (isConnected && address) {
+  if (isConnected && address && !isFarcasterConnected) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
