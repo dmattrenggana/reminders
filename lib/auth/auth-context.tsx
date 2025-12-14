@@ -75,25 +75,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const checkWalletConnection = async () => {
+    console.log("[v0] ===== CHECKING WALLET CONNECTION =====")
     if (typeof window !== "undefined" && window.ethereum) {
       try {
         const { BrowserProvider } = await import("ethers")
         const provider = new BrowserProvider(window.ethereum)
         const accounts = await provider.listAccounts()
+        console.log("[v0] Found accounts:", accounts.length)
 
         if (accounts.length > 0) {
           const signer = await provider.getSigner()
           const address = await signer.getAddress()
           const network = await provider.getNetwork()
 
+          console.log("[v0] ✅ Wallet connected:", address)
+          console.log("[v0] Network:", network.chainId)
+
           setAddress(address)
           setSigner(signer)
           setChainId(Number(network.chainId))
+        } else {
+          console.log("[v0] No accounts found")
         }
       } catch (error) {
-        console.error("Error checking wallet connection:", error)
+        console.error("[v0] Error checking wallet connection:", error)
       }
+    } else {
+      console.log("[v0] No ethereum provider found")
     }
+    console.log("[v0] ===== WALLET CONNECTION CHECK COMPLETE =====")
   }
 
   const checkFarcasterConnection = async () => {
@@ -242,11 +252,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const { JsonRpcProvider } = await import("ethers")
                 const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
                 setSigner(provider)
-              } catch (error) {
-                console.error("[v0] Error creating provider:", error)
+                console.log("[v0] ✅ Provider created for wallet address")
+              } catch {
+                console.log("[v0] Could not create provider")
               }
+            } else {
+              console.log("[v0] ⚠️ No wallet address available from Farcaster")
             }
-            console.log("[v0] Farcaster user connected via SDK")
+
+            console.log("[v0] ✅ Farcaster user connected via SDK")
             return
           }
         } catch (sdkError) {
@@ -359,8 +373,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const autoConnectMiniapp = async () => {
+    console.log("[v0] ===== AUTO-CONNECT MINIAPP =====")
     if (typeof window !== "undefined" && !farcasterUser) {
       const inFrame = window.self !== window.top
+      console.log("[v0] In frame:", inFrame)
 
       if (inFrame) {
         console.log("[v0] Detected miniapp frame, initializing Frame SDK...")
@@ -455,22 +471,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
 
           if (farcasterUser.walletAddress) {
+            console.log("[v0] ✅ Setting wallet address:", farcasterUser.walletAddress)
             setAddress(farcasterUser.walletAddress)
 
             try {
               const { JsonRpcProvider } = await import("ethers")
               const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
               setSigner(provider)
+              console.log("[v0] ✅ Provider created for wallet address")
             } catch {
               console.log("[v0] Could not create provider")
             }
+          } else {
+            console.log("[v0] ⚠️ No wallet address available from Farcaster")
           }
 
-          console.log("[v0] Miniapp connection complete")
+          console.log("[v0] ✅ Miniapp connection complete")
+          console.log("[v0] ===== AUTO-CONNECT COMPLETE =====")
         } catch (err) {
           console.log("[v0] Frame SDK initialization failed")
+          console.log("[v0] ===== AUTO-CONNECT FAILED =====")
         }
+      } else {
+        console.log("[v0] Not in frame, skipping miniapp connection")
+        console.log("[v0] ===== AUTO-CONNECT SKIPPED =====")
       }
+    } else {
+      if (farcasterUser) {
+        console.log("[v0] Farcaster user already connected:", farcasterUser.username)
+      }
+      console.log("[v0] ===== AUTO-CONNECT SKIPPED (ALREADY CONNECTED) =====")
     }
   }
 
