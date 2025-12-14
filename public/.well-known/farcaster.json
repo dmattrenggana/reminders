@@ -1,0 +1,16 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEyMzQ1NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweEFiQ2RFZjEyMzQ1Njc4OTBBYkNkRWYxMjM0NTY3ODkwQWJDZEVmIn0",
+    "payload": "eyJkb21haW4iOiJyZW1pbmRlcnNiYXNlLnZlcmNlbC5hcHAifQ",
+    "signature": "MHg..."
+  },
+  "frame": {
+    "version": "1",
+    "name": "Reminders",
+    "iconUrl": "https://remindersbase.vercel.app/icon.png",
+    "splashImageUrl": "https://remindersbase.vercel.app/splash.png",
+    "splashBackgroundColor": "#0f172a",
+    "homeUrl": "https://remindersbase.vercel.app",
+    "webhookUrl": "https://remindersbase.vercel.app/api/frame/webhook"
+  }
+}
