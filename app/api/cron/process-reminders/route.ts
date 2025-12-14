@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     for (let i = 0; i < Number(reminderCount); i++) {
       try {
-        const reminder = await vaultContract.getReminder(i)
+        const reminder = await vaultContract.reminders(i)
         const [
           user,
           commitAmount,
@@ -45,30 +45,29 @@ export async function GET(request: NextRequest) {
           burned,
           description,
           farcasterUsername,
+          totalReminders,
           rewardsClaimed,
-          reminders,
         ] = reminder
 
+        // Skip already processed reminders
         if (confirmed || burned) continue
 
         if (currentTime > Number(confirmationDeadline)) {
-          const shouldBurn = await vaultContract.shouldBurn(i)
+          // Burns 50% commitment tokens to 0xdead
+          // Returns 50% reward pool to user
+          const tx = await vaultContract.burnMissedReminder(i)
+          await tx.wait()
 
-          if (shouldBurn) {
-            // Burns commitment tokens and returns unclaimed reward pool to user
-            const tx = await vaultContract.burnMissedReminder(i)
-            await tx.wait()
-
-            processedReminders.push({
-              id: i,
-              action: "burned_and_returned",
-              user,
-              farcasterUsername: farcasterUsername || "wallet user",
-              commitmentBurned: ethers.formatUnits(commitAmount, 18),
-              rewardPoolReturned: ethers.formatUnits(rewardPoolAmount, 18),
-              txHash: tx.hash,
-            })
-          }
+          processedReminders.push({
+            id: i,
+            action: "burned_missed_reminder",
+            user,
+            farcasterUsername: farcasterUsername || "wallet user",
+            commitmentBurned: ethers.formatUnits(commitAmount, 18),
+            rewardPoolReturned: ethers.formatUnits(rewardPoolAmount, 18),
+            helpersCount: Number(totalReminders),
+            txHash: tx.hash,
+          })
         }
       } catch (error: any) {
         errors.push({

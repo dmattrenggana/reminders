@@ -28,11 +28,27 @@ export async function POST(request: NextRequest) {
     const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, wallet)
 
     const tx = await vaultContract.recordReminder(reminderId, neynarScore)
-    await tx.wait()
+    const receipt = await tx.wait()
+
+    const rewardClaimedEvent = receipt.logs.find((log: any) => {
+      try {
+        const parsed = vaultContract.interface.parseLog(log)
+        return parsed?.name === "RewardClaimed"
+      } catch {
+        return false
+      }
+    })
+
+    let rewardAmount = 0
+    if (rewardClaimedEvent) {
+      const parsed = vaultContract.interface.parseLog(rewardClaimedEvent)
+      rewardAmount = parsed?.args?.amount ? Number(ethers.formatEther(parsed.args.amount)) : 0
+    }
 
     return NextResponse.json({
       success: true,
       neynarScore,
+      rewardAmount,
       txHash: tx.hash,
     })
   } catch (error) {

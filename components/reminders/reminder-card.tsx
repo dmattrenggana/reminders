@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, CheckCircle2, Flame, Lock, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Clock, CheckCircle2, Flame, Lock, AlertCircle, Info } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useReminderService } from "@/hooks/use-reminder-service"
@@ -19,6 +20,11 @@ interface Reminder {
   confirmationDeadline: Date
   status: "pending" | "active" | "completed" | "burned"
   canConfirm: boolean
+  canClaim?: boolean
+  claimableReward?: number
+  totalHelpers?: number
+  unclaimedRewardPool?: number
+  canWithdrawUnclaimed?: boolean // Added for V3 withdraw feature
 }
 
 interface ReminderCardProps {
@@ -27,6 +33,8 @@ interface ReminderCardProps {
 
 export function ReminderCard({ reminder }: ReminderCardProps) {
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isClaiming, setIsClaiming] = useState(false)
+  const [isWithdrawing, setIsWithdrawing] = useState(false) // Added for V3 withdraw
   const service = useReminderService()
   const { toast } = useToast()
 
@@ -62,6 +70,74 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
       })
     } finally {
       setIsConfirming(false)
+    }
+  }
+
+  const handleClaimReward = async () => {
+    if (!service) {
+      toast({
+        title: "Not Connected",
+        description: "Please connect your wallet",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsClaiming(true)
+
+    try {
+      console.log("[v0] Claiming reward for reminder:", reminder.id)
+      await service.claimReward(reminder.id)
+
+      toast({
+        title: "Reward Claimed",
+        description: `Successfully claimed ${reminder.claimableReward || 0} ${TOKEN_SYMBOL} tokens`,
+      })
+
+      window.location.reload()
+    } catch (error: any) {
+      console.error("[v0] Error claiming reward:", error)
+      toast({
+        title: "Claim Failed",
+        description: error.message || "Failed to claim reward",
+        variant: "destructive",
+      })
+    } finally {
+      setIsClaiming(false)
+    }
+  }
+
+  const handleWithdrawUnclaimed = async () => {
+    if (!service) {
+      toast({
+        title: "Not Connected",
+        description: "Please connect your wallet",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsWithdrawing(true)
+
+    try {
+      console.log("[v0] Withdrawing unclaimed rewards for reminder:", reminder.id)
+      await service.withdrawUnclaimedRewards(reminder.id)
+
+      toast({
+        title: "Unclaimed Rewards Withdrawn",
+        description: `Successfully withdrawn ${reminder.unclaimedRewardPool || 0} ${TOKEN_SYMBOL} tokens`,
+      })
+
+      window.location.reload()
+    } catch (error: any) {
+      console.error("[v0] Error withdrawing unclaimed rewards:", error)
+      toast({
+        title: "Withdrawal Failed",
+        description: error.message || "Failed to withdraw unclaimed rewards",
+        variant: "destructive",
+      })
+    } finally {
+      setIsWithdrawing(false)
     }
   }
 
@@ -137,6 +213,46 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
                 Deadline: {formatDistanceToNow(reminder.confirmationDeadline, { addSuffix: true })}
               </div>
             )}
+
+            {reminder.canConfirm && reminder.totalHelpers === 0 && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Important: No Helpers Yet</AlertTitle>
+                <AlertDescription className="text-xs">
+                  No one has reminded you yet. If you confirm now, you will get back{" "}
+                  {Math.floor(reminder.tokenAmount / 2)} {TOKEN_SYMBOL} (50% commitment), but the other{" "}
+                  {Math.floor(reminder.tokenAmount / 2)} {TOKEN_SYMBOL} (50% reward pool) will remain locked in the
+                  contract.
+                  <br />
+                  <strong>
+                    Consider waiting for helpers to remind you before confirming to maximize your recovery.
+                  </strong>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {reminder.status === "completed" && reminder.unclaimedRewardPool && reminder.unclaimedRewardPool > 0 && (
+              <Alert variant={reminder.canWithdrawUnclaimed ? "default" : "destructive"}>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Unclaimed Rewards</AlertTitle>
+                <AlertDescription className="text-xs">
+                  {Math.floor(reminder.unclaimedRewardPool)} {TOKEN_SYMBOL} from the reward pool remains unclaimed.
+                  {reminder.canWithdrawUnclaimed ? (
+                    <>
+                      <br />
+                      <strong>Good news!</strong> The 24-hour claim window has expired. You can now withdraw these
+                      unclaimed tokens.
+                    </>
+                  ) : (
+                    <>
+                      <br />
+                      Helpers have 24 hours from confirmation to claim their rewards. After that, you can withdraw the
+                      unclaimed amount.
+                    </>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -145,9 +261,21 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
                 {isConfirming ? "Confirming..." : "Confirm & Reclaim"}
               </Button>
             )}
+            {reminder.canClaim && reminder.claimableReward && reminder.claimableReward > 0 && (
+              <Button onClick={handleClaimReward} variant="secondary" size="lg" disabled={isClaiming}>
+                {isClaiming ? "Claiming..." : `Claim ${reminder.claimableReward} ${TOKEN_SYMBOL}`}
+              </Button>
+            )}
             {reminder.status === "pending" && (
               <Button variant="outline" size="sm" disabled>
                 Not Yet Available
+              </Button>
+            )}
+            {reminder.canWithdrawUnclaimed && reminder.unclaimedRewardPool && reminder.unclaimedRewardPool > 0 && (
+              <Button onClick={handleWithdrawUnclaimed} variant="default" size="lg" disabled={isWithdrawing}>
+                {isWithdrawing
+                  ? "Withdrawing..."
+                  : `Withdraw ${Math.floor(reminder.unclaimedRewardPool)} ${TOKEN_SYMBOL}`}
               </Button>
             )}
           </div>

@@ -14,6 +14,11 @@ export interface Reminder {
   confirmationDeadline: Date
   status: "pending" | "active" | "completed" | "burned"
   canConfirm: boolean
+  canClaim?: boolean
+  claimableReward?: number
+  totalHelpers?: number
+  unclaimedRewardPool?: number
+  canWithdrawUnclaimed?: boolean // Added for V3 withdraw feature
 }
 
 export function useReminders() {
@@ -48,6 +53,35 @@ export function useReminders() {
 
       const totalTokens = Number(formatUnits(data.commitmentAmount + data.rewardPoolAmount, 18))
 
+      const totalHelpers = data.totalReminders
+
+      let unclaimedRewardPool = 0
+      if (service && data.confirmed) {
+        const unclaimed = await service.getUnclaimedRewardPool(data.id)
+        unclaimedRewardPool = Number(unclaimed)
+      }
+
+      let canClaim = false
+      let claimableReward = 0
+
+      if (service && address && data.confirmed && !data.burned) {
+        try {
+          const canClaimReward = await service.canClaimReward(data.id, address)
+          if (canClaimReward) {
+            const rewardAmount = await service.calculateReward(data.id, address)
+            claimableReward = Number(rewardAmount)
+            canClaim = claimableReward > 0
+          }
+        } catch (err) {
+          console.log("[v0] User has not reminded for this reminder")
+        }
+      }
+
+      let canWithdrawUnclaimed = false
+      if (service && data.confirmed && data.user.toLowerCase() === address?.toLowerCase()) {
+        canWithdrawUnclaimed = await service.canWithdrawUnclaimed(data.id)
+      }
+
       return {
         id: data.id,
         description: data.description,
@@ -56,6 +90,11 @@ export function useReminders() {
         confirmationDeadline,
         status,
         canConfirm,
+        canClaim,
+        claimableReward,
+        totalHelpers,
+        unclaimedRewardPool,
+        canWithdrawUnclaimed, // Added for V3
       }
     } catch (err) {
       console.error("[v0] Error mapping reminder data:", err)
@@ -67,6 +106,11 @@ export function useReminders() {
         confirmationDeadline: new Date(),
         status: "pending",
         canConfirm: false,
+        canClaim: false,
+        claimableReward: 0,
+        totalHelpers: 0,
+        unclaimedRewardPool: 0,
+        canWithdrawUnclaimed: false,
       }
     }
   }

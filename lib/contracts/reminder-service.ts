@@ -14,6 +14,7 @@ export interface ReminderData {
   farcasterUsername: string
   totalReminders: number
   rewardsClaimed: bigint
+  confirmationTime: bigint // Added confirmationTime field for V3
 }
 
 export interface ReminderRecord {
@@ -300,6 +301,7 @@ export class ReminderService {
         farcasterUsername: data[8],
         totalReminders: Number(data[9]),
         rewardsClaimed: data[10].toString(),
+        confirmationTime: data[11].toString(),
       })
 
       return {
@@ -315,6 +317,7 @@ export class ReminderService {
         farcasterUsername: data[8],
         totalReminders: Number(data[9]),
         rewardsClaimed: data[10],
+        confirmationTime: data[11], // Added confirmationTime
       }
     } catch (error) {
       console.error("[v0] Error getting reminder:", reminderId, error)
@@ -423,6 +426,52 @@ export class ReminderService {
       return reminders
     } catch (error) {
       console.error("[v0] Error getting user reminders with details:", error)
+      throw error
+    }
+  }
+
+  /**
+   * Get unclaimed reward pool amount for a confirmed reminder
+   */
+  async getUnclaimedRewardPool(reminderId: number): Promise<string> {
+    try {
+      await this.ensureContracts()
+      const unclaimedAmount = await this.vaultContract.getUnclaimedAmount(reminderId)
+      return Math.floor(Number(formatUnits(unclaimedAmount, 18))).toString()
+    } catch (error) {
+      console.error("[v0] Error getting unclaimed reward pool:", error)
+      return "0"
+    }
+  }
+
+  /**
+   * Check if user can withdraw unclaimed rewards (V3 feature)
+   */
+  async canWithdrawUnclaimed(reminderId: number): Promise<boolean> {
+    try {
+      await this.ensureContracts()
+      return await this.vaultContract.canWithdrawUnclaimed(reminderId)
+    } catch (error) {
+      console.error("[v0] Error checking canWithdrawUnclaimed:", error)
+      return false
+    }
+  }
+
+  /**
+   * Withdraw unclaimed rewards after 24 hours (V3 feature)
+   */
+  async withdrawUnclaimedRewards(reminderId: number): Promise<void> {
+    try {
+      await this.ensureContracts()
+      console.log("[v0] Withdrawing unclaimed rewards for reminder:", reminderId)
+      const tx = await this.vaultContract.withdrawUnclaimedRewards(reminderId)
+      await tx.wait()
+      console.log("[v0] Unclaimed rewards withdrawn successfully")
+    } catch (error: any) {
+      console.error("[v0] Error withdrawing unclaimed rewards:", error)
+      if (error.code === "ACTION_REJECTED") {
+        throw new Error("Transaction rejected by user")
+      }
       throw error
     }
   }
