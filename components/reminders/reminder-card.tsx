@@ -25,6 +25,7 @@ interface Reminder {
   totalHelpers?: number
   unclaimedRewardPool?: number
   canWithdrawUnclaimed?: boolean // Added for V3 withdraw feature
+  canBurn?: boolean // Added canBurn flag
 }
 
 interface ReminderCardProps {
@@ -35,6 +36,7 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
   const [isConfirming, setIsConfirming] = useState(false)
   const [isClaiming, setIsClaiming] = useState(false)
   const [isWithdrawing, setIsWithdrawing] = useState(false) // Added for V3 withdraw
+  const [isBurning, setIsBurning] = useState(false) // Added burning state
   const service = useReminderService()
   const { toast } = useToast()
 
@@ -138,6 +140,40 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
       })
     } finally {
       setIsWithdrawing(false)
+    }
+  }
+
+  const handleBurn = async () => {
+    if (!service) {
+      toast({
+        title: "Not Connected",
+        description: "Please connect your wallet",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsBurning(true)
+
+    try {
+      console.log("[v0] Burning missed reminder:", reminder.id)
+      await service.burnMissedReminder(reminder.id)
+
+      toast({
+        title: "Reminder Burned",
+        description: `Commitment tokens burned. Reward pool of ${Math.floor(reminder.tokenAmount / 2)} ${TOKEN_SYMBOL} returned to you.`,
+      })
+
+      window.location.reload()
+    } catch (error: any) {
+      console.error("[v0] Error burning reminder:", error)
+      toast({
+        title: "Burn Failed",
+        description: error.message || "Failed to burn reminder",
+        variant: "destructive",
+      })
+    } finally {
+      setIsBurning(false)
     }
   }
 
@@ -264,6 +300,11 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
             {reminder.canClaim && reminder.claimableReward && reminder.claimableReward > 0 && (
               <Button onClick={handleClaimReward} variant="secondary" size="lg" disabled={isClaiming}>
                 {isClaiming ? "Claiming..." : `Claim ${reminder.claimableReward} ${TOKEN_SYMBOL}`}
+              </Button>
+            )}
+            {reminder.canBurn && (
+              <Button onClick={handleBurn} variant="destructive" size="lg" disabled={isBurning}>
+                {isBurning ? "Burning..." : "Burn Missed Reminder"}
               </Button>
             )}
             {reminder.status === "pending" && (

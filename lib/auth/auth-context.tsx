@@ -160,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const connectFarcaster = async () => {
     try {
+      // Check if in miniapp (Frame SDK)
       if (typeof window !== "undefined" && window.parent !== window) {
         try {
           const sdk = await import("@farcaster/frame-sdk")
@@ -231,7 +232,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      alert("Please open this app in Warpcast to connect with Farcaster, or connect with your wallet instead.")
+      console.log("[v0] Opening Farcaster web auth...")
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app"
+
+      // Open Farcaster auth in popup window
+      const width = 500
+      const height = 700
+      const left = window.screen.width / 2 - width / 2
+      const top = window.screen.height / 2 - height / 2
+
+      const authUrl = `/api/farcaster/auth?returnTo=${encodeURIComponent(window.location.href)}`
+      const popup = window.open(authUrl, "Farcaster Sign In", `width=${width},height=${height},left=${left},top=${top}`)
+
+      // Listen for auth completion
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return
+
+        if (event.data.type === "FARCASTER_AUTH_SUCCESS") {
+          const userData = event.data.user
+          console.log("[v0] Farcaster web auth successful:", userData)
+
+          const farcasterUser: FarcasterUser = {
+            fid: userData.fid,
+            username: userData.username,
+            displayName: userData.displayName,
+            pfpUrl: userData.pfpUrl,
+            walletAddress: userData.walletAddress,
+          }
+
+          setFarcasterUser(farcasterUser)
+          localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+
+          if (farcasterUser.walletAddress) {
+            setAddress(farcasterUser.walletAddress)
+          }
+
+          popup?.close()
+          window.removeEventListener("message", handleMessage)
+        }
+      }
+
+      window.addEventListener("message", handleMessage)
+
+      // Cleanup if popup is closed
+      const checkClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkClosed)
+          window.removeEventListener("message", handleMessage)
+        }
+      }, 500)
     } catch (error) {
       console.error("Error connecting Farcaster:", error)
       alert("Failed to connect with Farcaster. Please try again.")
@@ -284,20 +333,117 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const inFrame = window.self !== window.top
 
       if (inFrame) {
-        // Wait for Frame SDK to be ready before auto-connecting
+        console.log("[v0] Detected miniapp frame, initializing Frame SDK...")
+
         setTimeout(async () => {
           try {
             const sdk = await import("@farcaster/frame-sdk")
+
+            console.log("[v0] Calling sdk.actions.ready()...")
+            await sdk.default.actions.ready()
+            console.log("[v0] SDK ready signal sent")
+
             const context = await sdk.default.context
+            console.log("[v0] Full Frame SDK context:", JSON.stringify(context, null, 2))
 
             if (context?.user) {
-              console.log("[v0] Auto-connecting Farcaster miniapp user")
-              await connectFarcaster()
+              console.log("[v0] Frame SDK user found:", context.user)
+
+              let walletAddr = null
+
+              // Method 1: From context.client
+              if (context.client) {
+                walletAddr =
+                  context.client.walletAddress ||
+                  context.client.ethProvider?.selectedAddress ||
+                  context.client.ethProvider?.address
+
+                console.log("[v0] Wallet from context.client:", walletAddr)
+              }
+
+              // Method 2: Request from eth provider
+              if (!walletAddr && context.client?.ethProvider) {
+                try {
+                  const accounts = await context.client.ethProvider.request({ method: "eth_accounts" })
+                  if (accounts && accounts.length > 0) {
+                    walletAddr = accounts[0]
+                    console.log("[v0] Wallet from eth_accounts:", walletAddr)
+                  }
+                } catch (err) {
+                  console.log("[v0] eth_accounts error:", err)
+                }
+              }
+
+              console.log("[v0] Final wallet address extracted:", walletAddr)
+
+              try {
+                const response = await fetch(`/api/farcaster/user?fid=${context.user.fid}`)
+                if (response.ok) {
+                  const neynarData = await response.json()
+                  const farcasterUser: FarcasterUser = {
+                    fid: neynarData.fid,
+                    username: neynarData.username,
+                    displayName: neynarData.displayName,
+                    pfpUrl: neynarData.pfpUrl,
+                    walletAddress: walletAddr || neynarData.custodyAddress || neynarData.verifiedAddresses?.[0],
+                  }
+
+                  setFarcasterUser(farcasterUser)
+                  localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+
+                  if (farcasterUser.walletAddress) {
+                    console.log("[v0] Setting wallet address:", farcasterUser.walletAddress)
+                    setAddress(farcasterUser.walletAddress)
+
+                    if (typeof window !== "undefined") {
+                      ;(window as any).__frameSDK = sdk.default
+                      ;(window as any).__frameContext = context
+                    }
+
+                    const { JsonRpcProvider } = await import("ethers")
+                    const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
+                    setSigner(provider)
+                  }
+
+                  console.log("[v0] Auto-connect successful with Farcaster user:", farcasterUser)
+                  return
+                }
+              } catch (apiError) {
+                console.error("[v0] Neynar API error:", apiError)
+              }
+
+              const farcasterUser: FarcasterUser = {
+                fid: context.user.fid ?? 0,
+                username: context.user.username ?? "user",
+                displayName: context.user.displayName ?? context.user.username ?? "User",
+                pfpUrl: context.user.pfpUrl ?? "/abstract-profile.png",
+                walletAddress: walletAddr,
+              }
+
+              setFarcasterUser(farcasterUser)
+              localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+
+              if (farcasterUser.walletAddress) {
+                setAddress(farcasterUser.walletAddress)
+
+                if (typeof window !== "undefined") {
+                  ;(window as any).__frameSDK = sdk.default
+                  ;(window as any).__frameContext = context
+                }
+
+                const { JsonRpcProvider } = await import("ethers")
+                const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
+                setSigner(provider)
+              }
+
+              console.log("[v0] Auto-connect successful via SDK:", farcasterUser)
+            } else {
+              console.log("[v0] No user found in Frame SDK context")
             }
           } catch (error) {
-            console.log("[v0] Frame SDK not available for auto-connect")
+            console.error("[v0] Frame SDK initialization error:", error)
           }
-        }, 1500)
+        }, 3000) // Increased to 3 seconds for web miniapp
       }
     }
   }

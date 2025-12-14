@@ -31,12 +31,13 @@ export async function GET(request: NextRequest) {
     const errors = []
 
     const reminderCount = await vaultContract.nextReminderId()
+    console.log(`[v0] Cron: Checking ${reminderCount} reminders for expiration`)
 
     for (let i = 0; i < Number(reminderCount); i++) {
       try {
         const reminder = await vaultContract.reminders(i)
-        const [
-          user,
+
+        let user,
           commitAmount,
           rewardPoolAmount,
           reminderTime,
@@ -46,17 +47,51 @@ export async function GET(request: NextRequest) {
           description,
           farcasterUsername,
           totalReminders,
-          rewardsClaimed,
-        ] = reminder
+          rewardsClaimed
+
+        if (reminder.length === 12) {
+          // V3 contract with confirmationTime field at index 11
+          ;[
+            user,
+            commitAmount,
+            rewardPoolAmount,
+            reminderTime,
+            confirmationDeadline,
+            confirmed,
+            burned,
+            description,
+            farcasterUsername,
+            totalReminders,
+            rewardsClaimed,
+            // confirmationTime (not used here)
+          ] = reminder
+        } else {
+          // V2 contract without confirmationTime
+          ;[
+            user,
+            commitAmount,
+            rewardPoolAmount,
+            reminderTime,
+            confirmationDeadline,
+            confirmed,
+            burned,
+            description,
+            farcasterUsername,
+            totalReminders,
+            rewardsClaimed,
+          ] = reminder
+        }
 
         // Skip already processed reminders
         if (confirmed || burned) continue
 
         if (currentTime > Number(confirmationDeadline)) {
+          console.log(`[v0] Cron: Burning expired reminder ${i} for ${farcasterUsername || "wallet user"}`)
+
           // Burns 50% commitment tokens to 0xdead
           // Returns 50% reward pool to user
           const tx = await vaultContract.burnMissedReminder(i)
-          await tx.wait()
+          const receipt = await tx.wait()
 
           processedReminders.push({
             id: i,
@@ -67,9 +102,13 @@ export async function GET(request: NextRequest) {
             rewardPoolReturned: ethers.formatUnits(rewardPoolAmount, 18),
             helpersCount: Number(totalReminders),
             txHash: tx.hash,
+            blockNumber: receipt.blockNumber,
           })
+
+          console.log(`[v0] Cron: Successfully burned reminder ${i}, tx: ${tx.hash}`)
         }
       } catch (error: any) {
+        console.error(`[v0] Cron: Error processing reminder ${i}:`, error.message)
         errors.push({
           id: i,
           error: error.message,
@@ -77,15 +116,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const response = {
       success: true,
       timestamp: new Date().toISOString(),
+      totalChecked: Number(reminderCount),
       processed: processedReminders.length,
       reminders: processedReminders,
       errors: errors.length > 0 ? errors : undefined,
-    })
+    }
+
+    console.log(`[v0] Cron: Completed. Processed ${processedReminders.length} expired reminders`)
+
+    return NextResponse.json(response)
   } catch (error: any) {
-    console.error("Cron job error:", error)
+    console.error("[v0] Cron job error:", error)
     return NextResponse.json({ error: "Cron job failed", message: error.message }, { status: 500 })
   }
 }

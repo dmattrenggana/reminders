@@ -18,7 +18,8 @@ export interface Reminder {
   claimableReward?: number
   totalHelpers?: number
   unclaimedRewardPool?: number
-  canWithdrawUnclaimed?: boolean // Added for V3 withdraw feature
+  canWithdrawUnclaimed: boolean // Added for V3 withdraw feature
+  canBurn?: boolean // Added for V3 burn feature
 }
 
 export function useReminders() {
@@ -40,6 +41,9 @@ export function useReminders() {
         status = "burned"
       } else if (data.confirmed) {
         status = "completed"
+      } else if (now > confirmationDeadline.getTime()) {
+        // Expired and not confirmed = should be burned
+        status = "burned"
       } else if (now >= notificationStartTime && now <= confirmationDeadline.getTime()) {
         status = "active"
       } else {
@@ -82,6 +86,11 @@ export function useReminders() {
         canWithdrawUnclaimed = await service.canWithdrawUnclaimed(data.id)
       }
 
+      let canBurn = false
+      if (!data.confirmed && !data.burned && now > confirmationDeadline.getTime()) {
+        canBurn = true
+      }
+
       return {
         id: data.id,
         description: data.description,
@@ -94,7 +103,8 @@ export function useReminders() {
         claimableReward,
         totalHelpers,
         unclaimedRewardPool,
-        canWithdrawUnclaimed, // Added for V3
+        canWithdrawUnclaimed,
+        canBurn, // Added canBurn to return object
       }
     } catch (err) {
       console.error("[v0] Error mapping reminder data:", err)
@@ -111,6 +121,7 @@ export function useReminders() {
         totalHelpers: 0,
         unclaimedRewardPool: 0,
         canWithdrawUnclaimed: false,
+        canBurn: false, // Added canBurn to return object
       }
     }
   }
