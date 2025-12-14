@@ -28,8 +28,15 @@ export default function FeedPage() {
   const [reminders, setReminders] = useState<PublicReminder[]>([])
   const [loading, setLoading] = useState(true)
   const [processingReminder, setProcessingReminder] = useState<number | null>(null)
+  const [isInMiniapp, setIsInMiniapp] = useState(false)
   const cardRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
   const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const inFrame = typeof window !== "undefined" && window.self !== window.top
+    setIsInMiniapp(inFrame)
+    console.log("[v0] Running in Farcaster miniapp:", inFrame)
+  }, [])
 
   useEffect(() => {
     loadPublicReminders()
@@ -53,20 +60,13 @@ export default function FeedPage() {
   }, [reminders, searchParams])
 
   useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible") {
-        const pendingReminderId = localStorage.getItem("pendingReminderRecord")
-        if (pendingReminderId && walletAddress && farcasterUser) {
-          console.log("[v0] User returned from posting, auto-recording reminder:", pendingReminderId)
-          localStorage.removeItem("pendingReminderRecord")
-          await handleRecordReminder(Number(pendingReminderId))
-        }
-      }
+    const pendingClaim = searchParams.get("claim")
+    if (pendingClaim && walletAddress && farcasterUser) {
+      const reminderId = Number.parseInt(pendingClaim)
+      console.log("[v0] Detected pending claim from URL param:", reminderId)
+      handleRecordReminder(reminderId)
     }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
-  }, [walletAddress, farcasterUser])
+  }, [searchParams, walletAddress, farcasterUser])
 
   const loadPublicReminders = async () => {
     try {
@@ -82,6 +82,18 @@ export default function FeedPage() {
   }
 
   const handleRemindAndClaim = async (reminder: PublicReminder) => {
+    console.log("[v0] Button clicked, farcasterUser:", farcasterUser, "walletAddress:", walletAddress)
+
+    if (isInMiniapp && !farcasterUser) {
+      console.log("[v0] Waiting for Farcaster user to load in miniapp...")
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      if (!farcasterUser) {
+        alert("Please refresh the app to connect your Farcaster account")
+        return
+      }
+    }
+
     if (!farcasterUser) {
       alert("Please connect your Farcaster account first")
       return
@@ -92,7 +104,6 @@ export default function FeedPage() {
       if (shouldConnect) {
         try {
           await connectWallet()
-          // Wait a bit for state to update
           await new Promise((resolve) => setTimeout(resolve, 500))
         } catch (error) {
           alert("Failed to connect wallet. Please try again.")
@@ -107,6 +118,7 @@ export default function FeedPage() {
       setProcessingReminder(reminder.id)
 
       const appUrl = "https://remindersbase.vercel.app"
+      const returnUrl = `${appUrl}/feed?reminder=${reminder.id}&claim=${reminder.id}`
       const frameUrl = `${appUrl}/api/frame/${reminder.id}`
 
       const timeStr = new Date(reminder.reminderTime).toLocaleString("en-US", {
@@ -127,16 +139,12 @@ export default function FeedPage() {
 Reminder time: ${timeStr}
 Reward pool: ${reminder.rewardPoolAmount} COMMIT tokens
 
-Help them stay accountable: ${frameUrl}`
+Help them stay accountable: ${returnUrl}`
 
       const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}&embeds[]=${encodeURIComponent(frameUrl)}`
 
-      console.log("[v0] Opening Warpcast compose...")
+      console.log("[v0] Opening Warpcast compose with return URL:", returnUrl)
 
-      // Store the reminder ID to record after posting
-      localStorage.setItem("pendingReminderRecord", reminder.id.toString())
-
-      // Open Warpcast in same window
       window.location.href = warpcastUrl
     } catch (error) {
       console.error("Error in remind and claim flow:", error)
@@ -167,7 +175,6 @@ Help them stay accountable: ${frameUrl}`
 
       const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V2_ABI, signer)
 
-      // Get Neynar score
       console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
       const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
       const { score } = await scoreResponse.json()
@@ -180,7 +187,6 @@ Help them stay accountable: ${frameUrl}`
       const receipt = await tx.wait()
       console.log("[v0] Transaction confirmed:", receipt)
 
-      // Parse event to get reward amount
       const rewardClaimedEvent = receipt.logs.find((log: any) => {
         try {
           const parsed = vaultContract.interface.parseLog(log)
@@ -250,6 +256,7 @@ Help them stay accountable: ${frameUrl}`
           reminders.map((reminder) => {
             const isProcessing = processingReminder === reminder.id
             const alreadyRecorded = reminder.hasRecorded
+            const canClick = isInMiniapp || farcasterUser
 
             return (
               <Card
@@ -303,9 +310,10 @@ Help them stay accountable: ${frameUrl}`
                     ) : (
                       <Button
                         onClick={() => handleRemindAndClaim(reminder)}
-                        disabled={!reminder.canRemind || !farcasterUser || isProcessing}
-                        className="flex-1"
+                        disabled={!reminder.canRemind || isProcessing}
+                        className="flex-1 cursor-pointer"
                         size="sm"
+                        style={{ pointerEvents: "auto" }}
                       >
                         {isProcessing ? (
                           <>
@@ -315,7 +323,7 @@ Help them stay accountable: ${frameUrl}`
                         ) : (
                           <>
                             <Bell className="h-4 w-4 mr-2" />
-                            {!farcasterUser
+                            {!canClick
                               ? "Connect Farcaster to Remind"
                               : !reminder.canRemind
                                 ? "Not in remind window yet"
