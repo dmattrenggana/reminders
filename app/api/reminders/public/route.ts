@@ -4,6 +4,8 @@ import { CONTRACTS, REMINDER_VAULT_V2_ABI } from "@/lib/contracts/config"
 export async function GET(request: NextRequest) {
   try {
     const { ethers } = await import("ethers")
+    const searchParams = request.nextUrl.searchParams
+    const walletAddress = searchParams.get("walletAddress")
 
     if (!process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL) {
       return NextResponse.json({ error: "RPC URL not configured" }, { status: 500 })
@@ -22,7 +24,18 @@ export async function GET(request: NextRequest) {
         const reminderData = await vaultContract.reminders(Number(id))
         const canRemindNow = await vaultContract.canRemind(Number(id))
 
-        // reminderData structure: [user, commitAmount, rewardPoolAmount, reminderTime, confirmationDeadline, confirmed, burned, description, farcasterUsername, totalReminders, rewardsClaimed]
+        let hasRecorded = false
+        if (walletAddress) {
+          try {
+            const claimData = await vaultContract.remindClaims(Number(id), walletAddress)
+            hasRecorded = claimData.claimed
+          } catch (error) {
+            console.log(`[API] Could not check claim status for ${walletAddress}:`, error)
+          }
+        }
+
+        const isV3 = reminderData.length >= 12
+
         reminders.push({
           id: Number(id),
           user: reminderData[0],
@@ -32,6 +45,7 @@ export async function GET(request: NextRequest) {
           rewardPoolAmount: Number(ethers.formatUnits(reminderData[2], 18)),
           totalReminders: Number(reminderData[9]),
           canRemind: canRemindNow,
+          hasRecorded,
         })
       } catch (error) {
         console.error(`[API] Error loading reminder ${id}:`, error)

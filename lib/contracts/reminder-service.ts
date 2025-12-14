@@ -289,35 +289,48 @@ export class ReminderService {
       console.log("[v0] Fetching reminder data for ID:", reminderId)
       const data = await this.vaultContract.reminders(reminderId)
 
-      console.log("[v0] Reminder data received:", {
-        user: data[0],
-        commitAmount: data[1].toString(),
-        rewardPoolAmount: data[2].toString(),
-        reminderTime: data[3].toString(),
-        confirmationDeadline: data[4].toString(),
-        confirmed: data[5],
-        burned: data[6],
-        description: data[7],
-        farcasterUsername: data[8],
-        totalReminders: Number(data[9]),
-        rewardsClaimed: data[10].toString(),
-        confirmationTime: data[11].toString(),
-      })
+      console.log("[v0] Reminder data array length:", data.length)
+      console.log("[v0] Full data array:", data)
 
-      return {
-        id: reminderId,
-        user: data[0],
-        commitmentAmount: data[1],
-        rewardPoolAmount: data[2],
-        reminderTime: data[3],
-        confirmationDeadline: data[4],
-        confirmed: data[5],
-        burned: data[6],
-        description: data[7],
-        farcasterUsername: data[8],
-        totalReminders: Number(data[9]),
-        rewardsClaimed: data[10],
-        confirmationTime: data[11], // Added confirmationTime
+      // Check if this is V2 (11 fields) or V3 (12 fields)
+      if (data.length === 11) {
+        console.warn("[v0] ⚠️ Contract appears to be V2 (11 fields), not V3 (12 fields)")
+        // V2 format (no confirmationTime)
+        return {
+          id: reminderId,
+          user: data[0],
+          commitmentAmount: data[1],
+          rewardPoolAmount: data[2],
+          reminderTime: data[3],
+          confirmationDeadline: data[4],
+          confirmed: data[5],
+          burned: data[6],
+          description: data[7],
+          farcasterUsername: data[8],
+          totalReminders: Number(data[9]),
+          rewardsClaimed: data[10],
+          confirmationTime: BigInt(0), // Default value for V2
+        }
+      } else if (data.length === 12) {
+        console.log("[v0] ✅ Contract is V3 (12 fields)")
+        // V3 format (with confirmationTime)
+        return {
+          id: reminderId,
+          user: data[0],
+          commitmentAmount: data[1],
+          rewardPoolAmount: data[2],
+          reminderTime: data[3],
+          confirmationDeadline: data[4],
+          confirmed: data[5],
+          burned: data[6],
+          description: data[7],
+          farcasterUsername: data[8],
+          totalReminders: Number(data[9]),
+          rewardsClaimed: data[10],
+          confirmationTime: data[11],
+        }
+      } else {
+        throw new Error(`Unexpected data length: ${data.length}. Expected 11 (V2) or 12 (V3)`)
       }
     } catch (error) {
       console.error("[v0] Error getting reminder:", reminderId, error)
