@@ -75,35 +75,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const checkWalletConnection = async () => {
-    console.log("[v0] ===== CHECKING WALLET CONNECTION =====")
     if (typeof window !== "undefined" && window.ethereum) {
       try {
         const { BrowserProvider } = await import("ethers")
         const provider = new BrowserProvider(window.ethereum)
         const accounts = await provider.listAccounts()
-        console.log("[v0] Found accounts:", accounts.length)
 
         if (accounts.length > 0) {
           const signer = await provider.getSigner()
           const address = await signer.getAddress()
           const network = await provider.getNetwork()
 
-          console.log("[v0] ✅ Wallet connected:", address)
-          console.log("[v0] Network:", network.chainId)
-
           setAddress(address)
           setSigner(signer)
           setChainId(Number(network.chainId))
-        } else {
-          console.log("[v0] No accounts found")
         }
       } catch (error) {
         console.error("[v0] Error checking wallet connection:", error)
       }
-    } else {
-      console.log("[v0] No ethereum provider found")
     }
-    console.log("[v0] ===== WALLET CONNECTION CHECK COMPLETE =====")
   }
 
   const checkFarcasterConnection = async () => {
@@ -237,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const farcasterUser: FarcasterUser = {
               fid: user.fid ?? 0,
               username: user.username ?? "user",
-              displayName: user.displayName ?? user.username ?? "User",
+              displayName: user.displayName || user.username || "User",
               pfpUrl: validPfpUrl,
               walletAddress: validClientWallet,
             }
@@ -385,41 +375,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const sdk = await import("@farcaster/frame-sdk")
           console.log("[v0] Frame SDK loaded")
 
-          try {
-            await Promise.race([
-              sdk.default.actions.ready(),
-              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000)),
-            ])
-            console.log("[v0] SDK ready completed")
-          } catch {
-            console.log("[v0] SDK ready timeout, continuing anyway")
-          }
+          await sdk.default.actions.ready()
+          console.log("[v0] SDK ready completed")
 
-          let context
-          try {
-            context = sdk.context
-          } catch {
-            console.log("[v0] Trying alternative context access...")
-            context = (sdk as any).default?.context
-          }
+          const context = sdk.default.context
 
-          if (!context) {
-            console.log("[v0] No context available from Frame SDK")
-            return
-          }
-
-          const user = context.user
-          if (!user || !user.fid) {
+          if (!context?.user?.fid) {
             console.log("[v0] No valid user found in context")
             return
           }
 
-          console.log("[v0] Found user FID:", user.fid)
-
+          const user = context.user
           let walletAddr: string | undefined = undefined
 
           try {
-            const ethProvider = sdk.default?.wallet?.ethProvider || (sdk as any).wallet?.ethProvider
+            const ethProvider = sdk.default?.wallet?.ethProvider
             if (ethProvider) {
               console.log("[v0] Requesting wallet access...")
               const accounts = await ethProvider.request({ method: "eth_requestAccounts" })
@@ -459,9 +429,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           const farcasterUser: FarcasterUser = {
-            fid: user.fid ?? 0,
-            username: user.username ?? "user",
-            displayName: user.displayName ?? user.username ?? "User",
+            fid: user.fid,
+            username: user.username || "user",
+            displayName: user.displayName || user.username || "User",
             pfpUrl: typeof user.pfpUrl === "string" && user.pfpUrl.length > 0 ? user.pfpUrl : "/abstract-profile.png",
             walletAddress: walletAddr,
           }
@@ -475,10 +445,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setAddress(farcasterUser.walletAddress)
 
             try {
-              const { JsonRpcProvider } = await import("ethers")
-              const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
-              setSigner(provider)
-              console.log("[v0] ✅ Provider created for wallet address")
+              const frameProvider = (window as any).__frameEthProvider
+              if (frameProvider) {
+                const { BrowserProvider } = await import("ethers")
+                const provider = new BrowserProvider(frameProvider)
+                setSigner(await provider.getSigner())
+              } else {
+                // Fallback to read-only provider
+                const { JsonRpcProvider } = await import("ethers")
+                const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
+                setSigner(provider)
+              }
             } catch {
               console.log("[v0] Could not create provider")
             }

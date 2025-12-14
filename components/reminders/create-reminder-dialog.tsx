@@ -61,7 +61,6 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
   }
 
   const handleCreate = async () => {
-    console.log("[v0] ===== DIALOG: Starting handleCreate =====")
     setTxStatus("Checking fields...")
 
     if (!description || !tokenAmount || !date || !time) {
@@ -75,7 +74,6 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
     }
 
     if (!service) {
-      console.error("[v0] DIALOG: Service not available")
       toast({
         title: "Not Connected",
         description: "Please connect your wallet first",
@@ -95,7 +93,6 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       return
     }
 
-    console.log("[v0] DIALOG: All validation passed, setting isCreating to true")
     setIsCreating(true)
     setTxStatus("Preparing transaction...")
 
@@ -103,25 +100,16 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       const reminderDate = new Date(date)
       reminderDate.setHours(Number.parseInt(hours), Number.parseInt(minutes), 0, 0)
 
-      console.log("[v0] DIALOG: Prepared reminder date:", reminderDate.toISOString())
-      console.log("[v0] DIALOG: Token amount:", tokenAmount)
-      console.log("[v0] DIALOG: Description:", description)
-      console.log("[v0] DIALOG: Farcaster username:", farcasterUser?.username || "none")
-
-      console.log("[v0] DIALOG: Calling service.createReminder...")
-
       const reminderId = await service.createReminder(
         tokenAmount,
         reminderDate,
         description,
         farcasterUser?.username,
         (status) => {
-          console.log("[v0] DIALOG: Progress update:", status)
           setTxStatus(status)
         },
       )
 
-      console.log("[v0] DIALOG: ✅ Reminder created successfully! ID:", reminderId)
       setTxStatus("✅ Reminder created!")
 
       toast({
@@ -143,15 +131,8 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
         setTxStatus("")
         onOpenChange(false)
       }, 2000)
-
-      console.log("[v0] DIALOG: ===== DIALOG: handleCreate completed successfully =====")
     } catch (error: any) {
-      console.error("[v0] DIALOG: ❌❌ Error in handleCreate:", error)
-      console.error("[v0] DIALOG: Error name:", error.name)
-      console.error("[v0] DIALOG: Error message:", error.message)
-      console.error("[v0] DIALOG: Error stack:", error.stack)
-      console.error("[v0] DIALOG: Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)))
-
+      console.error("[v0] Error creating reminder:", error)
       setTxStatus("")
       toast({
         title: "Creation Failed",
@@ -159,7 +140,6 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
         variant: "destructive",
       })
     } finally {
-      console.log("[v0] DIALOG: Finally block - setting isCreating to false")
       setIsCreating(false)
     }
   }

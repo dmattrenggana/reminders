@@ -66,6 +66,21 @@ export class ReminderService {
     if (!this.vaultContract || !this.tokenContract) {
       await this.initializeContracts()
     }
+
+    if (typeof window !== "undefined") {
+      const frameProvider = (window as any).__frameEthProvider
+      if (frameProvider && this.signer) {
+        try {
+          const { BrowserProvider } = await import("ethers")
+          const provider = new BrowserProvider(frameProvider)
+          const signer = await provider.getSigner()
+
+          const { Contract } = await import("ethers")
+          this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, signer)
+          this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
+        } catch {}
+      }
+    }
   }
 
   /**
