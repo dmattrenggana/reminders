@@ -85,7 +85,12 @@ export class ReminderService {
   /**
    * Create a new reminder with token commitment
    */
-  async createReminder(tokenAmount: string, reminderTime: Date, description: string): Promise<number> {
+  async createReminder(
+    tokenAmount: string,
+    reminderTime: Date,
+    description: string,
+    farcasterUsername?: string,
+  ): Promise<number> {
     try {
       await this.ensureContracts()
       const amountInWei = parseUnits(tokenAmount, 18)
@@ -97,6 +102,7 @@ export class ReminderService {
         amountInWei: amountInWei.toString(),
         reminderTimestamp,
         description,
+        farcasterUsername: farcasterUsername || "wallet-user",
       })
 
       const userAddress = await this.signer.getAddress()
@@ -129,9 +135,11 @@ export class ReminderService {
       console.log("[v0] Step 3: Calling createReminder on vault contract...")
       console.log("[v0] Contract address:", this.vaultContract.target || this.vaultContract.address)
 
+      const username = farcasterUsername || `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`
+
       let createTx
       try {
-        createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description)
+        createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description, username)
         console.log("[v0] ✅ CreateReminder transaction sent:", createTx.hash)
       } catch (vaultError: any) {
         console.error("[v0] ❌ Error calling vault.createReminder:", vaultError)

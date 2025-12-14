@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import { useReminderService } from "@/hooks/use-reminder-service"
 import { useTokenBalance } from "@/hooks/use-token-balance"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth/auth-context"
 import { TOKEN_SYMBOL } from "@/lib/contracts/config"
 import { addHours, startOfDay, startOfToday } from "date-fns"
 
@@ -36,6 +37,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
   const service = useReminderService()
   const { balance } = useTokenBalance()
   const { toast } = useToast()
+  const { farcasterUser } = useAuth()
 
   const setQuickReminder = (hoursFromNow: number) => {
     const now = new Date()
@@ -92,7 +94,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       reminderDate.setHours(Number(hours), Number(minutes), 0, 0)
 
       console.log("[v0] Creating reminder on blockchain...")
-      const reminderId = await service.createReminder(tokenAmount, reminderDate, description)
+      const reminderId = await service.createReminder(tokenAmount, reminderDate, description, farcasterUser?.username)
 
       console.log("[v0] Reminder created with ID:", reminderId)
 
