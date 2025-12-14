@@ -73,6 +73,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  useEffect(() => {
+    // Only run in miniapp (iframe context)
+    if (typeof window !== "undefined" && window.self !== window.top) {
+      const initMiniapp = async () => {
+        try {
+          console.log("[v0] Miniapp detected, initializing Frame SDK...")
+          const sdk = await import("@farcaster/frame-sdk")
+
+          // Call ready immediately to dismiss splash screen
+          sdk.default.actions.ready()
+          console.log("[v0] Frame SDK ready() called - splash screen should dismiss")
+
+          // Store SDK globally for later use
+          ;(window as any).__frameSdk = sdk.default
+        } catch (error) {
+          console.error("[v0] Error initializing miniapp:", error)
+          // Fallback: try to dismiss splash with postMessage
+          try {
+            window.parent.postMessage({ type: "frame-ready" }, "*")
+          } catch (e) {
+            // Silent fail
+          }
+        }
+      }
+
+      initMiniapp()
+    }
+  }, [])
+
   const checkWalletConnection = async () => {
     if (typeof window !== "undefined" && window.ethereum) {
       try {
@@ -194,15 +223,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Check if in miniapp (Frame SDK)
       if (typeof window !== "undefined" && window.self !== window.top) {
-        console.log("[v0] Miniapp detected, loading Frame SDK...")
+        console.log("[v0] Miniapp detected, connecting with Frame SDK...")
 
         try {
-          const sdk = await import("@farcaster/frame-sdk")
-          console.log("[v0] Frame SDK module loaded")
+          // Use already loaded SDK if available
+          let sdk = (window as any).__frameSdk
+          if (!sdk) {
+            sdk = await import("@farcaster/frame-sdk")
+            sdk = sdk.default
+          }
 
-          sdk.default.actions.ready()
+          console.log("[v0] Frame SDK loaded")
 
-          await new Promise((resolve) => setTimeout(resolve, 300))
+          // Wait a bit for SDK to be fully ready
+          await new Promise((resolve) => setTimeout(resolve, 500))
 
           let userFid = 0
           let userName = ""
@@ -212,8 +246,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           try {
             // Extract FID first
-            if (sdk.default.context?.user?.fid) {
-              userFid = Number(sdk.default.context.user.fid)
+            if (sdk.context?.user?.fid) {
+              userFid = Number(sdk.context.user.fid)
             }
 
             if (userFid === 0) {
@@ -223,29 +257,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("[v0] Got FID from Frame SDK")
 
             // Extract username safely
-            if (sdk.default.context.user.username) {
-              userName = String(sdk.default.context.user.username)
+            if (sdk.context.user.username) {
+              userName = String(sdk.context.user.username)
             }
 
             // Extract display name safely
-            if (sdk.default.context.user.displayName) {
-              userDisplay = String(sdk.default.context.user.displayName)
+            if (sdk.context.user.displayName) {
+              userDisplay = String(sdk.context.user.displayName)
             }
 
             // Extract profile picture safely
-            if (sdk.default.context.user.pfpUrl) {
-              userPfp = String(sdk.default.context.user.pfpUrl)
+            if (sdk.context.user.pfpUrl) {
+              userPfp = String(sdk.context.user.pfpUrl)
             }
 
             // Try to get wallet address from client context
-            if (sdk.default.context.client?.walletAddress) {
-              walletAddr = String(sdk.default.context.client.walletAddress)
+            if (sdk.context.client?.walletAddress) {
+              walletAddr = String(sdk.context.client.walletAddress)
               console.log("[v0] Got wallet from client context")
             }
 
             if (!walletAddr) {
               try {
-                const ethProvider = sdk.default.wallet?.ethProvider
+                const ethProvider = sdk.wallet?.ethProvider
                 if (ethProvider) {
                   ;(window as any).__frameEthProvider = ethProvider
                   const accounts = (await ethProvider.request({ method: "eth_accounts", params: [] })) as string[]

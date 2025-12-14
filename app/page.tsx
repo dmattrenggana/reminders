@@ -3,43 +3,11 @@ import { UnifiedConnectButton } from "@/components/auth/unified-connect-button"
 import { ReminderDashboard } from "@/components/reminders/reminder-dashboard"
 import { useAuth } from "@/lib/auth/auth-context"
 import Image from "next/image"
-import { useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
 export default function HomePage() {
   const { isConnected, isFarcasterConnected } = useAuth()
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.parent !== window) {
-      const initFrameSDK = async () => {
-        try {
-          const sdk = await import("@farcaster/frame-sdk")
-
-          // Initialize the SDK with context
-          const context = await sdk.default.context
-          console.log("[v0] Frame SDK context loaded:", context)
-
-          // Call ready to dismiss splash screen
-          sdk.default.actions.ready()
-          console.log("[v0] Frame SDK ready() called successfully")
-        } catch (error) {
-          console.error("[v0] Error with Frame SDK:", error)
-
-          // Fallback: send frame-ready postMessage
-          try {
-            window.parent.postMessage({ type: "frame-ready" }, "*")
-            console.log("[v0] Sent fallback frame-ready message")
-          } catch (postError) {
-            console.log("[v0] Could not notify parent frame")
-          }
-        }
-      }
-
-      // Call immediately
-      initFrameSDK()
-    }
-  }, [])
 
   const isAuthenticated = isConnected || isFarcasterConnected
 
