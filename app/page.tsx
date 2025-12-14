@@ -1,6 +1,4 @@
 "use client"
-
-import { AuthGuard } from "@/components/auth/auth-guard"
 import { UnifiedConnectButton } from "@/components/auth/unified-connect-button"
 import { ReminderDashboard } from "@/components/reminders/reminder-dashboard"
 import { useAuth } from "@/lib/auth/auth-context"
@@ -16,24 +14,29 @@ export default function HomePage() {
     if (typeof window !== "undefined" && window.parent !== window) {
       const initFrameSDK = async () => {
         try {
-          // Import Frame SDK dynamically
           const sdk = await import("@farcaster/frame-sdk")
 
-          // Call ready to dismiss splash screen
-          await sdk.default.actions.ready()
-          console.log("[v0] Frame SDK ready called successfully")
-        } catch (error) {
-          console.error("[v0] Error calling Frame SDK ready:", error)
+          // Initialize the SDK with context
+          const context = await sdk.default.context
+          console.log("[v0] Frame SDK context loaded:", context)
 
-          // Fallback: send frame-ready message to parent
+          // Call ready to dismiss splash screen
+          sdk.default.actions.ready()
+          console.log("[v0] Frame SDK ready() called successfully")
+        } catch (error) {
+          console.error("[v0] Error with Frame SDK:", error)
+
+          // Fallback: send frame-ready postMessage
           try {
             window.parent.postMessage({ type: "frame-ready" }, "*")
+            console.log("[v0] Sent fallback frame-ready message")
           } catch (postError) {
             console.log("[v0] Could not notify parent frame")
           }
         }
       }
 
+      // Call immediately
       initFrameSDK()
     }
   }, [])
@@ -79,9 +82,13 @@ export default function HomePage() {
         {isAuthenticated ? (
           <ReminderDashboard />
         ) : (
-          <AuthGuard requireWallet={false} requireFarcaster={false}>
-            <ReminderDashboard />
-          </AuthGuard>
+          <div className="container mx-auto px-4 py-16 text-center max-w-2xl">
+            <h2 className="text-3xl font-bold mb-4">Welcome to Base Reminders</h2>
+            <p className="text-muted-foreground mb-8">
+              Create commitment-based reminders backed by token stakes. Never miss what matters most.
+            </p>
+            <UnifiedConnectButton />
+          </div>
         )}
       </main>
     </div>

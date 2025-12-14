@@ -24,37 +24,63 @@ export function useReminders() {
   const [error, setError] = useState<string | null>(null)
 
   const mapReminderData = async (data: ReminderData): Promise<Reminder> => {
-    const reminderTime = new Date(Number(data.reminderTime) * 1000)
-    const confirmationDeadline = new Date(Number(data.confirmationDeadline) * 1000)
-    const now = Date.now()
-    const notificationStartTime = reminderTime.getTime() - 60 * 60 * 1000 // 1 hour before
+    try {
+      const reminderTime = new Date(Number(data.reminderTime) * 1000)
+      const confirmationDeadline = new Date(Number(data.confirmationDeadline) * 1000)
+      const now = Date.now()
+      const notificationStartTime = reminderTime.getTime() - 60 * 60 * 1000 // 1 hour before
 
-    let status: Reminder["status"]
-    if (data.burned) {
-      status = "burned"
-    } else if (data.confirmed) {
-      status = "completed"
-    } else if (now >= notificationStartTime && now <= confirmationDeadline.getTime()) {
-      status = "active"
-    } else {
-      status = "pending"
-    }
+      let status: Reminder["status"]
+      if (data.burned) {
+        status = "burned"
+      } else if (data.confirmed) {
+        status = "completed"
+      } else if (now >= notificationStartTime && now <= confirmationDeadline.getTime()) {
+        status = "active"
+      } else {
+        status = "pending"
+      }
 
-    const canConfirm = service ? await service.canConfirm(data.id) : false
+      let canConfirm = false
+      try {
+        canConfirm = service ? await service.canConfirm(data.id) : false
+      } catch (err) {
+        console.error("[v0] Error checking canConfirm:", err)
+      }
 
-    return {
-      id: data.id,
-      description: data.description,
-      tokenAmount: Number.parseFloat(formatUnits(data.tokenAmount, 18)),
-      reminderTime,
-      confirmationDeadline,
-      status,
-      canConfirm,
+      return {
+        id: data.id,
+        description: data.description,
+        tokenAmount: Number.parseFloat(formatUnits(data.tokenAmount, 18)),
+        reminderTime,
+        confirmationDeadline,
+        status,
+        canConfirm,
+      }
+    } catch (err) {
+      console.error("[v0] Error mapping reminder data:", err)
+      // Return a safe default reminder object
+      return {
+        id: data.id,
+        description: data.description || "Unknown reminder",
+        tokenAmount: 0,
+        reminderTime: new Date(),
+        confirmationDeadline: new Date(),
+        status: "pending",
+        canConfirm: false,
+      }
     }
   }
 
   const loadReminders = useCallback(async () => {
-    if (!service || !address) {
+    if (!isConnected || !address) {
+      setReminders([])
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+
+    if (!service) {
       setIsLoading(false)
       return
     }
@@ -76,14 +102,19 @@ export function useReminders() {
     } catch (err: any) {
       console.error("[v0] Error loading reminders:", err)
       setError(err.message || "Failed to load reminders")
+      setReminders([])
     } finally {
       setIsLoading(false)
     }
-  }, [service, address])
+  }, [service, address, isConnected])
 
   useEffect(() => {
     if (isConnected && address) {
       loadReminders()
+    } else {
+      setReminders([])
+      setIsLoading(false)
+      setError(null)
     }
   }, [isConnected, address, loadReminders])
 

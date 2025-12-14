@@ -145,11 +145,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (typeof window !== "undefined" && window.parent !== window) {
         try {
-          const farcasterContext = (window as any).farcaster?.context || (window as any).frameContext
+          const sdk = await import("@farcaster/frame-sdk")
+          const context = await sdk.default.context
 
-          if (farcasterContext?.user) {
-            const user = farcasterContext.user
+          if (context?.user) {
+            const user = context.user
 
+            // Try to fetch enriched data from Neynar API
             try {
               const response = await fetch(`/api/farcaster/user?fid=${user.fid}`)
               if (response.ok) {
@@ -162,12 +164,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
                 setFarcasterUser(farcasterUser)
                 localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+                console.log("[v0] Farcaster user connected via SDK:", farcasterUser)
                 return
               }
             } catch (apiError) {
-              console.log("Neynar API not available, using context data only")
+              console.log("[v0] Neynar API not available, using SDK context data")
             }
 
+            // Use SDK context data directly
             const farcasterUser: FarcasterUser = {
               fid: user.fid ?? 0,
               username: user.username ?? "user",
@@ -177,10 +181,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             setFarcasterUser(farcasterUser)
             localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+            console.log("[v0] Farcaster user connected via SDK context:", farcasterUser)
             return
           }
-        } catch (contextError) {
-          console.log("Farcaster context not available")
+        } catch (sdkError) {
+          console.error("[v0] Frame SDK error:", sdkError)
         }
       }
 
@@ -235,16 +240,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const autoConnectMiniapp = async () => {
     if (typeof window !== "undefined" && !farcasterUser) {
       const inFrame = window.self !== window.top
-      const hasFrameContext =
-        !!(window as any).farcasterFrameContext ||
-        !!(window as any).farcaster?.context ||
-        !!(window as any).frameContext
 
-      if (inFrame || hasFrameContext) {
-        // Wait for Farcaster context to be available
-        setTimeout(() => {
-          connectFarcaster()
-        }, 1000)
+      if (inFrame) {
+        // Wait for Frame SDK to be ready before auto-connecting
+        setTimeout(async () => {
+          try {
+            const sdk = await import("@farcaster/frame-sdk")
+            const context = await sdk.default.context
+
+            if (context?.user) {
+              console.log("[v0] Auto-connecting Farcaster miniapp user")
+              await connectFarcaster()
+            }
+          } catch (error) {
+            console.log("[v0] Frame SDK not available for auto-connect")
+          }
+        }, 1500)
       }
     }
   }
