@@ -34,8 +34,10 @@ export default function FeedPage() {
 
   useEffect(() => {
     const inFrame = typeof window !== "undefined" && window.self !== window.top
-    setIsInMiniapp(inFrame)
-    console.log("[v0] Running in Farcaster miniapp:", inFrame)
+    const hasFrameSDK = typeof window !== "undefined" && (window as any).frameSDK !== undefined
+    const isMiniapp = inFrame || hasFrameSDK
+    setIsInMiniapp(isMiniapp)
+    console.log("[v0] Running in Farcaster miniapp:", isMiniapp)
   }, [])
 
   useEffect(() => {
@@ -86,7 +88,7 @@ export default function FeedPage() {
 
     if (isInMiniapp && !farcasterUser) {
       console.log("[v0] Waiting for Farcaster user to load in miniapp...")
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
       if (!farcasterUser) {
         alert("Please refresh the app to connect your Farcaster account")
@@ -310,10 +312,9 @@ Help them stay accountable: ${returnUrl}`
                     ) : (
                       <Button
                         onClick={() => handleRemindAndClaim(reminder)}
-                        disabled={!reminder.canRemind || isProcessing}
-                        className="flex-1 cursor-pointer"
+                        disabled={isInMiniapp ? isProcessing : !reminder.canRemind || isProcessing}
+                        className="flex-1"
                         size="sm"
-                        style={{ pointerEvents: "auto" }}
                       >
                         {isProcessing ? (
                           <>
@@ -323,11 +324,13 @@ Help them stay accountable: ${returnUrl}`
                         ) : (
                           <>
                             <Bell className="h-4 w-4 mr-2" />
-                            {!canClick
-                              ? "Connect Farcaster to Remind"
-                              : !reminder.canRemind
-                                ? "Not in remind window yet"
-                                : "Post & Claim Reward"}
+                            {isInMiniapp
+                              ? "Post & Claim Reward"
+                              : !farcasterUser
+                                ? "Connect Farcaster to Remind"
+                                : !reminder.canRemind
+                                  ? "Not in remind window yet"
+                                  : "Post & Claim Reward"}
                           </>
                         )}
                       </Button>
