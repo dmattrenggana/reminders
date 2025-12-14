@@ -213,50 +213,47 @@ Help them stay accountable: ${returnUrl}`
         const frameSDK = (window as any).__frameSDK
         const frameContext = (window as any).__frameContext
 
-        if (frameSDK && frameContext?.client?.ethProvider) {
-          console.log("[v0] Attempting transaction via Frame SDK...")
+        console.log("[v0] Attempting Frame SDK transaction...")
+        console.log("[v0] Frame SDK available:", !!frameSDK)
+        console.log("[v0] Frame context available:", !!frameContext)
 
+        if (frameSDK && frameContext?.user) {
           try {
-            const ethProvider = frameContext.client.ethProvider
-
-            const accounts = await ethProvider.request({ method: "eth_accounts" })
-            if (!accounts || accounts.length === 0) {
-              throw new Error("No wallet accounts available")
-            }
-
-            const fromAddress = accounts[0]
-            console.log("[v0] Using wallet address:", fromAddress)
-
+            // Create transaction data
             const vaultInterface = new ethers.Interface(REMINDER_VAULT_V2_ABI)
             const calldata = vaultInterface.encodeFunctionData("recordReminder", [reminderId, score])
 
-            console.log("[v0] Sending transaction with params:", {
-              from: fromAddress,
-              to: process.env.NEXT_PUBLIC_VAULT_CONTRACT,
-              data: calldata,
-            })
+            console.log("[v0] Requesting transaction via Frame SDK...")
 
-            const txHash = await ethProvider.request({
+            // Use Frame SDK's transaction method
+            const result = await frameSDK.actions.transact({
+              chainId: `eip155:84532`, // Base Sepolia
               method: "eth_sendTransaction",
-              params: [
-                {
-                  from: fromAddress,
-                  to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
-                  data: calldata,
-                  value: "0x0",
-                },
-              ],
+              params: {
+                abi: REMINDER_VAULT_V2_ABI,
+                to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
+                data: calldata,
+                value: "0",
+              },
             })
 
-            console.log("[v0] Transaction submitted via Frame SDK:", txHash)
-            alert(`✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction: ${txHash}`)
+            console.log("[v0] Frame SDK transaction result:", result)
 
-            setProcessingReminder(null)
-            loadPublicReminders()
-            return
+            if (result?.transactionId) {
+              alert(
+                `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction ID: ${result.transactionId}`,
+              )
+              setProcessingReminder(null)
+              loadPublicReminders()
+              return
+            }
           } catch (frameError) {
             console.error("[v0] Frame SDK transaction error:", frameError)
-            console.log("[v0] Falling back to MetaMask...")
+            alert(
+              `Frame transaction failed: ${frameError instanceof Error ? frameError.message : "Unknown error"}. Please try again.`,
+            )
+            setProcessingReminder(null)
+            return
           }
         }
       }
@@ -318,20 +315,6 @@ Help them stay accountable: ${returnUrl}`
           <h1 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2">Public Reminders Feed</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">Help others stay committed and earn rewards!</p>
         </div>
-
-        {!isInMiniapp && !farcasterUser && (
-          <Card className="mb-4">
-            <CardContent className="py-4 text-center">
-              <p className="text-sm text-muted-foreground mb-3">
-                Connect your Farcaster account to post reminders and earn rewards
-              </p>
-              <Button onClick={connectFarcaster} className="text-sm">
-                <Bell className="h-4 w-4 mr-2" />
-                Connect Farcaster
-              </Button>
-            </CardContent>
-          </Card>
-        )}
 
         <div className="grid gap-3 sm:gap-4">
           {reminders.length === 0 ? (

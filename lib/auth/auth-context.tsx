@@ -185,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setFarcasterUser(farcasterUser)
                 localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
                 if (farcasterUser.walletAddress) {
+                  console.log("[v0] Restored Farcaster wallet:", farcasterUser.walletAddress)
                   setAddress(farcasterUser.walletAddress)
 
                   try {
@@ -339,78 +340,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const sdk = await import("@farcaster/frame-sdk")
 
-            console.log("[v0] Calling sdk.actions.ready()...")
-            await sdk.default.actions.ready()
-            console.log("[v0] SDK ready signal sent")
-
+            console.log("[v0] Fetching Frame SDK context directly...")
             const context = await sdk.default.context
-            console.log("[v0] Full Frame SDK context:", JSON.stringify(context, null, 2))
+            console.log("[v0] Frame SDK context:", JSON.stringify(context, null, 2))
 
             if (context?.user) {
               console.log("[v0] Frame SDK user found:", context.user)
 
-              let walletAddr = null
+              // Method 1: Get wallet from context
+              let walletAddr = context.user.connectedAddress || context.user.custody_address
 
-              // Method 1: From context.client
-              if (context.client) {
-                walletAddr =
-                  context.client.walletAddress ||
-                  context.client.ethProvider?.selectedAddress ||
-                  context.client.ethProvider?.address
+              console.log("[v0] Wallet from context.user:", walletAddr)
 
-                console.log("[v0] Wallet from context.client:", walletAddr)
-              }
-
-              // Method 2: Request from eth provider
-              if (!walletAddr && context.client?.ethProvider) {
+              // Method 2: Fetch from Neynar API
+              if (!walletAddr) {
                 try {
-                  const accounts = await context.client.ethProvider.request({ method: "eth_accounts" })
-                  if (accounts && accounts.length > 0) {
-                    walletAddr = accounts[0]
-                    console.log("[v0] Wallet from eth_accounts:", walletAddr)
+                  const response = await fetch(`/api/farcaster/user?fid=${context.user.fid}`)
+                  if (response.ok) {
+                    const neynarData = await response.json()
+                    walletAddr = neynarData.custodyAddress || neynarData.verifiedAddresses?.[0]
+                    console.log("[v0] Wallet from Neynar API:", walletAddr)
                   }
-                } catch (err) {
-                  console.log("[v0] eth_accounts error:", err)
+                } catch (apiError) {
+                  console.log("[v0] Neynar API error:", apiError)
                 }
               }
 
-              console.log("[v0] Final wallet address extracted:", walletAddr)
-
-              try {
-                const response = await fetch(`/api/farcaster/user?fid=${context.user.fid}`)
-                if (response.ok) {
-                  const neynarData = await response.json()
-                  const farcasterUser: FarcasterUser = {
-                    fid: neynarData.fid,
-                    username: neynarData.username,
-                    displayName: neynarData.displayName,
-                    pfpUrl: neynarData.pfpUrl,
-                    walletAddress: walletAddr || neynarData.custodyAddress || neynarData.verifiedAddresses?.[0],
-                  }
-
-                  setFarcasterUser(farcasterUser)
-                  localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
-
-                  if (farcasterUser.walletAddress) {
-                    console.log("[v0] Setting wallet address:", farcasterUser.walletAddress)
-                    setAddress(farcasterUser.walletAddress)
-
-                    if (typeof window !== "undefined") {
-                      ;(window as any).__frameSDK = sdk.default
-                      ;(window as any).__frameContext = context
-                    }
-
-                    const { JsonRpcProvider } = await import("ethers")
-                    const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
-                    setSigner(provider)
-                  }
-
-                  console.log("[v0] Auto-connect successful with Farcaster user:", farcasterUser)
-                  return
-                }
-              } catch (apiError) {
-                console.error("[v0] Neynar API error:", apiError)
-              }
+              console.log("[v0] Final wallet address:", walletAddr)
 
               const farcasterUser: FarcasterUser = {
                 fid: context.user.fid ?? 0,
@@ -424,26 +380,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
 
               if (farcasterUser.walletAddress) {
+                console.log("[v0] Setting wallet address:", farcasterUser.walletAddress)
                 setAddress(farcasterUser.walletAddress)
 
+                // Store SDK globally for transaction signing
                 if (typeof window !== "undefined") {
                   ;(window as any).__frameSDK = sdk.default
                   ;(window as any).__frameContext = context
+                  console.log("[v0] Frame SDK stored globally")
                 }
 
+                // Create read-only provider for balance checks
                 const { JsonRpcProvider } = await import("ethers")
                 const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
                 setSigner(provider)
               }
 
-              console.log("[v0] Auto-connect successful via SDK:", farcasterUser)
+              console.log("[v0] Farcaster miniapp connected:", farcasterUser)
             } else {
               console.log("[v0] No user found in Frame SDK context")
             }
           } catch (error) {
             console.error("[v0] Frame SDK initialization error:", error)
           }
-        }, 3000) // Increased to 3 seconds for web miniapp
+        }, 1500) // Reduced to 1.5s since we're not waiting for ready()
       }
     }
   }

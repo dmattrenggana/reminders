@@ -302,7 +302,13 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
                 {isClaiming ? "Claiming..." : `Claim ${reminder.claimableReward} ${TOKEN_SYMBOL}`}
               </Button>
             )}
-            {reminder.canBurn && (
+            {reminder.status === "burned" && (
+              <Button variant="outline" size="sm" disabled>
+                <Flame className="h-4 w-4 mr-2" />
+                Burned
+              </Button>
+            )}
+            {reminder.canBurn && reminder.status !== "burned" && (
               <Button onClick={handleBurn} variant="destructive" size="lg" disabled={isBurning}>
                 {isBurning ? "Burning..." : "Burn Missed Reminder"}
               </Button>
