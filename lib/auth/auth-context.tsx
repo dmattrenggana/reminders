@@ -46,7 +46,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     checkWalletConnection()
     checkFarcasterConnection()
+
+    if (typeof window !== "undefined" && window.self !== window.top) {
+      initMiniapp()
+    }
   }, [])
+
+  const initMiniapp = async () => {
+    try {
+      console.log("[v0] Miniapp detected, initializing Frame SDK...")
+      const { sdk } = await import("@farcaster/frame-sdk")
+
+      // Call ready to dismiss splash screen
+      sdk.actions.ready()
+      console.log("[v0] Frame SDK ready() called - splash screen dismissed")
+
+      // Store SDK globally for later use
+      ;(window as any).__frameSdk = sdk
+
+      console.log("[v0] Miniapp initialized - app is now interactive")
+    } catch (error) {
+      console.error("[v0] Error initializing miniapp:", String(error))
+    }
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.ethereum) {
@@ -70,70 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.ethereum.removeListener("accountsChanged", handleAccountsChanged)
         window.ethereum.removeListener("chainChanged", handleChainChanged)
       }
-    }
-  }, [])
-
-  useEffect(() => {
-    // Only run in miniapp (iframe context)
-    if (typeof window !== "undefined" && window.self !== window.top) {
-      const initMiniapp = async () => {
-        try {
-          console.log("[v0] Miniapp detected, initializing Frame SDK...")
-          const { sdk } = await import("@farcaster/frame-sdk")
-
-          await sdk.actions.ready()
-          console.log("[v0] Frame SDK ready() completed")
-
-          // Store SDK globally for later use
-          ;(window as any).__frameSdk = sdk
-
-          await new Promise((resolve) => setTimeout(resolve, 1500))
-
-          console.log("[v0] Starting auto-connect...")
-          await connectFarcaster()
-          console.log("[v0] Auto-connect complete")
-        } catch (error) {
-          console.error("[v0] Error initializing miniapp:", String(error))
-        }
-      }
-
-      initMiniapp()
-    }
-  }, [])
-
-  useEffect(() => {
-    // Only run in miniapp (iframe context)
-    if (typeof window !== "undefined" && window.self !== window.top) {
-      const initMiniapp = async () => {
-        try {
-          console.log("[v0] Miniapp detected, initializing Frame SDK...")
-          const sdk = await import("@farcaster/frame-sdk")
-
-          // Call ready immediately to dismiss splash screen
-          sdk.default.actions.ready()
-          console.log("[v0] Frame SDK ready() called - splash screen should dismiss")
-
-          // Store SDK globally for later use
-          ;(window as any).__frameSdk = sdk.default
-
-          // Wait a bit for SDK to be fully initialized
-          await new Promise((resolve) => setTimeout(resolve, 1000))
-
-          console.log("[v0] Starting auto-connect...")
-          await connectFarcaster()
-          console.log("[v0] Auto-connect complete")
-        } catch (error) {
-          console.error("[v0] Error initializing miniapp:", error)
-          // Fallback: try to dismiss splash with postMessage
-          try {
-            window.parent.postMessage({ type: "frame-ready" }, "*")
-          } catch (e) {
-            // Silent fail
-          }
-        }
-      }
-
-      initMiniapp()
     }
   }, [])
 
@@ -269,41 +227,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           console.log("[v0] Frame SDK loaded")
 
-          await new Promise((resolve) => setTimeout(resolve, 500))
-
-          // Get context as a plain object by serializing it
-          let contextData: any = null
-          try {
-            // Try to serialize the context to plain object
-            const contextStr = JSON.stringify(sdk.context)
-            contextData = JSON.parse(contextStr)
-          } catch (serializeError) {
-            console.log("[v0] Could not serialize context, trying direct access...")
-            // Fallback: try to access properties one by one
-            contextData = {
-              user: {
-                fid: sdk.context?.user?.fid || 0,
-                username: sdk.context?.user?.username || "",
-                displayName: sdk.context?.user?.displayName || "",
-                pfpUrl: sdk.context?.user?.pfpUrl || "",
-              },
-            }
+          if (!sdk.context || !sdk.context.user) {
+            console.log("[v0] SDK context not ready yet, will use Connect button")
+            // Don't throw error, just return - let user click Connect button
+            alert("Please click the Connect button to authenticate with Farcaster")
+            return
           }
 
-          if (!contextData || !contextData.user || !contextData.user.fid) {
-            throw new Error("No user context available from Frame SDK")
-          }
-
-          const userFid = Number(contextData.user.fid) || 0
-          const userName = String(contextData.user.username || "")
-          const userDisplay = String(contextData.user.displayName || "")
-          const userPfp = String(contextData.user.pfpUrl || "")
-
-          console.log("[v0] Extracted user data - FID:", userFid)
-
+          const userFid = Number(sdk.context.user.fid || 0)
           if (userFid === 0) {
             throw new Error("No valid user FID from Frame SDK")
           }
+
+          // Extract each property safely
+          let userName = ""
+          let userDisplay = ""
+          let userPfp = ""
+
+          try {
+            userName = String(sdk.context.user.username || "")
+          } catch (e) {
+            userName = ""
+          }
+          try {
+            userDisplay = String(sdk.context.user.displayName || "")
+          } catch (e) {
+            userDisplay = ""
+          }
+          try {
+            userPfp = String(sdk.context.user.pfpUrl || "")
+          } catch (e) {
+            userPfp = ""
+          }
+
+          console.log("[v0] Extracted user data - FID:", userFid)
 
           let walletAddr: string | undefined = undefined
 
@@ -387,8 +344,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         } catch (sdkError) {
           const errorMsg = sdkError instanceof Error ? sdkError.message : "Unknown error"
-          console.log("[v0] Frame SDK initialization failed:", errorMsg)
-          throw new Error("Failed to connect with Farcaster miniapp")
+          console.log("[v0] Frame SDK error:", errorMsg)
+          alert("Please click the Connect button to authenticate with Farcaster")
+          return
         }
       }
 
