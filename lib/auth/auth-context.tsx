@@ -58,15 +58,135 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { sdk } = await import("@farcaster/frame-sdk")
 
       // Call ready to dismiss splash screen
-      sdk.actions.ready()
+      await sdk.actions.ready()
       console.log("[v0] Frame SDK ready() called - splash screen dismissed")
 
       // Store SDK globally for later use
       ;(window as any).__frameSdk = sdk
 
-      console.log("[v0] Miniapp initialized - app is now interactive")
+      setTimeout(async () => {
+        console.log("[v0] Auto-connecting Farcaster in miniapp...")
+        try {
+          await autoConnectFrameSDK(sdk)
+        } catch (error) {
+          console.log("[v0] Auto-connect failed, user can manually connect")
+        }
+      }, 500)
     } catch (error) {
       console.error("[v0] Error initializing miniapp:", String(error))
+    }
+  }
+
+  const autoConnectFrameSDK = async (sdk: any) => {
+    try {
+      if (!sdk.context || !sdk.context.user) {
+        throw new Error("SDK context not available")
+      }
+
+      const userFid = Number(sdk.context.user.fid || 0)
+      if (userFid === 0) {
+        throw new Error("No valid user FID")
+      }
+
+      console.log("[v0] Extracting user data from Frame SDK...")
+
+      // Extract user data safely
+      let userName = ""
+      let userDisplay = ""
+      let userPfp = ""
+
+      try {
+        userName = String(sdk.context.user.username || "")
+        userDisplay = String(sdk.context.user.displayName || "")
+        userPfp = String(sdk.context.user.pfpUrl || "")
+      } catch (e) {
+        console.log("[v0] Could not extract some user properties")
+      }
+
+      const validUsername = userName || userDisplay || `fid-${userFid}`
+      const validDisplayName = userDisplay || userName || `User ${userFid}`
+      const validPfpUrl = userPfp || "/abstract-profile.png"
+
+      console.log("[v0] User data extracted - FID:", userFid, "Username:", validUsername)
+
+      // Try to get wallet
+      let walletAddr: string | undefined = undefined
+
+      try {
+        const provider = await sdk.wallet.getEthereumProvider()
+        ;(window as any).__frameEthProvider = provider
+
+        const accounts = await provider.request({
+          method: "eth_accounts",
+          params: [],
+        })
+
+        if (accounts && accounts.length > 0) {
+          walletAddr = String(accounts[0])
+          console.log("[v0] Got wallet from SDK")
+        }
+      } catch (walletError) {
+        console.log("[v0] No wallet from SDK, will try Neynar")
+      }
+
+      // Fallback to Neynar for wallet
+      if (!walletAddr && userFid > 0) {
+        try {
+          const response = await fetch(`/api/farcaster/user?fid=${userFid}`)
+          if (response.ok) {
+            const neynarData = await response.json()
+            walletAddr = neynarData.custodyAddress || neynarData.verifiedAddresses?.[0] || neynarData.custody_address
+            if (walletAddr) {
+              console.log("[v0] Got wallet from Neynar")
+            }
+          }
+        } catch (apiError) {
+          console.log("[v0] Neynar API call failed")
+        }
+      }
+
+      const farcasterUser: FarcasterUser = {
+        fid: userFid,
+        username: validUsername,
+        displayName: validDisplayName,
+        pfpUrl: validPfpUrl,
+        walletAddress: walletAddr,
+      }
+
+      setFarcasterUser(farcasterUser)
+      localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+      console.log("[v0] Farcaster user set successfully")
+
+      if (walletAddr) {
+        setAddress(walletAddr)
+
+        // Try to create signer with Frame provider
+        try {
+          const frameProvider = (window as any).__frameEthProvider
+          if (frameProvider) {
+            const { BrowserProvider } = await import("ethers")
+            const provider = new BrowserProvider(frameProvider)
+            const signer = await provider.getSigner()
+            setSigner(signer)
+            setChainId(8453)
+            console.log("[v0] Signer created with Frame provider")
+          } else {
+            const { JsonRpcProvider } = await import("ethers")
+            const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
+            setSigner(provider)
+            setChainId(8453)
+            console.log("[v0] Read-only provider created")
+          }
+        } catch (providerError) {
+          console.log("[v0] Provider setup error")
+        }
+      }
+
+      console.log("[v0] Auto-connect complete!")
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      console.log("[v0] Auto-connect error:", errorMsg)
+      throw error
     }
   }
 

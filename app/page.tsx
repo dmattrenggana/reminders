@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth/auth-context"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Clock, Shield, Coins, Users } from "lucide-react"
 
 export default function HomePage() {
   const { isConnected, isFarcasterConnected } = useAuth()
@@ -50,12 +52,83 @@ export default function HomePage() {
         {isAuthenticated ? (
           <ReminderDashboard />
         ) : (
-          <div className="container mx-auto px-4 py-16 text-center max-w-2xl">
-            <h2 className="text-3xl font-bold mb-4">Welcome to Base Reminders</h2>
-            <p className="text-muted-foreground mb-8">
-              Create commitment-based reminders backed by token stakes. Never miss what matters most.
-            </p>
-            <UnifiedConnectButton />
+          <div className="container mx-auto px-4 py-8 max-w-7xl">
+            <div className="space-y-8">
+              {/* Hero Section */}
+              <div className="text-center space-y-4 py-12">
+                <h2 className="text-4xl font-bold tracking-tight">Commitment-Based Reminders on Base</h2>
+                <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                  Set reminders with token stakes. Complete them on time or lose your tokens to reward pool.
+                </p>
+                <div className="pt-4">
+                  <UnifiedConnectButton />
+                </div>
+              </div>
+
+              {/* Dashboard Preview */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold tracking-tight">Dashboard Preview</h3>
+                    <p className="text-sm text-muted-foreground mt-1">See what you'll get when you connect</p>
+                  </div>
+                </div>
+
+                {/* Stats Preview */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card className="p-6 border-2 border-dashed">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Clock className="h-6 w-6 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Active Reminders</p>
+                        <p className="text-2xl font-bold">0</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 border-2 border-dashed">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                        <Shield className="h-6 w-6 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Completed</p>
+                        <p className="text-2xl font-bold">0</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 border-2 border-dashed">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+                        <Coins className="h-6 w-6 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tokens Staked</p>
+                        <p className="text-2xl font-bold">0</p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Reminders Preview */}
+                <Card className="p-8 border-2 border-dashed">
+                  <div className="text-center space-y-4">
+                    <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
+                      <Users className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold">Your Reminders Will Appear Here</h4>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Connect your wallet or Farcaster account to start creating commitment-based reminders
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
           </div>
         )}
       </main>
