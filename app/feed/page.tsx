@@ -84,6 +84,8 @@ export default function FeedPage() {
   }
 
   const handleRemindAndClaim = async (reminder: PublicReminder) => {
+    alert("Button clicked! Reminder ID: " + reminder.id)
+
     console.log("[v0] =================================")
     console.log("[v0] Button clicked!")
     console.log("[v0] Reminder ID:", reminder.id)
@@ -318,13 +320,14 @@ Help them stay accountable: ${returnUrl}`
                     ) : (
                       <Button
                         onClick={(e) => {
-                          console.log("[v0] Button onClick fired!", e)
+                          e.preventDefault()
+                          e.stopPropagation()
+                          console.log("[v0] RAW BUTTON CLICK EVENT FIRED!")
                           handleRemindAndClaim(reminder)
                         }}
                         disabled={isProcessing}
-                        className="flex-1 cursor-pointer"
+                        className="flex-1 cursor-pointer !pointer-events-auto"
                         size="sm"
-                        style={{ pointerEvents: "auto" }}
                       >
                         {isProcessing ? (
                           <>
