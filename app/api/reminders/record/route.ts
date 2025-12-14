@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { NeynarAPIClient } from "@neynar/nodejs-sdk"
-import { CONTRACTS, REMINDER_VAULT_V2_ABI } from "@/lib/contracts/config"
+import { CONTRACTS, REMINDER_VAULT_V3_ABI } from "@/lib/contracts/config"
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const { ethers } = await import("ethers")
     const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL)
     const wallet = new ethers.Wallet(process.env.CRON_WALLET_PRIVATE_KEY, provider)
-    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, wallet)
+    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, wallet)
 
     const tx = await vaultContract.recordReminder(reminderId, neynarScore)
     const receipt = await tx.wait()

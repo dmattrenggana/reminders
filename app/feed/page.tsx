@@ -9,7 +9,7 @@ import { Bell, Clock, Coins, Users, ArrowLeft, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { formatDistance } from "date-fns"
 import { useSearchParams } from "next/navigation"
-import { REMINDER_VAULT_V2_ABI } from "@/lib/contracts/config"
+import { REMINDER_VAULT_V3_ABI } from "@/lib/contracts/config"
 
 interface PublicReminder {
   id: number
@@ -179,7 +179,7 @@ Help them stay accountable: ${returnUrl}`
 
             const vaultContract = new ethers.Contract(
               process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
-              REMINDER_VAULT_V2_ABI,
+              REMINDER_VAULT_V3_ABI,
               signer,
             )
 
@@ -215,7 +215,7 @@ Help them stay accountable: ${returnUrl}`
 
       const provider = new ethers.BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
-      const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V2_ABI, signer)
+      const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V3_ABI, signer)
 
       console.log("[v0] Recording reminder with score:", score)
       const tx = await vaultContract.recordReminder(reminderId, score)

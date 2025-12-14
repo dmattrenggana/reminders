@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { CONTRACTS, REMINDER_VAULT_V2_ABI } from "@/lib/contracts/config"
+import { CONTRACTS, REMINDER_VAULT_V3_ABI } from "@/lib/contracts/config"
 
 export const maxDuration = 60
 
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL)
     const wallet = new ethers.Wallet(process.env.CRON_WALLET_PRIVATE_KEY, provider)
-    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, wallet)
+    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, wallet)
 
     const currentTime = Math.floor(Date.now() / 1000)
     const processedReminders = []
@@ -47,7 +47,8 @@ export async function GET(request: NextRequest) {
           description,
           farcasterUsername,
           totalReminders,
-          rewardsClaimed
+          rewardsClaimed,
+          confirmationTime
 
         if (reminder.length === 12) {
           // V3 contract with confirmationTime field at index 11
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
             farcasterUsername,
             totalReminders,
             rewardsClaimed,
-            // confirmationTime (not used here)
+            confirmationTime,
           ] = reminder
         } else {
           // V2 contract without confirmationTime
