@@ -33,6 +33,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
   const [showManualTime, setShowManualTime] = useState(false)
   const [hours, setHours] = useState("")
   const [minutes, setMinutes] = useState("")
+  const [txStatus, setTxStatus] = useState<string>("")
 
   const service = useReminderService()
   const { balance } = useTokenBalance()
@@ -61,6 +62,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
 
   const handleCreate = async () => {
     console.log("[v0] ===== DIALOG: Starting handleCreate =====")
+    setTxStatus("Checking fields...")
 
     if (!description || !tokenAmount || !date || !time) {
       toast({
@@ -68,6 +70,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
         description: "Please fill in all fields",
         variant: "destructive",
       })
+      setTxStatus("")
       return
     }
 
@@ -78,6 +81,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
         description: "Please connect your wallet first",
         variant: "destructive",
       })
+      setTxStatus("")
       return
     }
 
@@ -87,11 +91,13 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
         description: `You need ${tokenAmount} ${TOKEN_SYMBOL} tokens. Current balance: ${balance} ${TOKEN_SYMBOL}`,
         variant: "destructive",
       })
+      setTxStatus("")
       return
     }
 
     console.log("[v0] DIALOG: All validation passed, setting isCreating to true")
     setIsCreating(true)
+    setTxStatus("Preparing transaction...")
 
     try {
       const reminderDate = new Date(date)
@@ -102,10 +108,16 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       console.log("[v0] DIALOG: Description:", description)
       console.log("[v0] DIALOG: Farcaster username:", farcasterUser?.username || "none")
 
+      setTxStatus("Step 1/2: Approving tokens...")
       console.log("[v0] DIALOG: Calling service.createReminder...")
+
+      // Add a small delay to let the UI update
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const reminderId = await service.createReminder(tokenAmount, reminderDate, description, farcasterUser?.username)
 
       console.log("[v0] DIALOG: ✅ Reminder created successfully! ID:", reminderId)
+      setTxStatus("✅ Reminder created!")
 
       toast({
         title: "Reminder Created",
@@ -121,6 +133,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       setTime("")
       setHours("")
       setMinutes("")
+      setTxStatus("")
 
       console.log("[v0] DIALOG: ===== DIALOG: handleCreate completed successfully =====")
     } catch (error: any) {
@@ -130,6 +143,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       console.error("[v0] DIALOG: Error stack:", error.stack)
       console.error("[v0] DIALOG: Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)))
 
+      setTxStatus("")
       toast({
         title: "Creation Failed",
         description: error.message || "Failed to create reminder. Please try again.",
@@ -301,7 +315,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={isCreating}>
             Cancel
           </Button>
           <Button
@@ -312,6 +326,12 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
             {isCreating ? "Creating..." : "Create Reminder"}
           </Button>
         </div>
+
+        {txStatus && (
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 text-center">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">{txStatus}</p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )

@@ -122,6 +122,7 @@ export class ReminderService {
 
       if (currentAllowance < amountInWei) {
         console.log("[v0] Step 2: Insufficient allowance, requesting approval...")
+        console.log("[v0] 🔵 USER ACTION REQUIRED: Please approve the token transaction in your wallet")
         const approveTx = await this.tokenContract.approve(CONTRACTS.REMINDER_VAULT, amountInWei)
         console.log("[v0] Approval transaction sent:", approveTx.hash)
         console.log("[v0] Waiting for approval confirmation...")
@@ -139,8 +140,8 @@ export class ReminderService {
         console.log("[v0] Step 2: Sufficient allowance already exists, skipping approval")
       }
 
-      console.log("[v0] Waiting for blockchain state to settle...")
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      console.log("[v0] Waiting 2 seconds for blockchain state to settle...")
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       console.log("[v0] Step 3: Calling createReminder on vault contract...")
       console.log("[v0] Contract address:", this.vaultContract.target || this.vaultContract.address)
@@ -150,14 +151,23 @@ export class ReminderService {
 
       let createTx
       try {
-        console.log("[v0] 🚀 About to call vaultContract.createReminder...")
+        console.log("[v0] 🚀🚀🚀 About to call vaultContract.createReminder...")
+        console.log("[v0] 🔵 USER ACTION REQUIRED: Please confirm the createReminder transaction in your wallet")
+        console.log("[v0] Calling with params:", {
+          amount: amountInWei.toString(),
+          time: reminderTimestamp,
+          desc: description,
+          user: username,
+        })
+
         createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description, username)
-        console.log("[v0] ✅✅ CreateReminder transaction sent:", createTx.hash)
+        console.log("[v0] ✅✅✅ CreateReminder transaction sent successfully:", createTx.hash)
       } catch (vaultError: any) {
-        console.error("[v0] ❌❌ Error calling vault.createReminder:", vaultError)
+        console.error("[v0] ❌❌❌ Error calling vault.createReminder:", vaultError)
         console.error("[v0] Error code:", vaultError.code)
         console.error("[v0] Error message:", vaultError.message)
         console.error("[v0] Error data:", vaultError.data)
+        console.error("[v0] Error reason:", vaultError.reason)
 
         if (vaultError.code === "ACTION_REJECTED") {
           throw new Error("Transaction rejected by user")
