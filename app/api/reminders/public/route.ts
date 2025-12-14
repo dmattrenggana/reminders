@@ -34,12 +34,19 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        const isV3 = reminderData.length >= 12
+        // V3: index 8, V2: index 8 (same position)
+        const rawFarcasterUsername = reminderData[8]
+        const farcasterUsername =
+          rawFarcasterUsername && rawFarcasterUsername.trim() !== ""
+            ? rawFarcasterUsername
+            : reminderData[0].slice(0, 6) + "..." + reminderData[0].slice(-4)
+
+        console.log(`[API] Reminder ${id} farcasterUsername:`, farcasterUsername, "raw:", rawFarcasterUsername)
 
         reminders.push({
           id: Number(id),
           user: reminderData[0],
-          farcasterUsername: reminderData[8] || reminderData[0].slice(0, 6) + "..." + reminderData[0].slice(-4),
+          farcasterUsername,
           description: reminderData[7],
           reminderTime: new Date(Number(reminderData[3]) * 1000),
           rewardPoolAmount: Number(ethers.formatUnits(reminderData[2], 18)),

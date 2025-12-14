@@ -54,12 +54,36 @@ export default function FeedPage() {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
       const reminderUrl = `${appUrl}/feed?reminder=${reminder.id}`
 
-      const postText = `Hey @${reminder.farcasterUsername}! 🔔\n\nReminder: ${reminder.description}\n\nDon't forget to confirm before the deadline! ⏰\n\n${reminderUrl}\n\n#BaseReminders`
+      const timeStr = new Date(reminder.reminderTime).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+
+      const userIdentifier =
+        reminder.farcasterUsername && !reminder.farcasterUsername.startsWith("0x")
+          ? `@${reminder.farcasterUsername}`
+          : reminder.farcasterUsername
+
+      const postText = `Hey ${userIdentifier}! Don't forget: ${reminder.description}
+
+Reminder time: ${timeStr}
+Reward pool: ${reminder.rewardPoolAmount} COMMIT tokens
+
+Help them stay accountable: ${reminderUrl}`
+
       const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`
+
+      console.log("[v0] Post text:", postText)
+      console.log("[v0] Reminder URL:", reminderUrl)
+      console.log("[v0] Reminder ID:", reminder.id)
+
       window.open(warpcastUrl, "_blank")
       setPostedReminders((prev) => new Set(prev).add(reminder.id))
       alert(
-        "After you've posted on Farcaster, click 'Record & Claim' to record your reminder on-chain and earn rewards!",
+        "After you've posted on Farcaster, click 'Record & Claim' to record your reminder on-chain and earn rewards instantly!",
       )
     } catch (error) {
       console.error("Error creating reminder post:", error)
@@ -151,7 +175,7 @@ export default function FeedPage() {
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-1">{reminder.description}</CardTitle>
                       <CardDescription className="flex items-center gap-2">
-                        <span>@{reminder.farcasterUsername}</span>
+                        <span>{reminder.farcasterUsername}</span>
                         <Badge variant="outline" className="text-xs">
                           <Clock className="h-3 w-3 mr-1" />
                           {formatDistance(reminder.reminderTime, new Date(), { addSuffix: true })}
