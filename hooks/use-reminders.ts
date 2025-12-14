@@ -135,6 +135,7 @@ export function useReminders() {
     }
 
     if (!service) {
+      setError("Contract service not initialized. Please refresh the page.")
       setIsLoading(false)
       return
     }
@@ -142,10 +143,8 @@ export function useReminders() {
     try {
       setIsLoading(true)
       setError(null)
-      console.log("[v0] Loading reminders for address:", address)
 
       const rawReminders = await service.getUserReminders(address)
-      console.log("[v0] Raw reminders loaded:", rawReminders.length)
 
       const mappedReminders = await Promise.all(rawReminders.map((data) => mapReminderData(data)))
 
@@ -155,7 +154,7 @@ export function useReminders() {
       setReminders(mappedReminders)
     } catch (err: any) {
       console.error("[v0] Error loading reminders:", err)
-      setError(err.message || "Failed to load reminders")
+      setError(err.message || "Failed to load reminders. Please check your network connection.")
       setReminders([])
     } finally {
       setIsLoading(false)

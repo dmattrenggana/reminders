@@ -1,6 +1,6 @@
-import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V3_ABI, CHAIN_CONFIG } from "./config"
+import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V3_ABI } from "./config"
 import { parseUnits, formatUnits } from "@/lib/utils/ethers-utils"
-import { JsonRpcProvider, BrowserProvider } from "ethers"
+import { BrowserProvider } from "ethers"
 
 export interface ReminderData {
   id: number
@@ -40,7 +40,7 @@ export class ReminderService {
     if (typeof window === "undefined") return
 
     try {
-      const { Contract } = await import("ethers")
+      const { Contract, JsonRpcProvider } = await import("ethers")
 
       if (!CONTRACTS.COMMIT_TOKEN || !CONTRACTS.REMINDER_VAULT) {
         throw new Error(
@@ -48,26 +48,28 @@ export class ReminderService {
         )
       }
 
+      // Use signer's provider if available, otherwise create a new one
       if (this.signer && this.signer.provider) {
         this.provider = this.signer.provider
       } else {
-        // Use multiple RPC endpoints for reliability
-        const rpcUrls = CHAIN_CONFIG.BASE_MAINNET.rpcUrls
-        this.provider = new JsonRpcProvider(rpcUrls[0], {
-          chainId: CHAIN_CONFIG.BASE_MAINNET.chainId,
-          name: CHAIN_CONFIG.BASE_MAINNET.name,
-        })
+        // Create a simple provider with the primary RPC endpoint
+        this.provider = new JsonRpcProvider("https://mainnet.base.org", 8453)
       }
 
+      // Initialize contracts with V3 ABI
       this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, this.signer || this.provider)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.signer || this.provider)
 
-      console.log("[v0] Contracts initialized successfully")
-      console.log("[v0] Token:", CONTRACTS.COMMIT_TOKEN)
-      console.log("[v0] Vault:", CONTRACTS.REMINDER_VAULT)
-      console.log("[v0] Network:", CHAIN_CONFIG.BASE_MAINNET.name, "Chain ID:", CHAIN_CONFIG.BASE_MAINNET.chainId)
+      // Test the provider by checking if contracts are deployed
+      try {
+        await this.provider.getCode(CONTRACTS.REMINDER_VAULT)
+      } catch (testError) {
+        throw new Error(
+          "Vault contract not responding at " + CONTRACTS.REMINDER_VAULT + ". Verify it's deployed on Base Mainnet.",
+        )
+      }
     } catch (error) {
-      console.error("[v0] Error initializing contracts:", error instanceof Error ? error.message : "Unknown error")
+      console.error("[v0] Contract initialization error:", error)
       throw error
     }
   }
@@ -313,58 +315,18 @@ export class ReminderService {
   async getUserReminderIds(address: string): Promise<number[]> {
     try {
       await this.ensureContracts()
-      console.log("[v0] ===== TESTING CONTRACT CONNECTION =====")
-      console.log("[v0] Vault address:", CONTRACTS.REMINDER_VAULT)
-      console.log("[v0] Token address:", CONTRACTS.COMMIT_TOKEN)
-      console.log("[v0] User address:", address)
-      console.log("[v0] Chain ID:", CHAIN_CONFIG.BASE_MAINNET.chainId)
 
-      try {
-        console.log("[v0] Step 1: Testing if vault contract is deployed...")
-        const nextId = await this.vaultContract.nextReminderId()
-        console.log("[v0] ✅ Vault contract is deployed! Next reminder ID:", nextId.toString())
-      } catch (testError: any) {
-        console.error("[v0] ❌ Vault contract test FAILED")
-        console.error("[v0] Error:", testError.message)
-        console.error("[v0] This likely means:")
-        console.error("[v0] 1. Contract address is wrong")
-        console.error("[v0] 2. Contract not deployed on Base Mainnet (chainId: 8453)")
-        console.error("[v0] 3. RPC endpoint issue")
-        throw new Error(
-          `Vault contract not responding at ${CONTRACTS.REMINDER_VAULT}. Verify it's deployed on Base Mainnet.`,
-        )
+      if (!this.vaultContract) {
+        throw new Error("Vault contract not initialized")
       }
 
-      try {
-        console.log("[v0] Step 2: Testing if token contract is deployed...")
-        const tokenSymbol = await this.tokenContract.symbol()
-        console.log("[v0] ✅ Token contract is deployed! Symbol:", tokenSymbol)
-      } catch (testError: any) {
-        console.error("[v0] ❌ Token contract test FAILED")
-        console.error("[v0] Error:", testError.message)
-        throw new Error(
-          `Token contract not responding at ${CONTRACTS.COMMIT_TOKEN}. Verify it's deployed on Base Mainnet.`,
-        )
-      }
-
-      console.log("[v0] Step 3: Calling getUserReminders for address:", address)
       const ids = await this.vaultContract.getUserReminders(address)
-      console.log("[v0] ✅ getUserReminders returned:", ids.length, "reminders")
       return ids.map((id: bigint) => Number(id))
     } catch (error: any) {
-      console.error("[v0] ❌ Error in getUserReminderIds:", error)
-      console.error("[v0] Full error details:", {
-        code: error.code,
-        message: error.message,
-        reason: error.reason,
-      })
-
-      if (error.message?.includes("could not decode result data")) {
-        throw new Error(
-          `Contract call failed. Your contracts are deployed at:\nVault: ${CONTRACTS.REMINDER_VAULT}\nToken: ${CONTRACTS.COMMIT_TOKEN}\n\nPlease verify these addresses are correct on Base Mainnet.`,
-        )
-      }
-      throw error
+      console.error("[v0] getUserReminderIds error:", error?.message || error)
+      throw new Error(
+        "Vault contract not responding at " + CONTRACTS.REMINDER_VAULT + ". Verify it's deployed on Base Mainnet.",
+      )
     }
   }
 
