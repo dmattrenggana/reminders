@@ -60,6 +60,8 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
   }
 
   const handleCreate = async () => {
+    console.log("[v0] ===== DIALOG: Starting handleCreate =====")
+
     if (!description || !tokenAmount || !date || !time) {
       toast({
         title: "Missing Information",
@@ -70,6 +72,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
     }
 
     if (!service) {
+      console.error("[v0] DIALOG: Service not available")
       toast({
         title: "Not Connected",
         description: "Please connect your wallet first",
@@ -87,16 +90,22 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       return
     }
 
+    console.log("[v0] DIALOG: All validation passed, setting isCreating to true")
     setIsCreating(true)
 
     try {
       const reminderDate = new Date(date)
-      reminderDate.setHours(Number(hours), Number(minutes), 0, 0)
+      reminderDate.setHours(Number.parseInt(hours), Number.parseInt(minutes), 0, 0)
 
-      console.log("[v0] Creating reminder on blockchain...")
+      console.log("[v0] DIALOG: Prepared reminder date:", reminderDate.toISOString())
+      console.log("[v0] DIALOG: Token amount:", tokenAmount)
+      console.log("[v0] DIALOG: Description:", description)
+      console.log("[v0] DIALOG: Farcaster username:", farcasterUser?.username || "none")
+
+      console.log("[v0] DIALOG: Calling service.createReminder...")
       const reminderId = await service.createReminder(tokenAmount, reminderDate, description, farcasterUser?.username)
 
-      console.log("[v0] Reminder created with ID:", reminderId)
+      console.log("[v0] DIALOG: ✅ Reminder created successfully! ID:", reminderId)
 
       toast({
         title: "Reminder Created",
@@ -112,14 +121,22 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       setTime("")
       setHours("")
       setMinutes("")
+
+      console.log("[v0] DIALOG: ===== DIALOG: handleCreate completed successfully =====")
     } catch (error: any) {
-      console.error("[v0] Error creating reminder:", error)
+      console.error("[v0] DIALOG: ❌❌ Error in handleCreate:", error)
+      console.error("[v0] DIALOG: Error name:", error.name)
+      console.error("[v0] DIALOG: Error message:", error.message)
+      console.error("[v0] DIALOG: Error stack:", error.stack)
+      console.error("[v0] DIALOG: Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)))
+
       toast({
         title: "Creation Failed",
         description: error.message || "Failed to create reminder. Please try again.",
         variant: "destructive",
       })
     } finally {
+      console.log("[v0] DIALOG: Finally block - setting isCreating to false")
       setIsCreating(false)
     }
   }
