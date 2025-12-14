@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/lib/auth/auth-context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Bell, Clock, Coins, Users, ArrowLeft, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { formatDistance } from "date-fns"
+import { useSearchParams } from "next/navigation"
+import { REMINDER_VAULT_V2_ABI } from "@/lib/contracts/config"
 
 interface PublicReminder {
   id: number
@@ -26,10 +28,29 @@ export default function FeedPage() {
   const [reminders, setReminders] = useState<PublicReminder[]>([])
   const [loading, setLoading] = useState(true)
   const [postedReminders, setPostedReminders] = useState<Set<number>>(new Set())
+  const cardRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     loadPublicReminders()
   }, [walletAddress])
+
+  useEffect(() => {
+    const reminderIdParam = searchParams.get("reminder")
+    if (reminderIdParam && reminders.length > 0) {
+      const reminderId = Number.parseInt(reminderIdParam)
+      setTimeout(() => {
+        const element = cardRefs.current[reminderId]
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" })
+          element.classList.add("ring-2", "ring-primary", "ring-offset-2")
+          setTimeout(() => {
+            element.classList.remove("ring-2", "ring-primary", "ring-offset-2")
+          }, 3000)
+        }
+      }, 500)
+    }
+  }, [reminders, searchParams])
 
   const loadPublicReminders = async () => {
     try {
@@ -95,34 +116,59 @@ Help them stay accountable: ${reminderUrl}`
     if (!walletAddress || !farcasterUser) return
 
     try {
-      const response = await fetch("/api/reminders/record", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reminderId,
-          farcasterFid: farcasterUser.fid,
-          walletAddress,
-        }),
+      const { ethers } = await import("ethers")
+
+      if (!window.ethereum) {
+        alert("Please install MetaMask or connect a wallet")
+        return
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
+
+      const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V2_ABI, signer)
+
+      // Get Neynar score first
+      const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
+      const { score } = await scoreResponse.json()
+
+      console.log("[v0] Recording reminder with score:", score)
+
+      const tx = await vaultContract.recordReminder(reminderId, score)
+      console.log("[v0] Transaction sent:", tx.hash)
+
+      const receipt = await tx.wait()
+      console.log("[v0] Transaction confirmed:", receipt)
+
+      // Parse event to get reward amount
+      const rewardClaimedEvent = receipt.logs.find((log: any) => {
+        try {
+          const parsed = vaultContract.interface.parseLog(log)
+          return parsed?.name === "RewardClaimed"
+        } catch {
+          return false
+        }
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        alert(
-          `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${data.neynarScore}\nReward received: ${data.rewardAmount} COMMIT tokens\n\nTransaction: ${data.txHash}`,
-        )
-        setPostedReminders((prev) => {
-          const newSet = new Set(prev)
-          newSet.delete(reminderId)
-          return newSet
-        })
-        loadPublicReminders()
-      } else {
-        alert(`Failed to record: ${data.error}`)
+      let rewardAmount = 0
+      if (rewardClaimedEvent) {
+        const parsed = vaultContract.interface.parseLog(rewardClaimedEvent)
+        rewardAmount = parsed?.args?.amount ? Number(ethers.formatEther(parsed.args.amount)) : 0
       }
+
+      alert(
+        `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\nReward received: ${rewardAmount} COMMIT tokens\n\nTransaction: ${tx.hash}`,
+      )
+
+      setPostedReminders((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(reminderId)
+        return newSet
+      })
+      loadPublicReminders()
     } catch (error) {
-      console.error("Error recording reminder:", error)
-      alert("Failed to record reminder on-chain")
+      console.error("[v0] Error recording reminder:", error)
+      alert(`Failed to record reminder: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
@@ -170,7 +216,13 @@ Help them stay accountable: ${reminderUrl}`
             const alreadyRecorded = reminder.hasRecorded
 
             return (
-              <Card key={reminder.id} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={reminder.id}
+                ref={(el) => {
+                  cardRefs.current[reminder.id] = el
+                }}
+                className="hover:shadow-lg transition-all duration-300"
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
