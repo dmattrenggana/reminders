@@ -275,6 +275,7 @@ Help them stay accountable: ${returnUrl}`
             reminders.map((reminder) => {
               const isProcessing = processingReminder === reminder.id
               const alreadyRecorded = reminder.hasRecorded
+              const isWithinOneHour = new Date(reminder.reminderTime).getTime() - new Date().getTime() <= 60 * 60 * 1000
 
               return (
                 <Card
@@ -339,6 +340,16 @@ Help them stay accountable: ${returnUrl}`
                         >
                           <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                           Claimed
+                        </Button>
+                      ) : !isWithinOneHour ? (
+                        <Button
+                          disabled
+                          variant="outline"
+                          className="flex-1 text-xs sm:text-sm h-8 sm:h-10 bg-transparent"
+                          size="sm"
+                        >
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          Soon
                         </Button>
                       ) : (
                         <Button
