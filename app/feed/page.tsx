@@ -99,9 +99,8 @@ export default function FeedPage() {
     try {
       setProcessingReminder(reminder.id)
 
-      const appUrl = "https://remindersbase.vercel.app"
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app"
       const returnUrl = `${appUrl}/feed?reminder=${reminder.id}&claim=${reminder.id}`
-      const frameUrl = `${appUrl}/api/frame/${reminder.id}`
 
       const timeStr = new Date(reminder.reminderTime).toLocaleString("en-US", {
         month: "short",
@@ -123,7 +122,7 @@ Reward pool: ${reminder.rewardPoolAmount} COMMIT tokens
 
 Help them stay accountable: ${returnUrl}`
 
-      const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}&embeds[]=${encodeURIComponent(frameUrl)}`
+      const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`
 
       console.log("[v0] Opening Warpcast externally with template post...")
       console.log("[v0] Post text:", postText)
