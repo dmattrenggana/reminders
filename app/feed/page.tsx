@@ -84,7 +84,13 @@ export default function FeedPage() {
   }
 
   const handleRemindAndClaim = async (reminder: PublicReminder) => {
-    console.log("[v0] Button clicked, farcasterUser:", farcasterUser, "walletAddress:", walletAddress)
+    console.log("[v0] =================================")
+    console.log("[v0] Button clicked!")
+    console.log("[v0] Reminder ID:", reminder.id)
+    console.log("[v0] Is in miniapp:", isInMiniapp)
+    console.log("[v0] Farcaster user:", farcasterUser)
+    console.log("[v0] Wallet address:", walletAddress)
+    console.log("[v0] =================================")
 
     if (isInMiniapp && !farcasterUser) {
       console.log("[v0] Waiting for Farcaster user to load in miniapp...")
@@ -117,6 +123,7 @@ export default function FeedPage() {
     }
 
     try {
+      console.log("[v0] Starting post and claim flow...")
       setProcessingReminder(reminder.id)
 
       const appUrl = "https://remindersbase.vercel.app"
@@ -258,7 +265,6 @@ Help them stay accountable: ${returnUrl}`
           reminders.map((reminder) => {
             const isProcessing = processingReminder === reminder.id
             const alreadyRecorded = reminder.hasRecorded
-            const canClick = isInMiniapp || farcasterUser
 
             return (
               <Card
@@ -311,10 +317,14 @@ Help them stay accountable: ${returnUrl}`
                       </Button>
                     ) : (
                       <Button
-                        onClick={() => handleRemindAndClaim(reminder)}
-                        disabled={isInMiniapp ? isProcessing : !reminder.canRemind || isProcessing}
-                        className="flex-1"
+                        onClick={(e) => {
+                          console.log("[v0] Button onClick fired!", e)
+                          handleRemindAndClaim(reminder)
+                        }}
+                        disabled={isProcessing}
+                        className="flex-1 cursor-pointer"
                         size="sm"
+                        style={{ pointerEvents: "auto" }}
                       >
                         {isProcessing ? (
                           <>
@@ -324,13 +334,7 @@ Help them stay accountable: ${returnUrl}`
                         ) : (
                           <>
                             <Bell className="h-4 w-4 mr-2" />
-                            {isInMiniapp
-                              ? "Post & Claim Reward"
-                              : !farcasterUser
-                                ? "Connect Farcaster to Remind"
-                                : !reminder.canRemind
-                                  ? "Not in remind window yet"
-                                  : "Post & Claim Reward"}
+                            Post & Claim Reward
                           </>
                         )}
                       </Button>
