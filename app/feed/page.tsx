@@ -29,36 +29,12 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true)
   const [processingReminder, setProcessingReminder] = useState<number | null>(null)
   const [isInMiniapp, setIsInMiniapp] = useState(false)
-  const [frameSDK, setFrameSDK] = useState<any>(null)
   const cardRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
   const searchParams = useSearchParams()
 
   useEffect(() => {
     const inFrame = typeof window !== "undefined" && window.self !== window.top
     setIsInMiniapp(inFrame)
-
-    if (inFrame) {
-      console.log("[v0] Initializing Frame SDK for miniapp...")
-
-      import("@farcaster/frame-sdk")
-        .then(async (sdk) => {
-          try {
-            // Signal frame is ready
-            await sdk.default.actions.ready()
-
-            // Get context to access eth provider
-            const context = await sdk.default.context
-            console.log("[v0] Frame SDK ready with context:", context)
-
-            setFrameSDK(sdk.default)
-          } catch (err) {
-            console.error("[v0] Frame SDK initialization error:", err)
-          }
-        })
-        .catch((err) => {
-          console.error("[v0] Failed to load Frame SDK:", err)
-        })
-    }
   }, [])
 
   useEffect(() => {
@@ -143,10 +119,14 @@ Help them stay accountable: ${returnUrl}`
 
       const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}&embeds[]=${encodeURIComponent(frameUrl)}`
 
-      console.log("[v0] Opening Warpcast with template post...")
+      console.log("[v0] Opening Warpcast externally with template post...")
       console.log("[v0] Post text:", postText)
 
-      window.location.href = warpcastUrl
+      if (isInMiniapp) {
+        window.open(warpcastUrl, "_blank")
+      } else {
+        window.location.href = warpcastUrl
+      }
     } catch (error) {
       console.error("[v0] Error opening Warpcast:", error)
       setProcessingReminder(null)
@@ -182,36 +162,27 @@ Help them stay accountable: ${returnUrl}`
         const frameSDK = (window as any).__frameSDK
         const frameContext = (window as any).__frameContext
 
-        console.log("[v0] Attempting Frame SDK transaction...")
+        console.log("[v0] Checking Frame SDK for transaction...")
         console.log("[v0] Frame SDK available:", !!frameSDK)
         console.log("[v0] Frame context available:", !!frameContext)
+        console.log("[v0] Frame context user:", frameContext?.user)
 
         if (frameSDK && frameContext?.user) {
           try {
-            // Create transaction data
-            const vaultInterface = new ethers.Interface(REMINDER_VAULT_V2_ABI)
-            const calldata = vaultInterface.encodeFunctionData("recordReminder", [reminderId, score])
+            console.log("[v0] Attempting Frame SDK transaction...")
 
-            console.log("[v0] Requesting transaction via Frame SDK...")
-
-            // Use Frame SDK's transaction method
-            const result = await frameSDK.actions.transact({
-              chainId: `eip155:84532`, // Base Sepolia
-              method: "eth_sendTransaction",
-              params: {
-                abi: REMINDER_VAULT_V2_ABI,
-                to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
-                data: calldata,
-                value: "0",
-              },
+            const txHash = await frameSDK.actions.sendTransaction({
+              chainId: "eip155:84532", // Base Sepolia
+              to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
+              abi: REMINDER_VAULT_V2_ABI,
+              functionName: "recordReminder",
+              args: [reminderId, score],
             })
 
-            console.log("[v0] Frame SDK transaction result:", result)
+            console.log("[v0] Frame SDK transaction hash:", txHash)
 
-            if (result?.transactionId) {
-              alert(
-                `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction ID: ${result.transactionId}`,
-              )
+            if (txHash) {
+              alert(`✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction: ${txHash}`)
               setProcessingReminder(null)
               loadPublicReminders()
               return
@@ -219,11 +190,11 @@ Help them stay accountable: ${returnUrl}`
           } catch (frameError) {
             console.error("[v0] Frame SDK transaction error:", frameError)
             alert(
-              `Frame transaction failed: ${frameError instanceof Error ? frameError.message : "Unknown error"}. Please try again.`,
+              `Frame transaction failed: ${frameError instanceof Error ? frameError.message : "Unknown error"}. Falling back to MetaMask...`,
             )
-            setProcessingReminder(null)
-            return
           }
+        } else {
+          console.log("[v0] Frame SDK not fully initialized, falling back to MetaMask")
         }
       }
 
