@@ -27,7 +27,7 @@ export default function FeedPage() {
   const { walletAddress, farcasterUser } = useAuth()
   const [reminders, setReminders] = useState<PublicReminder[]>([])
   const [loading, setLoading] = useState(true)
-  const [postedReminders, setPostedReminders] = useState<Set<number>>(new Set())
+  const [processingReminder, setProcessingReminder] = useState<number | null>(null)
   const cardRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
   const searchParams = useSearchParams()
 
@@ -52,6 +52,22 @@ export default function FeedPage() {
     }
   }, [reminders, searchParams])
 
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible") {
+        const pendingReminderId = localStorage.getItem("pendingReminderRecord")
+        if (pendingReminderId && walletAddress && farcasterUser) {
+          console.log("[v0] User returned from posting, auto-recording reminder:", pendingReminderId)
+          localStorage.removeItem("pendingReminderRecord")
+          await handleRecordReminder(Number(pendingReminderId))
+        }
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+  }, [walletAddress, farcasterUser])
+
   const loadPublicReminders = async () => {
     try {
       const url = walletAddress ? `/api/reminders/public?walletAddress=${walletAddress}` : "/api/reminders/public"
@@ -65,15 +81,22 @@ export default function FeedPage() {
     }
   }
 
-  const handleRemind = async (reminder: PublicReminder) => {
+  const handleRemindAndClaim = async (reminder: PublicReminder) => {
     if (!farcasterUser) {
       alert("Please connect your Farcaster account first")
       return
     }
 
+    if (!walletAddress) {
+      alert("Please connect your wallet first")
+      return
+    }
+
     try {
+      setProcessingReminder(reminder.id)
+
       const appUrl = "https://remindersbase.vercel.app"
-      const reminderUrl = `${appUrl}/feed?reminder=${reminder.id}`
+      const frameUrl = `${appUrl}/api/frame/${reminder.id}`
 
       const timeStr = new Date(reminder.reminderTime).toLocaleString("en-US", {
         month: "short",
@@ -93,33 +116,38 @@ export default function FeedPage() {
 Reminder time: ${timeStr}
 Reward pool: ${reminder.rewardPoolAmount} COMMIT tokens
 
-Help them stay accountable: ${reminderUrl}`
+Help them stay accountable: ${frameUrl}`
 
-      const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`
+      const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}&embeds[]=${encodeURIComponent(frameUrl)}`
 
-      console.log("[v0] Post text:", postText)
-      console.log("[v0] Reminder URL:", reminderUrl)
-      console.log("[v0] Reminder ID:", reminder.id)
-      console.log("[v0] Full reminder object:", reminder)
+      console.log("[v0] Opening Warpcast compose...")
 
-      window.open(warpcastUrl, "_blank")
-      setPostedReminders((prev) => new Set(prev).add(reminder.id))
-      alert(
-        "After you've posted on Farcaster, click 'Record & Claim' to record your reminder on-chain and earn rewards instantly!",
-      )
+      // Store the reminder ID to record after posting
+      localStorage.setItem("pendingReminderRecord", reminder.id.toString())
+
+      // Open Warpcast in same window
+      window.location.href = warpcastUrl
     } catch (error) {
-      console.error("Error creating reminder post:", error)
+      console.error("Error in remind and claim flow:", error)
+      setProcessingReminder(null)
+      alert("Failed to initiate reminder process. Please try again.")
     }
   }
 
   const handleRecordReminder = async (reminderId: number) => {
-    if (!walletAddress || !farcasterUser) return
+    if (!walletAddress || !farcasterUser) {
+      console.log("[v0] Missing wallet or Farcaster user")
+      return
+    }
 
     try {
+      setProcessingReminder(reminderId)
+
       const { ethers } = await import("ethers")
 
       if (!window.ethereum) {
         alert("Please install MetaMask or connect a wallet")
+        setProcessingReminder(null)
         return
       }
 
@@ -128,7 +156,8 @@ Help them stay accountable: ${reminderUrl}`
 
       const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V2_ABI, signer)
 
-      // Get Neynar score first
+      // Get Neynar score
+      console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
       const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
       const { score } = await scoreResponse.json()
 
@@ -160,14 +189,11 @@ Help them stay accountable: ${reminderUrl}`
         `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\nReward received: ${rewardAmount} COMMIT tokens\n\nTransaction: ${tx.hash}`,
       )
 
-      setPostedReminders((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(reminderId)
-        return newSet
-      })
+      setProcessingReminder(null)
       loadPublicReminders()
     } catch (error) {
       console.error("[v0] Error recording reminder:", error)
+      setProcessingReminder(null)
       alert(`Failed to record reminder: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
@@ -197,8 +223,7 @@ Help them stay accountable: ${reminderUrl}`
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Public Reminders Feed</h1>
         <p className="text-muted-foreground">
-          Help others stay committed and earn rewards! Remind users via Farcaster to claim your share of the reward
-          pool.
+          Help others stay committed and earn rewards! Post a reminder on Farcaster to instantly claim your share.
         </p>
       </div>
 
@@ -212,7 +237,7 @@ Help them stay accountable: ${reminderUrl}`
           </Card>
         ) : (
           reminders.map((reminder) => {
-            const hasPosted = postedReminders.has(reminder.id)
+            const isProcessing = processingReminder === reminder.id
             const alreadyRecorded = reminder.hasRecorded
 
             return (
@@ -264,28 +289,30 @@ Help them stay accountable: ${reminderUrl}`
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Already Recorded & Claimed
                       </Button>
-                    ) : !hasPosted ? (
-                      <Button
-                        onClick={() => handleRemind(reminder)}
-                        disabled={!reminder.canRemind || !farcasterUser}
-                        className="flex-1"
-                        size="sm"
-                      >
-                        <Bell className="h-4 w-4 mr-2" />
-                        {!farcasterUser
-                          ? "Connect Farcaster to Remind"
-                          : !reminder.canRemind
-                            ? "Not in remind window yet"
-                            : "Post Reminder on Farcaster"}
-                      </Button>
                     ) : (
                       <Button
-                        onClick={() => handleRecordReminder(reminder.id)}
-                        variant="default"
+                        onClick={() => handleRemindAndClaim(reminder)}
+                        disabled={!reminder.canRemind || !farcasterUser || !walletAddress || isProcessing}
                         className="flex-1"
                         size="sm"
                       >
-                        Record & Claim Rewards
+                        {isProcessing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="h-4 w-4 mr-2" />
+                            {!farcasterUser
+                              ? "Connect Farcaster to Remind"
+                              : !walletAddress
+                                ? "Connect Wallet to Earn"
+                                : !reminder.canRemind
+                                  ? "Not in remind window yet"
+                                  : "Post & Claim Reward"}
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
