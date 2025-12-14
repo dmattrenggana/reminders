@@ -29,6 +29,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true)
   const [processingReminder, setProcessingReminder] = useState<number | null>(null)
   const [isInMiniapp, setIsInMiniapp] = useState(false)
+  const [frameSDK, setFrameSDK] = useState<any>(null)
   const cardRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
   const searchParams = useSearchParams()
 
@@ -37,8 +38,29 @@ export default function FeedPage() {
     const hasFrameSDK = typeof window !== "undefined" && (window as any).frameSDK !== undefined
     const isMiniapp = inFrame || hasFrameSDK
     setIsInMiniapp(isMiniapp)
+
+    if (isMiniapp) {
+      import("@farcaster/frame-sdk")
+        .then((sdk) => {
+          sdk.default.actions.ready().then(() => {
+            setFrameSDK(sdk.default)
+            console.log("[v0] Frame SDK initialized for transactions")
+          })
+        })
+        .catch((err) => {
+          console.error("[v0] Failed to load Frame SDK:", err)
+        })
+    }
+
     console.log("[v0] Running in Farcaster miniapp:", isMiniapp)
   }, [])
+
+  useEffect(() => {
+    console.log("[v0] AUTH STATE UPDATE:")
+    console.log("[v0] - Farcaster User:", farcasterUser)
+    console.log("[v0] - Wallet Address:", walletAddress)
+    console.log("[v0] - Is in miniapp:", isInMiniapp)
+  }, [farcasterUser, walletAddress, isInMiniapp])
 
   useEffect(() => {
     loadPublicReminders()
@@ -84,15 +106,21 @@ export default function FeedPage() {
   }
 
   const handleRemindAndClaim = async (reminder: PublicReminder) => {
-    alert("Button clicked! Reminder ID: " + reminder.id)
+    console.log("[v0] =================================")
+    console.log("[v0] BUTTON CLICKED - FULL STATE DEBUG")
+    console.log("[v0] - Reminder ID:", reminder.id)
+    console.log("[v0] - Is in miniapp:", isInMiniapp)
+    console.log("[v0] - Farcaster user:", JSON.stringify(farcasterUser, null, 2))
+    console.log("[v0] - Wallet address:", walletAddress)
+    console.log("[v0] - Has farcasterUser:", !!farcasterUser)
+    console.log("[v0] - Has walletAddress:", !!walletAddress)
+    console.log("[v0] - FarcasterUser.walletAddress:", farcasterUser?.walletAddress)
+    console.log("[v0] =================================")
 
-    console.log("[v0] =================================")
-    console.log("[v0] Button clicked!")
-    console.log("[v0] Reminder ID:", reminder.id)
-    console.log("[v0] Is in miniapp:", isInMiniapp)
-    console.log("[v0] Farcaster user:", farcasterUser)
-    console.log("[v0] Wallet address:", walletAddress)
-    console.log("[v0] =================================")
+    if (farcasterUser?.walletAddress && !walletAddress) {
+      console.log("[v0] Found wallet in farcasterUser, but not in walletAddress state")
+      console.log("[v0] Attempting to use Farcaster wallet:", farcasterUser.walletAddress)
+    }
 
     if (isInMiniapp && !farcasterUser) {
       console.log("[v0] Waiting for Farcaster user to load in miniapp...")
@@ -165,8 +193,8 @@ Help them stay accountable: ${returnUrl}`
   }
 
   const handleRecordReminder = async (reminderId: number) => {
-    if (!walletAddress || !farcasterUser) {
-      console.log("[v0] Missing wallet or Farcaster user")
+    if (!farcasterUser) {
+      console.log("[v0] Missing Farcaster user")
       return
     }
 
@@ -175,47 +203,105 @@ Help them stay accountable: ${returnUrl}`
 
       const { ethers } = await import("ethers")
 
-      if (!window.ethereum) {
-        alert("Please install MetaMask or connect a wallet")
-        setProcessingReminder(null)
-        return
-      }
+      if (isInMiniapp && frameSDK) {
+        console.log("[v0] Using Frame SDK for transaction in miniapp")
 
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
+        console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
+        const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
+        const { score } = await scoreResponse.json()
+        console.log("[v0] Neynar score:", score)
 
-      const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V2_ABI, signer)
+        const vaultInterface = new ethers.Interface(REMINDER_VAULT_V2_ABI)
+        const calldata = vaultInterface.encodeFunctionData("recordReminder", [reminderId, score])
 
-      console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
-      const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
-      const { score } = await scoreResponse.json()
+        console.log("[v0] Requesting transaction signature via Frame SDK...")
+        const txResult = await frameSDK.actions.signTransaction({
+          chainId: `eip155:84532`, // Base Sepolia
+          method: "eth_sendTransaction",
+          params: {
+            to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
+            data: calldata,
+            value: "0x0",
+          },
+        })
 
-      console.log("[v0] Recording reminder with score:", score)
+        console.log("[v0] Frame SDK transaction result:", txResult)
 
-      const tx = await vaultContract.recordReminder(reminderId, score)
-      console.log("[v0] Transaction sent:", tx.hash)
+        if (txResult.transactionHash) {
+          console.log("[v0] Transaction submitted:", txResult.transactionHash)
 
-      const receipt = await tx.wait()
-      console.log("[v0] Transaction confirmed:", receipt)
+          const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL)
+          let receipt = null
+          let attempts = 0
 
-      const rewardClaimedEvent = receipt.logs.find((log: any) => {
-        try {
-          const parsed = vaultContract.interface.parseLog(log)
-          return parsed?.name === "RewardClaimed"
-        } catch {
-          return false
+          while (!receipt && attempts < 30) {
+            await new Promise((resolve) => setTimeout(resolve, 2000))
+            try {
+              receipt = await provider.getTransactionReceipt(txResult.transactionHash)
+            } catch (e) {
+              console.log("[v0] Waiting for transaction confirmation...")
+            }
+            attempts++
+          }
+
+          if (receipt) {
+            console.log("[v0] Transaction confirmed:", receipt)
+            alert(
+              `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction: ${txResult.transactionHash}`,
+            )
+          } else {
+            alert(`Transaction submitted! Hash: ${txResult.transactionHash}\n\nCheck Base Sepolia explorer for status.`)
+          }
+        } else {
+          throw new Error("No transaction hash returned from Frame SDK")
         }
-      })
+      } else {
+        console.log("[v0] Using MetaMask for transaction")
 
-      let rewardAmount = 0
-      if (rewardClaimedEvent) {
-        const parsed = vaultContract.interface.parseLog(rewardClaimedEvent)
-        rewardAmount = parsed?.args?.amount ? Number(ethers.formatEther(parsed.args.amount)) : 0
+        if (!window.ethereum) {
+          alert("Please install MetaMask or connect a wallet")
+          setProcessingReminder(null)
+          return
+        }
+
+        const provider = new ethers.BrowserProvider(window.ethereum)
+        const signer = await provider.getSigner()
+        const vaultContract = new ethers.Contract(
+          process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
+          REMINDER_VAULT_V2_ABI,
+          signer,
+        )
+
+        console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
+        const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
+        const { score } = await scoreResponse.json()
+
+        console.log("[v0] Recording reminder with score:", score)
+        const tx = await vaultContract.recordReminder(reminderId, score)
+        console.log("[v0] Transaction sent:", tx.hash)
+
+        const receipt = await tx.wait()
+        console.log("[v0] Transaction confirmed:", receipt)
+
+        const rewardClaimedEvent = receipt.logs.find((log: any) => {
+          try {
+            const parsed = vaultContract.interface.parseLog(log)
+            return parsed?.name === "RewardClaimed"
+          } catch {
+            return false
+          }
+        })
+
+        let rewardAmount = 0
+        if (rewardClaimedEvent) {
+          const parsed = vaultContract.interface.parseLog(rewardClaimedEvent)
+          rewardAmount = parsed?.args?.amount ? Number(ethers.formatEther(parsed.args.amount)) : 0
+        }
+
+        alert(
+          `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\nReward received: ${rewardAmount} COMMIT tokens\n\nTransaction: ${tx.hash}`,
+        )
       }
-
-      alert(
-        `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\nReward received: ${rewardAmount} COMMIT tokens\n\nTransaction: ${tx.hash}`,
-      )
 
       setProcessingReminder(null)
       loadPublicReminders()
