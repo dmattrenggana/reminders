@@ -27,14 +27,29 @@ export class ReminderService {
 
   constructor(signer: any) {
     this.signer = signer
-    const Contract = signer.constructor.name.includes("JsonRpc") ? require("ethers").Contract : null
 
-    if (!Contract) {
-      throw new Error("Invalid signer provided")
+    // Import Contract dynamically to avoid SSR issues
+    if (typeof window !== "undefined") {
+      const initContracts = async () => {
+        try {
+          const { Contract } = await import("ethers")
+          this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, signer)
+          this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
+        } catch (error) {
+          console.error("[v0] Error initializing contracts:", error)
+          throw new Error("Failed to initialize contracts")
+        }
+      }
+      initContracts()
     }
+  }
 
-    this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, signer)
-    this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
+  private async ensureContracts() {
+    if (!this.vaultContract || !this.tokenContract) {
+      const { Contract } = await import("ethers")
+      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, this.signer)
+      this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.signer)
+    }
   }
 
   /**
@@ -42,6 +57,7 @@ export class ReminderService {
    */
   async getTokenBalance(address: string): Promise<string> {
     try {
+      await this.ensureContracts()
       const balance = await this.tokenContract.balanceOf(address)
       return Math.floor(Number(formatUnits(balance, 18))).toString()
     } catch (error) {
@@ -55,6 +71,7 @@ export class ReminderService {
    */
   async approveTokens(amount: string): Promise<void> {
     try {
+      await this.ensureContracts()
       const amountInWei = parseUnits(amount, 18)
       const tx = await this.tokenContract.approve(CONTRACTS.REMINDER_VAULT, amountInWei)
       await tx.wait()
@@ -70,6 +87,7 @@ export class ReminderService {
    */
   async createReminder(tokenAmount: string, reminderTime: Date, description: string): Promise<number> {
     try {
+      await this.ensureContracts()
       const amountInWei = parseUnits(tokenAmount, 18)
       const reminderTimestamp = Math.floor(reminderTime.getTime() / 1000)
 
@@ -120,6 +138,7 @@ export class ReminderService {
    */
   async confirmReminder(reminderId: number): Promise<void> {
     try {
+      await this.ensureContracts()
       console.log("[v0] Confirming reminder:", reminderId)
       const tx = await this.vaultContract.confirmReminder(reminderId)
       await tx.wait()
@@ -138,6 +157,7 @@ export class ReminderService {
    */
   async burnMissedReminder(reminderId: number): Promise<void> {
     try {
+      await this.ensureContracts()
       console.log("[v0] Burning tokens for reminder:", reminderId)
       const tx = await this.vaultContract.burnMissedReminder(reminderId)
       await tx.wait()
@@ -153,6 +173,7 @@ export class ReminderService {
    */
   async getUserReminderIds(address: string): Promise<number[]> {
     try {
+      await this.ensureContracts()
       const ids = await this.vaultContract.getUserReminders(address)
       return ids.map((id: bigint) => Number(id))
     } catch (error) {
@@ -166,6 +187,7 @@ export class ReminderService {
    */
   async getReminder(reminderId: number): Promise<ReminderData> {
     try {
+      await this.ensureContracts()
       const data = await this.vaultContract.getReminder(reminderId)
       return {
         id: reminderId,
@@ -187,6 +209,7 @@ export class ReminderService {
 
   async getReminderRecords(reminderId: number): Promise<ReminderRecord> {
     try {
+      await this.ensureContracts()
       const data = await this.vaultContract.getReminders(reminderId)
       return {
         remindedBy: data[0],
@@ -201,6 +224,7 @@ export class ReminderService {
 
   async recordReminder(reminderId: number, remindedBy: string, neynarScore: number): Promise<void> {
     try {
+      await this.ensureContracts()
       console.log("[v0] Recording reminder:", { reminderId, remindedBy, neynarScore })
       const tx = await this.vaultContract.recordReminder(reminderId, remindedBy, neynarScore)
       await tx.wait()
@@ -216,6 +240,7 @@ export class ReminderService {
 
   async claimReward(reminderId: number): Promise<void> {
     try {
+      await this.ensureContracts()
       console.log("[v0] Claiming reward for reminder:", reminderId)
       const tx = await this.vaultContract.claimReward(reminderId)
       await tx.wait()
@@ -231,6 +256,7 @@ export class ReminderService {
 
   async calculateReward(reminderId: number, claimer: string): Promise<string> {
     try {
+      await this.ensureContracts()
       const reward = await this.vaultContract.calculateReward(reminderId, claimer)
       return Math.floor(Number(formatUnits(reward, 18))).toString()
     } catch (error) {
@@ -241,6 +267,7 @@ export class ReminderService {
 
   async canClaimReward(reminderId: number, claimer: string): Promise<boolean> {
     try {
+      await this.ensureContracts()
       return await this.vaultContract.canClaimReward(reminderId, claimer)
     } catch (error) {
       console.error("[v0] Error checking canClaimReward:", error)
@@ -253,6 +280,7 @@ export class ReminderService {
    */
   async canConfirm(reminderId: number): Promise<boolean> {
     try {
+      await this.ensureContracts()
       return await this.vaultContract.canConfirm(reminderId)
     } catch (error) {
       console.error("[v0] Error checking canConfirm:", error)
@@ -265,6 +293,7 @@ export class ReminderService {
    */
   async shouldBurn(reminderId: number): Promise<boolean> {
     try {
+      await this.ensureContracts()
       return await this.vaultContract.shouldBurn(reminderId)
     } catch (error) {
       console.error("[v0] Error checking shouldBurn:", error)
@@ -277,6 +306,7 @@ export class ReminderService {
    */
   async getUserReminders(address: string): Promise<ReminderData[]> {
     try {
+      await this.ensureContracts()
       const ids = await this.getUserReminderIds(address)
       const reminders = await Promise.all(ids.map((id) => this.getReminder(id)))
       return reminders
