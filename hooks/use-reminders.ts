@@ -48,10 +48,12 @@ export function useReminders() {
         console.error("[v0] Error checking canConfirm:", err)
       }
 
+      const totalTokens = Number(formatUnits(data.commitmentAmount + data.rewardPoolAmount, 18))
+
       return {
         id: data.id,
         description: data.description,
-        tokenAmount: Number.parseFloat(formatUnits(data.tokenAmount, 18)),
+        tokenAmount: totalTokens,
         reminderTime,
         confirmationDeadline,
         status,

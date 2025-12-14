@@ -11,7 +11,9 @@ export interface ReminderData {
   confirmed: boolean
   burned: boolean
   description: string
+  farcasterUsername: string
   totalReminders: number
+  rewardsClaimed: bigint
 }
 
 export interface ReminderRecord {
@@ -294,7 +296,9 @@ export class ReminderService {
         confirmed: data[5],
         burned: data[6],
         description: data[7],
-        totalReminders: Number(data[8]),
+        farcasterUsername: data[8],
+        totalReminders: Number(data[9]),
+        rewardsClaimed: data[10],
       }
     } catch (error) {
       console.error("[v0] Error getting reminder:", error)
@@ -302,15 +306,11 @@ export class ReminderService {
     }
   }
 
-  async getReminderRecords(reminderId: number): Promise<ReminderRecord> {
+  async getReminderRecords(reminderId: number): Promise<string[]> {
     try {
       await this.ensureContracts()
-      const data = await this.vaultContract.getReminders(reminderId)
-      return {
-        remindedBy: data[0],
-        scores: data[1],
-        claimed: data[2],
-      }
+      const addresses = await this.vaultContract.getRemindersFor(reminderId)
+      return addresses
     } catch (error) {
       console.error("[v0] Error getting reminder records:", error)
       throw error
