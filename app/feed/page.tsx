@@ -204,7 +204,7 @@ Help them stay accountable: ${returnUrl}`
       const { ethers } = await import("ethers")
 
       if (isInMiniapp && frameSDK) {
-        console.log("[v0] Using Frame SDK for transaction in miniapp")
+        console.log("[v0] Using Frame SDK transact for transaction in miniapp")
 
         console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
         const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
@@ -214,46 +214,34 @@ Help them stay accountable: ${returnUrl}`
         const vaultInterface = new ethers.Interface(REMINDER_VAULT_V2_ABI)
         const calldata = vaultInterface.encodeFunctionData("recordReminder", [reminderId, score])
 
-        console.log("[v0] Requesting transaction signature via Frame SDK...")
-        const txResult = await frameSDK.actions.signTransaction({
-          chainId: `eip155:84532`, // Base Sepolia
+        console.log("[v0] Requesting transaction via Frame SDK transact...")
+        console.log("[v0] Transaction params:", {
+          chainId: "eip155:84532",
+          method: "eth_sendTransaction",
+          to: process.env.NEXT_PUBLIC_VAULT_CONTRACT,
+          data: calldata,
+          value: "0",
+        })
+
+        const result = await frameSDK.actions.transact({
+          chainId: "eip155:84532",
           method: "eth_sendTransaction",
           params: {
             to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
+            value: "0",
             data: calldata,
-            value: "0x0",
           },
         })
 
-        console.log("[v0] Frame SDK transaction result:", txResult)
+        console.log("[v0] Frame SDK transact result:", result)
 
-        if (txResult.transactionHash) {
-          console.log("[v0] Transaction submitted:", txResult.transactionHash)
-
-          const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL)
-          let receipt = null
-          let attempts = 0
-
-          while (!receipt && attempts < 30) {
-            await new Promise((resolve) => setTimeout(resolve, 2000))
-            try {
-              receipt = await provider.getTransactionReceipt(txResult.transactionHash)
-            } catch (e) {
-              console.log("[v0] Waiting for transaction confirmation...")
-            }
-            attempts++
-          }
-
-          if (receipt) {
-            console.log("[v0] Transaction confirmed:", receipt)
-            alert(
-              `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction: ${txResult.transactionHash}`,
-            )
-          } else {
-            alert(`Transaction submitted! Hash: ${txResult.transactionHash}\n\nCheck Base Sepolia explorer for status.`)
-          }
+        if (result.transactionId) {
+          console.log("[v0] Transaction submitted:", result.transactionId)
+          alert(
+            `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction ID: ${result.transactionId}`,
+          )
         } else {
-          throw new Error("No transaction hash returned from Frame SDK")
+          throw new Error("No transaction ID returned from Frame SDK")
         }
       } else {
         console.log("[v0] Using MetaMask for transaction")
