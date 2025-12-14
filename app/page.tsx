@@ -16,6 +16,11 @@ export default function HomePage() {
     if (typeof window !== "undefined" && window.parent !== window) {
       try {
         window.parent.postMessage({ type: "frame-ready" }, "*")
+
+        // Also try SDK ready message
+        if ((window as any).farcaster) {
+          ;(window as any).farcaster.ready?.()
+        }
       } catch (error) {
         console.log("Could not notify parent frame")
       }

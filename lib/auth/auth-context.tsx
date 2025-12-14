@@ -235,10 +235,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const autoConnectMiniapp = async () => {
     if (typeof window !== "undefined" && !farcasterUser) {
       const inFrame = window.self !== window.top
-      if (inFrame) {
+      const hasFrameContext =
+        !!(window as any).farcasterFrameContext ||
+        !!(window as any).farcaster?.context ||
+        !!(window as any).frameContext
+
+      if (inFrame || hasFrameContext) {
+        // Wait for Farcaster context to be available
         setTimeout(() => {
           connectFarcaster()
-        }, 500)
+        }, 1000)
       }
     }
   }
