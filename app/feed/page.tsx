@@ -112,44 +112,9 @@ export default function FeedPage() {
   }
 
   const handleRemindAndClaim = async (reminder: PublicReminder) => {
-    console.log("[v0] =================================")
-    console.log("[v0] BUTTON CLICKED - FULL STATE DEBUG")
-    console.log("[v0] - Reminder ID:", reminder.id)
-    console.log("[v0] - Is in miniapp:", isInMiniapp)
-    console.log("[v0] - Farcaster user:", JSON.stringify(farcasterUser, null, 2))
-    console.log("[v0] - Wallet address:", walletAddress)
-    console.log("[v0] - Has farcasterUser:", !!farcasterUser)
-    console.log("[v0] - Has walletAddress:", !!walletAddress)
-    console.log("[v0] - FarcasterUser.walletAddress:", farcasterUser?.walletAddress)
-    console.log("[v0] =================================")
-
-    if (farcasterUser?.walletAddress && !walletAddress) {
-      console.log("[v0] Found wallet in farcasterUser, but not in walletAddress state")
-      console.log("[v0] Attempting to use Farcaster wallet:", farcasterUser.walletAddress)
-    }
-
-    if (!farcasterUser) {
-      alert("Please connect your Farcaster account first")
-      return
-    }
-
-    if (!walletAddress) {
-      const shouldConnect = confirm("To earn rewards, you need to connect your wallet. Connect now?")
-      if (shouldConnect) {
-        try {
-          await connectWallet()
-          await new Promise((resolve) => setTimeout(resolve, 500))
-        } catch (error) {
-          alert("Failed to connect wallet. Please try again.")
-          return
-        }
-      } else {
-        return
-      }
-    }
+    console.log("[v0] Post & Claim button clicked for reminder:", reminder.id)
 
     try {
-      console.log("[v0] Starting post and claim flow...")
       setProcessingReminder(reminder.id)
 
       const appUrl = "https://remindersbase.vercel.app"
@@ -178,20 +143,24 @@ Help them stay accountable: ${returnUrl}`
 
       const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}&embeds[]=${encodeURIComponent(frameUrl)}`
 
-      console.log("[v0] Opening Warpcast compose with return URL:", returnUrl)
+      console.log("[v0] Opening Warpcast with template post...")
+      console.log("[v0] Post text:", postText)
 
       window.location.href = warpcastUrl
     } catch (error) {
-      console.error("Error in remind and claim flow:", error)
+      console.error("[v0] Error opening Warpcast:", error)
       setProcessingReminder(null)
-      alert("Failed to initiate reminder process. Please try again.")
+      alert("Failed to open Warpcast. Please try again.")
     }
   }
 
   const handleRecordReminder = async (reminderId: number) => {
-    if (!farcasterUser) {
-      console.log("[v0] Missing Farcaster user")
-      alert("Please connect your Farcaster account first")
+    console.log("[v0] Attempting to record reminder and claim reward for ID:", reminderId)
+
+    if (!walletAddress && !farcasterUser?.walletAddress) {
+      console.log("[v0] No wallet available, user returned from posting but can't claim yet")
+      alert("Post completed! To claim your reward, please connect a wallet.")
+      setProcessingReminder(null)
       return
     }
 
