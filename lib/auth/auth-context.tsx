@@ -369,86 +369,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const sdk = await import("@farcaster/frame-sdk")
           console.log("[v0] Frame SDK loaded")
 
-          const readyTimeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("SDK ready timeout")), 3000),
-          )
-
           try {
-            await Promise.race([sdk.default.actions.ready(), readyTimeout])
-            console.log("[v0] Frame SDK ready called successfully")
-          } catch (readyError) {
-            const errorMsg = readyError instanceof Error ? readyError.message : "Unknown error"
-            console.log("[v0] SDK ready timeout or error, proceeding anyway:", errorMsg)
+            await Promise.race([
+              sdk.default.actions.ready(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000)),
+            ])
+            console.log("[v0] SDK ready completed")
+          } catch {
+            console.log("[v0] SDK ready timeout, continuing anyway")
           }
 
-          const context = sdk.default.context
-          console.log("[v0] Accessing Frame SDK context...")
+          let context
+          try {
+            context = sdk.context
+          } catch {
+            console.log("[v0] Trying alternative context access...")
+            context = (sdk as any).default?.context
+          }
 
-          if (!context || !context.user) {
-            console.log("[v0] No user context found in Frame SDK")
+          if (!context) {
+            console.log("[v0] No context available from Frame SDK")
             return
           }
 
-          console.log("[v0] Found user in Frame SDK context:", context.user.username)
+          const user = context.user
+          if (!user || !user.fid) {
+            console.log("[v0] No valid user found in context")
+            return
+          }
+
+          console.log("[v0] Found user FID:", user.fid)
 
           let walletAddr: string | undefined = undefined
 
           try {
-            const ethProvider = sdk.default.wallet.ethProvider
+            const ethProvider = sdk.default?.wallet?.ethProvider || (sdk as any).wallet?.ethProvider
             if (ethProvider) {
-              console.log("[v0] Requesting accounts from Frame eth provider...")
+              console.log("[v0] Requesting wallet access...")
               const accounts = await ethProvider.request({ method: "eth_requestAccounts" })
 
               if (accounts && Array.isArray(accounts) && accounts.length > 0) {
                 const addr = accounts[0]
                 if (typeof addr === "string" && addr.length > 0) {
                   walletAddr = addr
-                  console.log("[v0] Got wallet address from Frame SDK:", walletAddr)
+                  console.log("[v0] Got wallet from Frame SDK")
                 }
               }
 
               // Store provider globally for transactions
               if (typeof window !== "undefined") {
                 ;(window as any).__frameEthProvider = ethProvider
-                console.log("[v0] Frame eth provider stored globally")
               }
             }
-          } catch (providerError) {
-            const errorMsg = providerError instanceof Error ? providerError.message : "Unknown provider error"
-            console.log("[v0] Could not get wallet from Frame provider:", errorMsg)
+          } catch (err) {
+            console.log("[v0] Could not access Frame wallet")
           }
 
-          if (!walletAddr && context.user.fid) {
+          if (!walletAddr && user.fid) {
             try {
-              console.log("[v0] Fetching wallet from Neynar API...")
-              const response = await fetch(`/api/farcaster/user?fid=${context.user.fid}`)
+              const response = await fetch(`/api/farcaster/user?fid=${user.fid}`)
               if (response.ok) {
                 const neynarData = await response.json()
                 const neynarWallet =
                   neynarData.custodyAddress || neynarData.verifiedAddresses?.[0] || neynarData.custody_address
                 if (typeof neynarWallet === "string" && neynarWallet.length > 0) {
                   walletAddr = neynarWallet
-                  console.log("[v0] Got wallet from Neynar API:", walletAddr)
+                  console.log("[v0] Got wallet from Neynar")
                 }
               }
-            } catch (apiError) {
-              const errorMsg = apiError instanceof Error ? apiError.message : "Unknown API error"
-              console.log("[v0] Neynar API error:", errorMsg)
+            } catch {
+              console.log("[v0] Neynar API not available")
             }
           }
 
           const farcasterUser: FarcasterUser = {
-            fid: context.user.fid ?? 0,
-            username: context.user.username ?? "user",
-            displayName: context.user.displayName ?? context.user.username ?? "User",
-            pfpUrl:
-              typeof context.user.pfpUrl === "string" && context.user.pfpUrl.length > 0
-                ? context.user.pfpUrl
-                : "/abstract-profile.png",
+            fid: user.fid ?? 0,
+            username: user.username ?? "user",
+            displayName: user.displayName ?? user.username ?? "User",
+            pfpUrl: typeof user.pfpUrl === "string" && user.pfpUrl.length > 0 ? user.pfpUrl : "/abstract-profile.png",
             walletAddress: walletAddr,
           }
 
-          console.log("[v0] Setting Farcaster user:", farcasterUser.username, "with wallet:", walletAddr || "none")
+          console.log("[v0] Setting user:", farcasterUser.username)
           setFarcasterUser(farcasterUser)
           localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
 
@@ -459,17 +461,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const { JsonRpcProvider } = await import("ethers")
               const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
               setSigner(provider)
-              console.log("[v0] Created provider for balance checks")
-            } catch (providerError) {
-              const errorMsg = providerError instanceof Error ? providerError.message : "Unknown error"
-              console.log("[v0] Error creating provider:", errorMsg)
+            } catch {
+              console.log("[v0] Could not create provider")
             }
           }
 
-          console.log("[v0] Farcaster miniapp connection complete")
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : "Unknown initialization error"
-          console.log("[v0] Frame SDK initialization error:", errorMsg)
+          console.log("[v0] Miniapp connection complete")
+        } catch (err) {
+          console.log("[v0] Frame SDK initialization failed")
         }
       }
     }
