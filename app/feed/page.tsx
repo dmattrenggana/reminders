@@ -150,8 +150,8 @@ Help them stay accountable: ${returnUrl}`
 
       const { ethers } = await import("ethers")
 
-      console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
-      const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
+      console.log("[v0] Fetching Neynar score for FID:", farcasterUser?.fid)
+      const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser?.fid}`)
       if (!scoreResponse.ok) {
         throw new Error("Failed to fetch Neynar score")
       }
@@ -159,34 +159,37 @@ Help them stay accountable: ${returnUrl}`
       console.log("[v0] Neynar score:", score)
 
       if (isInMiniapp && typeof window !== "undefined") {
-        const frameSDK = (window as any).__frameSDK
-        const frameContext = (window as any).__frameContext
+        const frameEthProvider = (window as any).__frameEthProvider
 
-        console.log("[v0] Checking Frame SDK for transaction...")
-        console.log("[v0] Frame SDK available:", !!frameSDK)
-        console.log("[v0] Frame context available:", !!frameContext)
-        console.log("[v0] Frame context user:", frameContext?.user)
+        console.log("[v0] Checking Frame Ethereum provider for transaction...")
+        console.log("[v0] Frame eth provider available:", !!frameEthProvider)
 
-        if (frameSDK && frameContext?.user) {
+        if (frameEthProvider) {
           try {
-            console.log("[v0] Attempting Frame SDK transaction...")
+            console.log("[v0] Creating ethers provider from Frame SDK...")
 
-            const txHash = await frameSDK.actions.sendTransaction({
-              chainId: "eip155:84532", // Base Sepolia
-              to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
-              abi: REMINDER_VAULT_V2_ABI,
-              functionName: "recordReminder",
-              args: [reminderId, score],
-            })
+            const provider = new ethers.BrowserProvider(frameEthProvider)
+            const signer = await provider.getSigner()
 
-            console.log("[v0] Frame SDK transaction hash:", txHash)
+            console.log("[v0] Signer obtained from Frame provider")
 
-            if (txHash) {
-              alert(`✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction: ${txHash}`)
-              setProcessingReminder(null)
-              loadPublicReminders()
-              return
-            }
+            const vaultContract = new ethers.Contract(
+              process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
+              REMINDER_VAULT_V2_ABI,
+              signer,
+            )
+
+            console.log("[v0] Recording reminder via Frame SDK provider with score:", score)
+            const tx = await vaultContract.recordReminder(reminderId, score)
+            console.log("[v0] Frame SDK transaction sent:", tx.hash)
+
+            const receipt = await tx.wait()
+            console.log("[v0] Frame SDK transaction confirmed:", receipt)
+
+            alert(`✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction: ${tx.hash}`)
+            setProcessingReminder(null)
+            loadPublicReminders()
+            return
           } catch (frameError) {
             console.error("[v0] Frame SDK transaction error:", frameError)
             alert(
@@ -194,7 +197,7 @@ Help them stay accountable: ${returnUrl}`
             )
           }
         } else {
-          console.log("[v0] Frame SDK not fully initialized, falling back to MetaMask")
+          console.log("[v0] Frame SDK eth provider not available, falling back to MetaMask")
         }
       }
 
