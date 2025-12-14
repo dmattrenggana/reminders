@@ -14,16 +14,27 @@ export default function HomePage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.parent !== window) {
-      try {
-        window.parent.postMessage({ type: "frame-ready" }, "*")
+      const initFrameSDK = async () => {
+        try {
+          // Import Frame SDK dynamically
+          const sdk = await import("@farcaster/frame-sdk")
 
-        // Also try SDK ready message
-        if ((window as any).farcaster) {
-          ;(window as any).farcaster.ready?.()
+          // Call ready to dismiss splash screen
+          await sdk.default.actions.ready()
+          console.log("[v0] Frame SDK ready called successfully")
+        } catch (error) {
+          console.error("[v0] Error calling Frame SDK ready:", error)
+
+          // Fallback: send frame-ready message to parent
+          try {
+            window.parent.postMessage({ type: "frame-ready" }, "*")
+          } catch (postError) {
+            console.log("[v0] Could not notify parent frame")
+          }
         }
-      } catch (error) {
-        console.log("Could not notify parent frame")
       }
+
+      initFrameSDK()
     }
   }, [])
 
