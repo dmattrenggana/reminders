@@ -214,82 +214,94 @@ Help them stay accountable: ${returnUrl}`
         const vaultInterface = new ethers.Interface(REMINDER_VAULT_V2_ABI)
         const calldata = vaultInterface.encodeFunctionData("recordReminder", [reminderId, score])
 
-        console.log("[v0] Requesting transaction via Frame SDK transact...")
-        console.log("[v0] Transaction params:", {
-          chainId: "eip155:84532",
-          method: "eth_sendTransaction",
+        console.log("[v0] Requesting transaction via Frame SDK...")
+        console.log("[v0] Transaction details:", {
           to: process.env.NEXT_PUBLIC_VAULT_CONTRACT,
-          data: calldata,
           value: "0",
+          data: calldata,
         })
 
-        const result = await frameSDK.actions.transact({
-          chainId: "eip155:84532",
-          method: "eth_sendTransaction",
-          params: {
-            to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
-            value: "0",
-            data: calldata,
-          },
-        })
+        try {
+          const result = await frameSDK.actions.transact({
+            chainId: `eip155:84532`, // Base Sepolia
+            method: "eth_sendTransaction",
+            params: {
+              abi: REMINDER_VAULT_V2_ABI,
+              to: process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
+              value: "0",
+              data: calldata,
+            },
+          })
 
-        console.log("[v0] Frame SDK transact result:", result)
+          console.log("[v0] Frame SDK transact result:", result)
 
-        if (result.transactionId) {
-          console.log("[v0] Transaction submitted:", result.transactionId)
-          alert(
-            `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction ID: ${result.transactionId}`,
-          )
-        } else {
-          throw new Error("No transaction ID returned from Frame SDK")
-        }
-      } else {
-        console.log("[v0] Using MetaMask for transaction")
+          if (result.transactionId) {
+            console.log("[v0] Transaction submitted:", result.transactionId)
+            alert(
+              `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction ID: ${result.transactionId}`,
+            )
 
-        if (!window.ethereum) {
-          alert("Please install MetaMask or connect a wallet")
-          setProcessingReminder(null)
-          return
-        }
-
-        const provider = new ethers.BrowserProvider(window.ethereum)
-        const signer = await provider.getSigner()
-        const vaultContract = new ethers.Contract(
-          process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
-          REMINDER_VAULT_V2_ABI,
-          signer,
-        )
-
-        console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
-        const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
-        const { score } = await scoreResponse.json()
-
-        console.log("[v0] Recording reminder with score:", score)
-        const tx = await vaultContract.recordReminder(reminderId, score)
-        console.log("[v0] Transaction sent:", tx.hash)
-
-        const receipt = await tx.wait()
-        console.log("[v0] Transaction confirmed:", receipt)
-
-        const rewardClaimedEvent = receipt.logs.find((log: any) => {
-          try {
-            const parsed = vaultContract.interface.parseLog(log)
-            return parsed?.name === "RewardClaimed"
-          } catch {
-            return false
+            setProcessingReminder(null)
+            loadPublicReminders()
+            return
+          } else {
+            throw new Error("No transaction ID returned from Frame SDK")
           }
-        })
+        } catch (frameError: any) {
+          console.error("[v0] Frame SDK transact error:", frameError)
 
-        let rewardAmount = 0
-        if (rewardClaimedEvent) {
-          const parsed = vaultContract.interface.parseLog(rewardClaimedEvent)
-          rewardAmount = parsed?.args?.amount ? Number(ethers.formatEther(parsed.args.amount)) : 0
+          alert("Frame SDK transaction failed. The app will attempt to connect your wallet for the transaction.")
+
+          // Request wallet connection
+          if (!window.ethereum) {
+            throw new Error("Please connect a wallet to complete this transaction")
+          }
+
+          // Fall through to MetaMask flow below
         }
-
-        alert(
-          `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\nReward received: ${rewardAmount} COMMIT tokens\n\nTransaction: ${tx.hash}`,
-        )
       }
+
+      console.log("[v0] Using MetaMask/Web3 wallet for transaction")
+
+      if (!window.ethereum) {
+        alert("Please install MetaMask or connect a wallet")
+        setProcessingReminder(null)
+        return
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
+      const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V2_ABI, signer)
+
+      console.log("[v0] Fetching Neynar score for FID:", farcasterUser.fid)
+      const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser.fid}`)
+      const { score } = await scoreResponse.json()
+
+      console.log("[v0] Recording reminder with score:", score)
+      const tx = await vaultContract.recordReminder(reminderId, score)
+      console.log("[v0] Transaction sent:", tx.hash)
+
+      const receipt = await tx.wait()
+      console.log("[v0] Transaction confirmed:", receipt)
+
+      const rewardClaimedEvent = receipt.logs.find((log: any) => {
+        try {
+          const parsed = vaultContract.interface.parseLog(log)
+          return parsed?.name === "RewardClaimed"
+        } catch {
+          return false
+        }
+      })
+
+      let rewardAmount = 0
+      if (rewardClaimedEvent) {
+        const parsed = vaultContract.interface.parseLog(rewardClaimedEvent)
+        rewardAmount = parsed?.args?.amount ? Number(ethers.formatEther(parsed.args.amount)) : 0
+      }
+
+      alert(
+        `✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\nReward received: ${rewardAmount} COMMIT tokens\n\nTransaction: ${tx.hash}`,
+      )
 
       setProcessingReminder(null)
       loadPublicReminders()
@@ -312,116 +324,132 @@ Help them stay accountable: ${returnUrl}`
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-4">
-        <Link href="/">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to My Reminders
-          </Button>
-        </Link>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-3 py-4 max-w-2xl sm:px-4 sm:py-8 sm:max-w-4xl">
+        <div className="mb-3 sm:mb-4">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="h-8 px-2 sm:h-10 sm:px-4">
+              <ArrowLeft className="h-3 w-3 mr-1 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="text-xs sm:text-sm">Back</span>
+            </Button>
+          </Link>
+        </div>
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Public Reminders Feed</h1>
-        <p className="text-muted-foreground">
-          Help others stay committed and earn rewards! Post a reminder on Farcaster to instantly claim your share.
-        </p>
-      </div>
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2">Public Reminders Feed</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Help others stay committed and earn rewards!</p>
+        </div>
 
-      <div className="grid gap-4">
-        {reminders.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No active reminders at the moment</p>
-            </CardContent>
-          </Card>
-        ) : (
-          reminders.map((reminder) => {
-            const isProcessing = processingReminder === reminder.id
-            const alreadyRecorded = reminder.hasRecorded
+        <div className="grid gap-3 sm:gap-4">
+          {reminders.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12">
+                <Bell className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base text-muted-foreground">No active reminders at the moment</p>
+              </CardContent>
+            </Card>
+          ) : (
+            reminders.map((reminder) => {
+              const isProcessing = processingReminder === reminder.id
+              const alreadyRecorded = reminder.hasRecorded
 
-            return (
-              <Card
-                key={reminder.id}
-                ref={(el) => {
-                  cardRefs.current[reminder.id] = el
-                }}
-                className="hover:shadow-lg transition-all duration-300"
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg mb-1">{reminder.description}</CardTitle>
-                      <CardDescription className="flex items-center gap-2">
-                        <span>{reminder.farcasterUsername}</span>
-                        <Badge variant="outline" className="text-xs">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {formatDistance(reminder.reminderTime, new Date(), { addSuffix: true })}
+              return (
+                <Card
+                  key={reminder.id}
+                  ref={(el) => {
+                    cardRefs.current[reminder.id] = el
+                  }}
+                  className="hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader className="pb-2 sm:pb-6">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-sm sm:text-lg mb-1 truncate">{reminder.description}</CardTitle>
+                        <CardDescription className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                          <span className="truncate max-w-[120px] sm:max-w-none">{reminder.farcasterUsername}</span>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] sm:text-xs px-1 sm:px-2 py-0 sm:py-0.5 shrink-0"
+                          >
+                            <Clock className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                            {formatDistance(reminder.reminderTime, new Date(), { addSuffix: true })}
+                          </Badge>
+                        </CardDescription>
+                      </div>
+
+                      {reminder.canRemind ? (
+                        <Badge className="bg-green-500 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 sm:py-0.5 shrink-0">
+                          Open
                         </Badge>
-                      </CardDescription>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 sm:py-0.5 shrink-0"
+                        >
+                          Soon
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-0">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Coins className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span>{reminder.rewardPoolAmount} RMND</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span>{reminder.totalReminders} reminded</span>
+                        </div>
+                      </div>
                     </div>
 
-                    {reminder.canRemind ? (
-                      <Badge className="bg-green-500">Open</Badge>
-                    ) : (
-                      <Badge variant="secondary">Upcoming</Badge>
-                    )}
-                  </div>
-                </CardHeader>
-
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Coins className="h-4 w-4" />
-                        <span>{reminder.rewardPoolAmount} RMND</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        <span>{reminder.totalReminders} reminded</span>
-                      </div>
+                    <div className="flex gap-2">
+                      {alreadyRecorded ? (
+                        <Button
+                          disabled
+                          variant="outline"
+                          className="flex-1 bg-transparent text-xs sm:text-sm h-8 sm:h-10"
+                          size="sm"
+                        >
+                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          Claimed
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            console.log("[v0] Button clicked for reminder:", reminder.id)
+                            handleRemindAndClaim(reminder)
+                          }}
+                          disabled={isProcessing}
+                          className="flex-1 cursor-pointer text-xs sm:text-sm h-8 sm:h-10 touch-manipulation"
+                          size="sm"
+                          style={{ pointerEvents: "auto" }}
+                        >
+                          {isProcessing ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white mr-1 sm:mr-2" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                              Post & Claim
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {alreadyRecorded ? (
-                      <Button disabled variant="outline" className="flex-1 bg-transparent" size="sm">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Already Recorded & Claimed
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          console.log("[v0] RAW BUTTON CLICK EVENT FIRED!")
-                          handleRemindAndClaim(reminder)
-                        }}
-                        disabled={isProcessing}
-                        className="flex-1 cursor-pointer !pointer-events-auto"
-                        size="sm"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <Bell className="h-4 w-4 mr-2" />
-                            Post & Claim Reward
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
+        </div>
       </div>
     </div>
   )

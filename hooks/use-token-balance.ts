@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth/auth-context"
 import { useReminderService } from "./use-reminder-service"
 
 export function useTokenBalance() {
-  const { address, isConnected } = useAuth()
+  const { address, isConnected, farcasterUser } = useAuth()
   const service = useReminderService()
   const [balance, setBalance] = useState<string>("0")
   const [isLoading, setIsLoading] = useState(true)
@@ -18,7 +18,9 @@ export function useTokenBalance() {
 
     try {
       setIsLoading(true)
+      console.log("[v0] Loading token balance for address:", address)
       const bal = await service.getTokenBalance(address)
+      console.log("[v0] Token balance loaded:", bal)
       setBalance(bal)
     } catch (error) {
       console.error("[v0] Error loading token balance:", error)
@@ -29,10 +31,13 @@ export function useTokenBalance() {
   }, [service, address])
 
   useEffect(() => {
-    if (isConnected && address) {
+    if (address) {
+      console.log("[v0] Address changed, loading balance...")
       loadBalance()
+    } else {
+      setIsLoading(false)
     }
-  }, [isConnected, address, loadBalance])
+  }, [address, loadBalance])
 
   const refresh = useCallback(() => {
     loadBalance()

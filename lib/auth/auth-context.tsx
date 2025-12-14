@@ -96,11 +96,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const checkFarcasterConnection = () => {
+  const checkFarcasterConnection = async () => {
     const stored = localStorage.getItem("farcaster_user")
     if (stored) {
       try {
-        setFarcasterUser(JSON.parse(stored))
+        const user = JSON.parse(stored)
+        setFarcasterUser(user)
+
+        // If Farcaster user has wallet, set it as address
+        if (user.walletAddress) {
+          console.log("[v0] Restored Farcaster wallet:", user.walletAddress)
+          setAddress(user.walletAddress)
+
+          // Create a read-only provider for balance checks
+          try {
+            const { JsonRpcProvider } = await import("ethers")
+            const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
+            setSigner(provider) // Use provider as signer for read operations
+          } catch (error) {
+            console.error("[v0] Error creating provider for Farcaster wallet:", error)
+          }
+        }
       } catch (error) {
         console.error("Error parsing stored Farcaster user:", error)
         localStorage.removeItem("farcaster_user")
@@ -169,6 +185,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
                 if (farcasterUser.walletAddress) {
                   setAddress(farcasterUser.walletAddress)
+
+                  try {
+                    const { JsonRpcProvider } = await import("ethers")
+                    const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
+                    setSigner(provider)
+                  } catch (error) {
+                    console.error("[v0] Error creating provider:", error)
+                  }
                 }
                 console.log("[v0] Farcaster user connected with wallet:", farcasterUser.walletAddress)
                 return
@@ -190,6 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
             if (farcasterUser.walletAddress) {
               setAddress(farcasterUser.walletAddress)
+
+              try {
+                const { JsonRpcProvider } = await import("ethers")
+                const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
+                setSigner(provider)
+              } catch (error) {
+                console.error("[v0] Error creating provider:", error)
+              }
             }
             console.log("[v0] Farcaster user connected via SDK with wallet:", farcasterUser.walletAddress)
             return
