@@ -87,6 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Store SDK globally for later use
           ;(window as any).__frameSdk = sdk.default
+
+          // Wait a bit for SDK to be fully initialized
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+
+          console.log("[v0] Starting auto-connect...")
+          await connectFarcaster()
+          console.log("[v0] Auto-connect complete")
         } catch (error) {
           console.error("[v0] Error initializing miniapp:", error)
           // Fallback: try to dismiss splash with postMessage
