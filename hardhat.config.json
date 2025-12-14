@@ -9,9 +9,9 @@
     }
   },
   "networks": {
-    "baseSepolia": {
-      "url": "https://sepolia.base.org",
-      "chainId": 84532,
+    "base": {
+      "url": "https://mainnet.base.org",
+      "chainId": 8453,
       "accounts": "PRIVATE_KEY_FROM_ENV"
     }
   },

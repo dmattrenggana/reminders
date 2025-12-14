@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Neynar API key not configured" }, { status: 500 })
     }
 
-    if (!process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || !process.env.CRON_WALLET_PRIVATE_KEY) {
+    if (!process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL || !process.env.CRON_WALLET_PRIVATE_KEY) {
       return NextResponse.json({ error: "Missing required environment variables" }, { status: 500 })
     }
 
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const neynarScore = Math.max(1, Math.floor(user.follower_count / 10))
 
     const { ethers } = await import("ethers")
-    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL)
+    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL)
     const wallet = new ethers.Wallet(process.env.CRON_WALLET_PRIVATE_KEY, provider)
     const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, wallet)
 

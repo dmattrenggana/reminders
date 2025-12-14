@@ -60,19 +60,19 @@ export function AuthGuard({ children, requireWallet = true, requireFarcaster = f
     )
   }
 
-  if (isConnected && chainId !== 84532) {
+  if (isConnected && chainId !== 8453) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Wrong Network</CardTitle>
-            <CardDescription>Please switch to Base Sepolia network</CardDescription>
+            <CardDescription>Please switch to Base network</CardDescription>
           </CardHeader>
           <CardContent>
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                This app requires Base Sepolia testnet. Your wallet should prompt you to switch networks.
+                This app requires Base Mainnet. Your wallet should prompt you to switch networks.
               </AlertDescription>
             </Alert>
           </CardContent>

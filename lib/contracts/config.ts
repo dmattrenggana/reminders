@@ -18,11 +18,11 @@ export const CONTRACTS = {
 }
 
 export const CHAIN_CONFIG = {
-  BASE_SEPOLIA: {
-    chainId: 84532,
-    name: "Base Sepolia",
-    rpcUrl: "https://sepolia.base.org",
-    blockExplorer: "https://sepolia.basescan.org",
+  BASE_MAINNET: {
+    chainId: 8453,
+    name: "Base",
+    rpcUrl: "https://mainnet.base.org",
+    blockExplorer: "https://basescan.org",
   },
 }
 

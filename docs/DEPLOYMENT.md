@@ -11,6 +11,7 @@
 2. Set up environment variables:
    \`\`\`
    DEPLOYER_PRIVATE_KEY=your_private_key_here
+   NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
    \`\`\`
 
 ## Deployment Steps
@@ -20,15 +21,15 @@
 npx hardhat compile
 \`\`\`
 
-### 2. Deploy to Base Sepolia
+### 2. Deploy to Base Mainnet
 \`\`\`bash
-npx hardhat run scripts/deploy-contracts.ts --network baseSepolia
+npx hardhat run scripts/deploy-contracts.ts --network base
 \`\`\`
 
 ### 3. Verify Contracts (Optional)
 \`\`\`bash
-npx hardhat verify --network baseSepolia COMMIT_TOKEN_ADDRESS "CommitToken" "CMIT" "1000000"
-npx hardhat verify --network baseSepolia REMINDER_VAULT_ADDRESS COMMIT_TOKEN_ADDRESS
+npx hardhat verify --network base COMMIT_TOKEN_ADDRESS "CommitToken" "RMND" "1000000"
+npx hardhat verify --network base REMINDER_VAULT_ADDRESS COMMIT_TOKEN_ADDRESS
 \`\`\`
 
 ### 4. Update Environment Variables
@@ -58,3 +59,10 @@ NEXT_PUBLIC_VAULT_CONTRACT=0x...
 - Users can confirm anytime from notification start until 1 hour after reminder time
 - Tokens are automatically burnable after the confirmation deadline passes
 - Anyone can call burnMissedReminder to enforce the penalty
+
+## Network Information
+
+- **Network**: Base Mainnet
+- **Chain ID**: 8453
+- **RPC URL**: https://mainnet.base.org
+- **Block Explorer**: https://basescan.org

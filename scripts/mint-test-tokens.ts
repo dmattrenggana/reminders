@@ -6,7 +6,7 @@ import { ethers } from "ethers"
  */
 async function mintTestTokens() {
   const tokenAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS
-  const rpcUrl = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL
+  const rpcUrl = process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL
   const privateKey = process.env.DEPLOYER_PRIVATE_KEY
 
   if (!tokenAddress || !rpcUrl || !privateKey) {

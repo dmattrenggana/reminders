@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Create a read-only provider for balance checks
           try {
             const { JsonRpcProvider } = await import("ethers")
-            const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
+            const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
             setSigner(provider) // Use provider as signer for read operations
           } catch (error) {
             console.error("[v0] Error creating provider for Farcaster wallet:", error)
@@ -176,8 +176,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSigner(signer)
       setChainId(Number(network.chainId))
 
-      if (Number(network.chainId) !== 84532) {
-        await switchNetwork(84532)
+      if (Number(network.chainId) !== 8453) {
+        await switchNetwork(8453)
       }
     } catch (error) {
       console.error("Error connecting wallet:", error)
@@ -240,7 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
               try {
                 const { JsonRpcProvider } = await import("ethers")
-                const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
+                const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
                 setSigner(provider)
               } catch (error) {
                 console.error("[v0] Error creating provider:", error)
@@ -338,14 +338,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             params: [
               {
                 chainId: `0x${targetChainId.toString(16)}`,
-                chainName: "Base Sepolia",
+                chainName: "Base",
                 nativeCurrency: {
                   name: "Ether",
                   symbol: "ETH",
                   decimals: 18,
                 },
-                rpcUrls: ["https://sepolia.base.org"],
-                blockExplorerUrls: ["https://sepolia.basescan.org"],
+                rpcUrls: ["https://mainnet.base.org"],
+                blockExplorerUrls: ["https://basescan.org"],
               },
             ],
           })
@@ -459,7 +459,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             try {
               const { JsonRpcProvider } = await import("ethers")
-              const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL!)
+              const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
               setSigner(provider)
             } catch {
               console.log("[v0] Could not create provider")

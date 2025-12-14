@@ -7,11 +7,11 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const walletAddress = searchParams.get("walletAddress")
 
-    if (!process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL) {
+    if (!process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL) {
       return NextResponse.json({ error: "RPC URL not configured" }, { status: 500 })
     }
 
-    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL)
+    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL)
     const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, provider)
 
     const activeReminderIds = await vaultContract.getActiveReminders()
