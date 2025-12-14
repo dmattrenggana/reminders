@@ -1,5 +1,5 @@
 /**
- * Contract addresses and configuration for Base Sepolia
+ * Contract addresses and configuration for Base Mainnet
  *
  * SECURITY NOTE: These NEXT_PUBLIC_ variables contain blockchain contract addresses,
  * which are public information visible on the blockchain explorer. They are NOT
@@ -27,6 +27,27 @@ export const CHAIN_CONFIG = {
 }
 
 export const TOKEN_SYMBOL = "RMND"
+
+export function validateContractConfig(): { isValid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  if (!CONTRACTS.COMMIT_TOKEN) {
+    errors.push("NEXT_PUBLIC_CONTRACT_ADDRESS is not set")
+  } else if (!CONTRACTS.COMMIT_TOKEN.startsWith("0x") || CONTRACTS.COMMIT_TOKEN.length !== 42) {
+    errors.push("NEXT_PUBLIC_CONTRACT_ADDRESS is not a valid Ethereum address")
+  }
+
+  if (!CONTRACTS.REMINDER_VAULT) {
+    errors.push("NEXT_PUBLIC_VAULT_CONTRACT is not set")
+  } else if (!CONTRACTS.REMINDER_VAULT.startsWith("0x") || CONTRACTS.REMINDER_VAULT.length !== 42) {
+    errors.push("NEXT_PUBLIC_VAULT_CONTRACT is not a valid Ethereum address")
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  }
+}
 
 export const COMMIT_TOKEN_ABI = [
   "function name() view returns (string)",

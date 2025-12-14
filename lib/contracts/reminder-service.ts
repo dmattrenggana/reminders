@@ -1,4 +1,4 @@
-import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V2_ABI } from "./config"
+import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V3_ABI } from "./config"
 import { parseUnits, formatUnits } from "@/lib/utils/ethers-utils"
 
 export interface ReminderData {
@@ -39,9 +39,19 @@ export class ReminderService {
 
     try {
       const { Contract } = await import("ethers")
-      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, this.signer)
+      console.log("[v0] Initializing contracts with addresses:")
+      console.log("[v0] - Token:", CONTRACTS.COMMIT_TOKEN)
+      console.log("[v0] - Vault:", CONTRACTS.REMINDER_VAULT)
+
+      if (!CONTRACTS.COMMIT_TOKEN || !CONTRACTS.REMINDER_VAULT) {
+        throw new Error(
+          "Contract addresses not configured. Please set NEXT_PUBLIC_CONTRACT_ADDRESS and NEXT_PUBLIC_VAULT_CONTRACT environment variables.",
+        )
+      }
+
+      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, this.signer)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.signer)
-      console.log("[v0] Contracts initialized successfully")
+      console.log("[v0] Contracts initialized successfully with V3 ABI")
     } catch (error) {
       console.error("[v0] Error initializing contracts:", error)
       throw new Error("Failed to initialize contracts")
@@ -272,10 +282,24 @@ export class ReminderService {
   async getUserReminderIds(address: string): Promise<number[]> {
     try {
       await this.ensureContracts()
+      console.log("[v0] Fetching reminder IDs for address:", address)
+      console.log("[v0] Using vault contract:", CONTRACTS.REMINDER_VAULT)
       const ids = await this.vaultContract.getUserReminders(address)
+      console.log("[v0] Raw IDs from contract:", ids)
       return ids.map((id: bigint) => Number(id))
-    } catch (error) {
+    } catch (error: any) {
       console.error("[v0] Error getting user reminders:", error)
+      console.error("[v0] Error details:", {
+        code: error.code,
+        message: error.message,
+        data: error.data,
+      })
+
+      if (error.message?.includes("could not decode result data")) {
+        throw new Error(
+          "Contract address might be incorrect or contract not deployed. Please verify NEXT_PUBLIC_VAULT_CONTRACT is set correctly.",
+        )
+      }
       throw error
     }
   }
