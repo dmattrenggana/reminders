@@ -1,5 +1,5 @@
 @import "tailwindcss";
-/* Removed tw-animate-css import that was causing CSS syntax errors */
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
