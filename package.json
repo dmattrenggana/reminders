@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "latest",
-    "@farcaster/auth-kit": "^0.3.4",
     "@farcaster/hub-web": "^0.3.0",
     "@hookform/resolvers": "^3.10.0",
     "@neynar/nodejs-sdk": "^1.26.0",
