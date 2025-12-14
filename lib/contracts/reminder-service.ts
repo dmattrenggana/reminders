@@ -1,4 +1,4 @@
-import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V3_ABI } from "./config"
+import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V3_ABI, REMINDER_VAULT_V2_ABI } from "./config"
 import { parseUnits, formatUnits } from "@/lib/utils/ethers-utils"
 
 export interface ReminderData {
@@ -39,9 +39,6 @@ export class ReminderService {
 
     try {
       const { Contract } = await import("ethers")
-      console.log("[v0] Initializing contracts with addresses:")
-      console.log("[v0] - Token:", CONTRACTS.COMMIT_TOKEN)
-      console.log("[v0] - Vault:", CONTRACTS.REMINDER_VAULT)
 
       if (!CONTRACTS.COMMIT_TOKEN || !CONTRACTS.REMINDER_VAULT) {
         throw new Error(
@@ -49,9 +46,47 @@ export class ReminderService {
         )
       }
 
+      console.log("[v0] Detecting contract version...")
+
+      // First try V3 ABI
       this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, this.signer)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.signer)
-      console.log("[v0] Contracts initialized successfully with V3 ABI")
+
+      try {
+        // Try to call nextReminderId() which exists in both V2 and V3
+        const nextId = await this.vaultContract.nextReminderId()
+        console.log("[v0] ✅ Contract is accessible, nextReminderId:", nextId.toString())
+
+        // Now try to get a reminder if any exist
+        if (Number(nextId) > 1) {
+          const testData = await this.vaultContract.reminders(1)
+          if (testData.length === 11) {
+            console.log("[v0] ⚠️ Detected V2 contract (11 fields), switching to V2 ABI")
+            this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, this.signer)
+          } else if (testData.length === 12) {
+            console.log("[v0] ✅ Confirmed V3 contract (12 fields)")
+          }
+        } else {
+          console.log("[v0] No reminders exist yet, assuming V3")
+        }
+      } catch (error: any) {
+        console.error("[v0] ❌ Contract detection error:", error.message)
+        // If V3 fails, try V2
+        console.log("[v0] Trying V2 ABI as fallback...")
+        this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, this.signer)
+
+        try {
+          const nextId = await this.vaultContract.nextReminderId()
+          console.log("[v0] ✅ V2 ABI works! Contract is V2, nextReminderId:", nextId.toString())
+        } catch (v2Error: any) {
+          console.error("[v0] ❌ V2 ABI also failed:", v2Error.message)
+          throw new Error(
+            `Contract not accessible with either V2 or V3 ABI. Please verify the contract is deployed at ${CONTRACTS.REMINDER_VAULT}`,
+          )
+        }
+      }
+
+      console.log("[v0] Contracts initialized successfully")
     } catch (error) {
       console.error("[v0] Error initializing contracts:", error)
       throw new Error("Failed to initialize contracts")
