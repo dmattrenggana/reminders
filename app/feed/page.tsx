@@ -124,8 +124,7 @@ Help them stay accountable: ${returnUrl}`
 
       const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`
 
-      console.log("[v0] Opening Warpcast externally with template post...")
-      console.log("[v0] Post text:", postText)
+      console.log("[v0] Opening Warpcast with URL:", returnUrl)
 
       if (isInMiniapp) {
         window.open(warpcastUrl, "_blank")
