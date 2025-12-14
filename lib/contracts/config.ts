@@ -42,10 +42,10 @@ export const COMMIT_TOKEN_ABI = [
 ] as const
 
 export const REMINDER_VAULT_V2_ABI = [
-  "function createReminder(uint256 tokenAmount, uint256 reminderTime, string memory description) returns (uint256)",
+  "function createReminder(uint256 tokenAmount, uint256 reminderTime, string memory description, string memory farcasterUsername) returns (uint256)",
   "function confirmReminder(uint256 reminderId)",
   "function burnMissedReminder(uint256 reminderId)",
-  "function recordReminder(uint256 reminderId, address remindedBy, uint256 neynarScore)",
+  "function recordReminder(uint256 reminderId, uint256 neynarScore)",
   "function claimReward(uint256 reminderId)",
   "function getUserReminders(address user) view returns (uint256[])",
   "function getReminder(uint256 reminderId) view returns (address user, uint256 commitmentAmount, uint256 rewardPoolAmount, uint256 reminderTime, uint256 confirmationDeadline, bool confirmed, bool burned, string memory description, uint256 totalReminders)",

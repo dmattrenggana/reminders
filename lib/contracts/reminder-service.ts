@@ -171,8 +171,6 @@ export class ReminderService {
       let createTx
       try {
         console.log("[v0] 🚀 Calling vaultContract.createReminder NOW...")
-        alert("Approval complete! Please confirm the CREATE REMINDER transaction in your wallet.")
-
         createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description, username)
 
         console.log("[v0] ✅ CreateReminder transaction sent:", createTx.hash)
