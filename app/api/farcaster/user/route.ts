@@ -25,6 +25,9 @@ export async function GET(request: NextRequest) {
 
     const user = response.users[0]
 
+    const walletAddress =
+      user.custody_address || user.verified_addresses?.eth_addresses?.[0] || user.verified_addresses?.sol_addresses?.[0]
+
     return NextResponse.json({
       fid: user.fid,
       username: user.username,
@@ -33,6 +36,9 @@ export async function GET(request: NextRequest) {
       followerCount: user.follower_count || 0,
       followingCount: user.following_count || 0,
       verified: user.verified_addresses?.eth_addresses?.length > 0,
+      custodyAddress: user.custody_address,
+      walletAddress: walletAddress,
+      verifiedAddresses: user.verified_addresses?.eth_addresses || [],
     })
   } catch (error) {
     console.error("Error fetching Neynar user data:", error)

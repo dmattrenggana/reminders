@@ -29,6 +29,7 @@ interface FarcasterUser {
   pfpUrl: string
   custody?: string
   verifications?: string[]
+  walletAddress?: string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -161,10 +162,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   username: neynarData.username,
                   displayName: neynarData.displayName,
                   pfpUrl: neynarData.pfpUrl,
+                  walletAddress:
+                    neynarData.custodyAddress || neynarData.verifiedAddresses?.[0] || neynarData.custody_address,
                 }
                 setFarcasterUser(farcasterUser)
                 localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
-                console.log("[v0] Farcaster user connected via SDK:", farcasterUser)
+                if (farcasterUser.walletAddress) {
+                  setAddress(farcasterUser.walletAddress)
+                }
+                console.log("[v0] Farcaster user connected with wallet:", farcasterUser.walletAddress)
                 return
               }
             } catch (apiError) {
@@ -177,11 +183,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               username: user.username ?? "user",
               displayName: user.displayName ?? user.username ?? "User",
               pfpUrl: user.pfpUrl ?? "/abstract-profile.png",
+              walletAddress: context.client?.walletAddress,
             }
 
             setFarcasterUser(farcasterUser)
             localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
-            console.log("[v0] Farcaster user connected via SDK context:", farcasterUser)
+            if (farcasterUser.walletAddress) {
+              setAddress(farcasterUser.walletAddress)
+            }
+            console.log("[v0] Farcaster user connected via SDK with wallet:", farcasterUser.walletAddress)
             return
           }
         } catch (sdkError) {

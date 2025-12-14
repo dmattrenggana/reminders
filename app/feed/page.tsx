@@ -24,7 +24,7 @@ interface PublicReminder {
 }
 
 export default function FeedPage() {
-  const { walletAddress, farcasterUser } = useAuth()
+  const { walletAddress, farcasterUser, connectWallet } = useAuth()
   const [reminders, setReminders] = useState<PublicReminder[]>([])
   const [loading, setLoading] = useState(true)
   const [processingReminder, setProcessingReminder] = useState<number | null>(null)
@@ -88,8 +88,19 @@ export default function FeedPage() {
     }
 
     if (!walletAddress) {
-      alert("Please connect your wallet first")
-      return
+      const shouldConnect = confirm("To earn rewards, you need to connect your wallet. Connect now?")
+      if (shouldConnect) {
+        try {
+          await connectWallet()
+          // Wait a bit for state to update
+          await new Promise((resolve) => setTimeout(resolve, 500))
+        } catch (error) {
+          alert("Failed to connect wallet. Please try again.")
+          return
+        }
+      } else {
+        return
+      }
     }
 
     try {
@@ -292,7 +303,7 @@ Help them stay accountable: ${frameUrl}`
                     ) : (
                       <Button
                         onClick={() => handleRemindAndClaim(reminder)}
-                        disabled={!reminder.canRemind || !farcasterUser || !walletAddress || isProcessing}
+                        disabled={!reminder.canRemind || !farcasterUser || isProcessing}
                         className="flex-1"
                         size="sm"
                       >
@@ -306,11 +317,9 @@ Help them stay accountable: ${frameUrl}`
                             <Bell className="h-4 w-4 mr-2" />
                             {!farcasterUser
                               ? "Connect Farcaster to Remind"
-                              : !walletAddress
-                                ? "Connect Wallet to Earn"
-                                : !reminder.canRemind
-                                  ? "Not in remind window yet"
-                                  : "Post & Claim Reward"}
+                              : !reminder.canRemind
+                                ? "Not in remind window yet"
+                                : "Post & Claim Reward"}
                           </>
                         )}
                       </Button>
