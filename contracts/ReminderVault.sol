@@ -13,15 +13,24 @@ contract ReminderVault is ReentrancyGuard {
 
     struct Reminder {
         address user;
-        uint256 tokenAmount;
+        uint256 commitmentAmount; // renamed from tokenAmount to match V2 ABI
+        uint256 rewardPoolAmount; // added reward pool for social reminders
         uint256 reminderTime;
-        uint256 confirmationDeadline; // 1 hour after reminder time
+        uint256 confirmationDeadline;
         bool confirmed;
         bool burned;
         string description;
+        uint256 totalReminders; // added to track how many people reminded
+    }
+
+    struct ReminderRecord {
+        address[] remindedBy;
+        uint256[] scores;
+        bool[] claimed;
     }
 
     mapping(uint256 => Reminder) public reminders;
+    mapping(uint256 => ReminderRecord) public reminderRecords;
     mapping(address => uint256[]) public userReminders;
     uint256 public nextReminderId;
 
@@ -70,25 +79,27 @@ contract ReminderVault is ReentrancyGuard {
         require(reminderTime > block.timestamp, "Reminder time must be in future");
         require(bytes(description).length > 0, "Description required");
 
-        // Transfer tokens to contract
         require(
             commitToken.transferFrom(msg.sender, address(this), tokenAmount),
             "Token transfer failed"
         );
 
         uint256 reminderId = nextReminderId++;
-        
-        // Confirmation deadline is 1 hour after reminder time
         uint256 confirmationDeadline = reminderTime + 1 hours;
+
+        uint256 commitmentAmount = tokenAmount / 2; // 50% commitment
+        uint256 rewardPoolAmount = tokenAmount - commitmentAmount; // 50% reward pool
 
         reminders[reminderId] = Reminder({
             user: msg.sender,
-            tokenAmount: tokenAmount,
+            commitmentAmount: commitmentAmount,
+            rewardPoolAmount: rewardPoolAmount,
             reminderTime: reminderTime,
             confirmationDeadline: confirmationDeadline,
             confirmed: false,
             burned: false,
-            description: description
+            description: description,
+            totalReminders: 0
         });
 
         userReminders[msg.sender].push(reminderId);
@@ -115,7 +126,6 @@ contract ReminderVault is ReentrancyGuard {
         require(!reminder.confirmed, "Already confirmed");
         require(!reminder.burned, "Tokens already burned");
         
-        // Can confirm starting from 1 hour before reminder time
         uint256 notificationStartTime = reminder.reminderTime - 1 hours;
         require(
             block.timestamp >= notificationStartTime,
@@ -128,18 +138,18 @@ contract ReminderVault is ReentrancyGuard {
 
         reminder.confirmed = true;
 
-        // Return tokens to user
+        uint256 totalReturn = reminder.commitmentAmount + reminder.rewardPoolAmount;
         require(
-            commitToken.transfer(msg.sender, reminder.tokenAmount),
+            commitToken.transfer(msg.sender, totalReturn),
             "Token return failed"
         );
 
         emit ReminderConfirmed(reminderId, msg.sender, block.timestamp);
-        emit TokensReclaimed(reminderId, msg.sender, reminder.tokenAmount);
+        emit TokensReclaimed(reminderId, msg.sender, totalReturn);
     }
 
     /**
-     * @dev Burn tokens for missed reminder (callable by anyone after deadline)
+     * @dev Burn tokens for missed reminder and return unclaimed reward pool
      */
     function burnMissedReminder(uint256 reminderId) external nonReentrant {
         Reminder storage reminder = reminders[reminderId];
@@ -153,13 +163,19 @@ contract ReminderVault is ReentrancyGuard {
 
         reminder.burned = true;
 
-        // Burn the tokens (send to dead address)
         require(
-            commitToken.transfer(address(0xdead), reminder.tokenAmount),
+            commitToken.transfer(address(0xdead), reminder.commitmentAmount),
             "Token burn failed"
         );
 
-        emit TokensBurned(reminderId, reminder.user, reminder.tokenAmount);
+        if (reminder.rewardPoolAmount > 0) {
+            require(
+                commitToken.transfer(reminder.user, reminder.rewardPoolAmount),
+                "Reward pool return failed"
+            );
+        }
+
+        emit TokensBurned(reminderId, reminder.user, reminder.commitmentAmount);
     }
 
     /**
@@ -170,26 +186,30 @@ contract ReminderVault is ReentrancyGuard {
     }
 
     /**
-     * @dev Get reminder details
+     * @dev Get reminder details (V2 format)
      */
     function getReminder(uint256 reminderId) external view returns (
         address user,
-        uint256 tokenAmount,
+        uint256 commitmentAmount,
+        uint256 rewardPoolAmount,
         uint256 reminderTime,
         uint256 confirmationDeadline,
         bool confirmed,
         bool burned,
-        string memory description
+        string memory description,
+        uint256 totalReminders
     ) {
         Reminder memory reminder = reminders[reminderId];
         return (
             reminder.user,
-            reminder.tokenAmount,
+            reminder.commitmentAmount,
+            reminder.rewardPoolAmount,
             reminder.reminderTime,
             reminder.confirmationDeadline,
             reminder.confirmed,
             reminder.burned,
-            reminder.description
+            reminder.description,
+            reminder.totalReminders
         );
     }
 
@@ -218,5 +238,95 @@ contract ReminderVault is ReentrancyGuard {
         return !reminder.confirmed && 
                !reminder.burned && 
                block.timestamp > reminder.confirmationDeadline;
+    }
+
+    function recordReminder(
+        uint256 reminderId,
+        address remindedBy,
+        uint256 neynarScore
+    ) external {
+        require(reminders[reminderId].user == msg.sender, "Not reminder owner");
+        require(!reminders[reminderId].confirmed, "Already confirmed");
+        
+        reminderRecords[reminderId].remindedBy.push(remindedBy);
+        reminderRecords[reminderId].scores.push(neynarScore);
+        reminderRecords[reminderId].claimed.push(false);
+        
+        reminders[reminderId].totalReminders++;
+    }
+
+    function getReminders(uint256 reminderId) external view returns (
+        address[] memory remindedBy,
+        uint256[] memory scores,
+        bool[] memory claimed
+    ) {
+        ReminderRecord memory record = reminderRecords[reminderId];
+        return (record.remindedBy, record.scores, record.claimed);
+    }
+
+    function calculateReward(uint256 reminderId, address claimer) external view returns (uint256) {
+        Reminder memory reminder = reminders[reminderId];
+        ReminderRecord memory record = reminderRecords[reminderId];
+        
+        if (!reminder.confirmed || reminder.totalReminders == 0) {
+            return 0;
+        }
+
+        uint256 totalScore = 0;
+        uint256 claimerScore = 0;
+        
+        for (uint256 i = 0; i < record.remindedBy.length; i++) {
+            totalScore += record.scores[i];
+            if (record.remindedBy[i] == claimer) {
+                claimerScore = record.scores[i];
+            }
+        }
+
+        if (claimerScore == 0 || totalScore == 0) {
+            return 0;
+        }
+
+        return (reminder.rewardPoolAmount * claimerScore) / totalScore;
+    }
+
+    function claimReward(uint256 reminderId) external nonReentrant {
+        Reminder memory reminder = reminders[reminderId];
+        ReminderRecord storage record = reminderRecords[reminderId];
+        
+        require(reminder.confirmed, "Reminder not confirmed");
+        
+        for (uint256 i = 0; i < record.remindedBy.length; i++) {
+            if (record.remindedBy[i] == msg.sender && !record.claimed[i]) {
+                record.claimed[i] = true;
+                
+                uint256 reward = this.calculateReward(reminderId, msg.sender);
+                if (reward > 0) {
+                    require(
+                        commitToken.transfer(msg.sender, reward),
+                        "Reward transfer failed"
+                    );
+                }
+                return;
+            }
+        }
+        
+        revert("No reward to claim");
+    }
+
+    function canClaimReward(uint256 reminderId, address claimer) external view returns (bool) {
+        Reminder memory reminder = reminders[reminderId];
+        ReminderRecord memory record = reminderRecords[reminderId];
+        
+        if (!reminder.confirmed) {
+            return false;
+        }
+        
+        for (uint256 i = 0; i < record.remindedBy.length; i++) {
+            if (record.remindedBy[i] == claimer && !record.claimed[i]) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

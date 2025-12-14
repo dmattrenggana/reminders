@@ -98,17 +98,31 @@ export class ReminderService {
         description,
       })
 
-      console.log("[v0] Step 1: Approving tokens...")
-      await this.approveTokens(tokenAmount)
-      console.log("[v0] Step 1: Token approval complete")
+      console.log("[v0] Step 1: Checking current token allowance...")
+      const currentAllowance = await this.tokenContract.allowance(
+        await this.signer.getAddress(),
+        CONTRACTS.REMINDER_VAULT,
+      )
+      console.log("[v0] Current allowance:", currentAllowance.toString(), "Required:", amountInWei.toString())
 
-      console.log("[v0] Step 2: Creating reminder on contract...")
-      const tx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description)
-      console.log("[v0] Step 2: Transaction sent, hash:", tx.hash)
+      if (currentAllowance < amountInWei) {
+        console.log("[v0] Step 2: Approving tokens...")
+        const approveTx = await this.tokenContract.approve(CONTRACTS.REMINDER_VAULT, amountInWei)
+        console.log("[v0] Approval transaction sent:", approveTx.hash)
 
-      console.log("[v0] Step 3: Waiting for transaction confirmation...")
-      const receipt = await tx.wait()
-      console.log("[v0] Step 3: Transaction confirmed, receipt:", receipt.hash)
+        const approveReceipt = await approveTx.wait()
+        console.log("[v0] Approval confirmed in block:", approveReceipt.blockNumber)
+      } else {
+        console.log("[v0] Step 2: Sufficient allowance already exists, skipping approval")
+      }
+
+      console.log("[v0] Step 3: Calling createReminder on vault contract...")
+      const createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description)
+      console.log("[v0] CreateReminder transaction sent:", createTx.hash)
+
+      console.log("[v0] Step 4: Waiting for createReminder confirmation...")
+      const receipt = await createTx.wait()
+      console.log("[v0] CreateReminder confirmed in block:", receipt.blockNumber)
 
       // Extract reminder ID from event
       const event = receipt.logs.find((log: any) => {
@@ -122,13 +136,13 @@ export class ReminderService {
       if (event) {
         const parsed = this.vaultContract.interface.parseLog(event)
         const reminderId = Number(parsed?.args[0])
-        console.log("[v0] Reminder created successfully with ID:", reminderId)
+        console.log("[v0] ✅ Reminder created successfully with ID:", reminderId)
         return reminderId
       }
 
       throw new Error("Failed to get reminder ID from event")
     } catch (error: any) {
-      console.error("[v0] Error creating reminder:", error)
+      console.error("[v0] ❌ Error creating reminder:", error)
       if (error.code === "ACTION_REJECTED") {
         throw new Error("Transaction rejected by user")
       }
@@ -231,11 +245,11 @@ export class ReminderService {
     }
   }
 
-  async recordReminder(reminderId: number, remindedBy: string, neynarScore: number): Promise<void> {
+  async recordReminder(reminderId: number, neynarScore: number): Promise<void> {
     try {
       await this.ensureContracts()
-      console.log("[v0] Recording reminder:", { reminderId, remindedBy, neynarScore })
-      const tx = await this.vaultContract.recordReminder(reminderId, remindedBy, neynarScore)
+      console.log("[v0] Recording reminder:", { reminderId, neynarScore })
+      const tx = await this.vaultContract.recordReminder(reminderId, neynarScore)
       await tx.wait()
       console.log("[v0] Reminder recorded successfully")
     } catch (error: any) {

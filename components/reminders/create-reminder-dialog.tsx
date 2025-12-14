@@ -29,6 +29,9 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
   const [date, setDate] = useState<Date>()
   const [time, setTime] = useState("")
   const [isCreating, setIsCreating] = useState(false)
+  const [showManualTime, setShowManualTime] = useState(false)
+  const [hours, setHours] = useState("")
+  const [minutes, setMinutes] = useState("")
 
   const service = useReminderService()
   const { balance } = useTokenBalance()
@@ -39,9 +42,19 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
     const reminderTime = addHours(now, hoursFromNow)
 
     setDate(new Date(reminderTime.getFullYear(), reminderTime.getMonth(), reminderTime.getDate()))
-    const hours = String(reminderTime.getHours()).padStart(2, "0")
-    const minutes = String(reminderTime.getMinutes()).padStart(2, "0")
-    setTime(`${hours}:${minutes}`)
+    const hrs = String(reminderTime.getHours()).padStart(2, "0")
+    const mins = String(reminderTime.getMinutes()).padStart(2, "0")
+    setTime(`${hrs}:${mins}`)
+    setHours(hrs)
+    setMinutes(mins)
+  }
+
+  const handleManualTimeChange = (newHours: string, newMinutes: string) => {
+    setHours(newHours)
+    setMinutes(newMinutes)
+    if (newHours && newMinutes) {
+      setTime(`${newHours.padStart(2, "0")}:${newMinutes.padStart(2, "0")}`)
+    }
   }
 
   const handleCreate = async () => {
@@ -75,9 +88,8 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
     setIsCreating(true)
 
     try {
-      const [hours, minutes] = time.split(":").map(Number)
       const reminderDate = new Date(date)
-      reminderDate.setHours(hours, minutes, 0, 0)
+      reminderDate.setHours(Number(hours), Number(minutes), 0, 0)
 
       console.log("[v0] Creating reminder on blockchain...")
       const reminderId = await service.createReminder(tokenAmount, reminderDate, description)
@@ -96,6 +108,8 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       setTokenAmount("")
       setDate(undefined)
       setTime("")
+      setHours("")
+      setMinutes("")
     } catch (error: any) {
       console.error("[v0] Error creating reminder:", error)
       toast({
@@ -189,17 +203,72 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="time">Reminder Time</Label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  id="time"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="pl-10 h-10"
-                />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="time">Reminder Time</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => setShowManualTime(!showManualTime)}
+                >
+                  {showManualTime ? "Use Picker" : "Manual Entry"}
+                </Button>
               </div>
+
+              {showManualTime ? (
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <Input
+                      type="number"
+                      placeholder="HH"
+                      value={hours}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val === "" || (Number(val) >= 0 && Number(val) <= 23)) {
+                          handleManualTimeChange(val, minutes)
+                        }
+                      }}
+                      min="0"
+                      max="23"
+                      className="text-center"
+                    />
+                  </div>
+                  <span className="text-muted-foreground">:</span>
+                  <div className="flex-1">
+                    <Input
+                      type="number"
+                      placeholder="MM"
+                      value={minutes}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val === "" || (Number(val) >= 0 && Number(val) <= 59)) {
+                          handleManualTimeChange(hours, val)
+                        }
+                      }}
+                      min="0"
+                      max="59"
+                      className="text-center"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+                  <Input
+                    id="time"
+                    type="time"
+                    value={time}
+                    onChange={(e) => {
+                      setTime(e.target.value)
+                      const [h, m] = e.target.value.split(":")
+                      setHours(h)
+                      setMinutes(m)
+                    }}
+                    className="pl-10 h-10 cursor-pointer"
+                    style={{ WebkitAppearance: "none" }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
