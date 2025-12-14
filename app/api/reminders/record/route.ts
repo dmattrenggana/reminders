@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { NeynarAPIClient } from "@neynar/nodejs-sdk"
+import { CONTRACTS, REMINDER_VAULT_V2_ABI } from "@/lib/contracts/config"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,20 +11,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Neynar API key not configured" }, { status: 500 })
     }
 
-    const neynarClient = new NeynarAPIClient({ apiKey })
+    if (!process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || !process.env.CRON_WALLET_PRIVATE_KEY) {
+      return NextResponse.json({ error: "Missing required environment variables" }, { status: 500 })
+    }
 
+    const neynarClient = new NeynarAPIClient({ apiKey })
     const userdata = await neynarClient.fetchBulkUsers([farcasterFid])
     const user = userdata.users[0]
 
-    // Calculate score based on follower count and engagement
+    // Calculate score based on follower count
     const neynarScore = Math.max(1, Math.floor(user.follower_count / 10))
 
-    // TODO: Call contract to record reminder with neynarScore
-    // This would call: contract.recordReminder(reminderId, neynarScore)
+    const { ethers } = await import("ethers")
+    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL)
+    const wallet = new ethers.Wallet(process.env.CRON_WALLET_PRIVATE_KEY, provider)
+    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, wallet)
+
+    const tx = await vaultContract.recordReminder(reminderId, neynarScore)
+    await tx.wait()
 
     return NextResponse.json({
       success: true,
       neynarScore,
+      txHash: tx.hash,
     })
   } catch (error) {
     console.error("Error recording reminder:", error)

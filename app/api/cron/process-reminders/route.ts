@@ -37,14 +37,16 @@ export async function GET(request: NextRequest) {
         const reminder = await vaultContract.getReminder(i)
         const [
           user,
-          commitmentAmount,
+          commitAmount,
           rewardPoolAmount,
           reminderTime,
           confirmationDeadline,
           confirmed,
           burned,
           description,
-          totalReminders,
+          farcasterUsername,
+          rewardsClaimed,
+          reminders,
         ] = reminder
 
         if (confirmed || burned) continue
@@ -61,7 +63,8 @@ export async function GET(request: NextRequest) {
               id: i,
               action: "burned_and_returned",
               user,
-              commitmentBurned: ethers.formatUnits(commitmentAmount, 18),
+              farcasterUsername: farcasterUsername || "wallet user",
+              commitmentBurned: ethers.formatUnits(commitAmount, 18),
               rewardPoolReturned: ethers.formatUnits(rewardPoolAmount, 18),
               txHash: tx.hash,
             })
