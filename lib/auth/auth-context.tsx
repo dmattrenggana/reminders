@@ -375,8 +375,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const sdk = await import("@farcaster/frame-sdk")
           console.log("[v0] Frame SDK loaded")
 
-          await sdk.default.actions.ready()
-          console.log("[v0] SDK ready completed")
+          sdk.default.actions.ready().catch((err: any) => console.log("[v0] Ready() failed:", err))
+
+          // Wait a moment for ready() to process
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          console.log("[v0] SDK ready initiated")
 
           const context = sdk.default.context
 
@@ -389,7 +392,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           let walletAddr: string | undefined = undefined
 
           try {
-            const ethProvider = sdk.default?.wallet?.ethProvider
+            const ethProvider = sdk.default.wallet?.ethProvider
             if (ethProvider) {
               console.log("[v0] Requesting wallet access...")
               const accounts = await ethProvider.request({ method: "eth_requestAccounts" })
@@ -398,21 +401,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const addr = accounts[0]
                 if (typeof addr === "string" && addr.length > 0) {
                   walletAddr = addr
-                  console.log("[v0] Got wallet from Frame SDK")
+                  console.log("[v0] Got wallet from Frame SDK:", walletAddr)
                 }
               }
 
               // Store provider globally for transactions
               if (typeof window !== "undefined") {
                 ;(window as any).__frameEthProvider = ethProvider
+                console.log("[v0] Stored Frame eth provider globally")
               }
             }
           } catch (err) {
-            console.log("[v0] Could not access Frame wallet")
+            console.log("[v0] Could not access Frame wallet:", err)
           }
 
           if (!walletAddr && user.fid) {
             try {
+              console.log("[v0] Fetching wallet from Neynar API...")
               const response = await fetch(`/api/farcaster/user?fid=${user.fid}`)
               if (response.ok) {
                 const neynarData = await response.json()
@@ -420,7 +425,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   neynarData.custodyAddress || neynarData.verifiedAddresses?.[0] || neynarData.custody_address
                 if (typeof neynarWallet === "string" && neynarWallet.length > 0) {
                   walletAddr = neynarWallet
-                  console.log("[v0] Got wallet from Neynar")
+                  console.log("[v0] Got wallet from Neynar:", walletAddr)
                 }
               }
             } catch {
@@ -436,7 +441,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             walletAddress: walletAddr,
           }
 
-          console.log("[v0] Setting user:", farcasterUser.username)
+          console.log("[v0] Setting user:", farcasterUser.username, "FID:", farcasterUser.fid)
           setFarcasterUser(farcasterUser)
           localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
 
@@ -447,14 +452,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
               const frameProvider = (window as any).__frameEthProvider
               if (frameProvider) {
+                console.log("[v0] Creating signer from Frame provider...")
                 const { BrowserProvider } = await import("ethers")
                 const provider = new BrowserProvider(frameProvider)
                 setSigner(await provider.getSigner())
+                console.log("[v0] ✅ Frame signer created")
               } else {
                 // Fallback to read-only provider
+                console.log("[v0] Creating read-only provider...")
                 const { JsonRpcProvider } = await import("ethers")
                 const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
                 setSigner(provider)
+                console.log("[v0] ✅ Read-only provider created")
               }
             } catch {
               console.log("[v0] Could not create provider")
@@ -466,7 +475,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("[v0] ✅ Miniapp connection complete")
           console.log("[v0] ===== AUTO-CONNECT COMPLETE =====")
         } catch (err) {
-          console.log("[v0] Frame SDK initialization failed")
+          console.log("[v0] Frame SDK initialization failed:", err)
           console.log("[v0] ===== AUTO-CONNECT FAILED =====")
         }
       } else {

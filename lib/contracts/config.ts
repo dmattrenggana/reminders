@@ -21,7 +21,8 @@ export const CHAIN_CONFIG = {
   BASE_MAINNET: {
     chainId: 8453,
     name: "Base",
-    rpcUrl: "https://mainnet.base.org",
+    rpcUrls: ["https://mainnet.base.org", "https://base.llamarpc.com", "https://base-rpc.publicnode.com"],
+    rpcUrl: "https://mainnet.base.org", // Default
     blockExplorer: "https://basescan.org",
   },
 }
