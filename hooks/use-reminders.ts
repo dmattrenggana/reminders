@@ -28,7 +28,7 @@ export function useReminders() {
       const reminderTime = new Date(Number(data.reminderTime) * 1000)
       const confirmationDeadline = new Date(Number(data.confirmationDeadline) * 1000)
       const now = Date.now()
-      const notificationStartTime = reminderTime.getTime() - 60 * 60 * 1000 // 1 hour before
+      const notificationStartTime = reminderTime.getTime() - 60 * 60 * 1000
 
       let status: Reminder["status"]
       if (data.burned) {
@@ -42,10 +42,8 @@ export function useReminders() {
       }
 
       let canConfirm = false
-      try {
-        canConfirm = service ? await service.canConfirm(data.id) : false
-      } catch (err) {
-        console.error("[v0] Error checking canConfirm:", err)
+      if (!data.confirmed && !data.burned && now >= notificationStartTime && now <= confirmationDeadline.getTime()) {
+        canConfirm = true
       }
 
       const totalTokens = Number(formatUnits(data.commitmentAmount + data.rewardPoolAmount, 18))
@@ -61,7 +59,6 @@ export function useReminders() {
       }
     } catch (err) {
       console.error("[v0] Error mapping reminder data:", err)
-      // Return a safe default reminder object
       return {
         id: data.id,
         description: data.description || "Unknown reminder",

@@ -13,14 +13,16 @@ export async function GET(request: NextRequest) {
     const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, provider)
 
     const activeReminderIds = await vaultContract.getActiveReminders()
+    console.log("[API] Active reminder IDs:", activeReminderIds)
 
     const reminders = []
 
     for (const id of activeReminderIds) {
       try {
-        const reminderData = await vaultContract.getReminder(Number(id))
+        const reminderData = await vaultContract.reminders(Number(id))
         const canRemindNow = await vaultContract.canRemind(Number(id))
 
+        // reminderData structure: [user, commitAmount, rewardPoolAmount, reminderTime, confirmationDeadline, confirmed, burned, description, farcasterUsername, totalReminders, rewardsClaimed]
         reminders.push({
           id: Number(id),
           user: reminderData[0],
@@ -28,20 +30,22 @@ export async function GET(request: NextRequest) {
           description: reminderData[7],
           reminderTime: new Date(Number(reminderData[3]) * 1000),
           rewardPoolAmount: Number(ethers.formatUnits(reminderData[2], 18)),
-          totalReminders: reminderData[10].length,
+          totalReminders: Number(reminderData[9]),
           canRemind: canRemindNow,
         })
       } catch (error) {
-        console.error(`Error loading reminder ${id}:`, error)
+        console.error(`[API] Error loading reminder ${id}:`, error)
       }
     }
+
+    console.log("[API] Loaded", reminders.length, "active reminders")
 
     return NextResponse.json({
       success: true,
       reminders,
     })
   } catch (error) {
-    console.error("Error fetching public reminders:", error)
+    console.error("[API] Error fetching public reminders:", error)
     return NextResponse.json({ error: "Failed to fetch reminders" }, { status: 500 })
   }
 }
