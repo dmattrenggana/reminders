@@ -24,31 +24,34 @@ export class ReminderService {
   private vaultContract: any
   private tokenContract: any
   private signer: any
+  private initPromise: Promise<void> | null = null
 
   constructor(signer: any) {
     this.signer = signer
+    this.initPromise = this.initializeContracts()
+  }
 
-    // Import Contract dynamically to avoid SSR issues
-    if (typeof window !== "undefined") {
-      const initContracts = async () => {
-        try {
-          const { Contract } = await import("ethers")
-          this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, signer)
-          this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
-        } catch (error) {
-          console.error("[v0] Error initializing contracts:", error)
-          throw new Error("Failed to initialize contracts")
-        }
-      }
-      initContracts()
+  private async initializeContracts() {
+    if (typeof window === "undefined") return
+
+    try {
+      const { Contract } = await import("ethers")
+      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, this.signer)
+      this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.signer)
+      console.log("[v0] Contracts initialized successfully")
+    } catch (error) {
+      console.error("[v0] Error initializing contracts:", error)
+      throw new Error("Failed to initialize contracts")
     }
   }
 
   private async ensureContracts() {
+    if (this.initPromise) {
+      await this.initPromise
+    }
+
     if (!this.vaultContract || !this.tokenContract) {
-      const { Contract } = await import("ethers")
-      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V2_ABI, this.signer)
-      this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.signer)
+      await this.initializeContracts()
     }
   }
 
@@ -92,11 +95,14 @@ export class ReminderService {
     farcasterUsername?: string,
   ): Promise<number> {
     try {
+      console.log("[v0] ========== STARTING REMINDER CREATION ==========")
+      console.log("[v0] Step 0: Ensuring contracts are initialized...")
       await this.ensureContracts()
+      console.log("[v0] ✅ Contracts ready")
+
       const amountInWei = parseUnits(tokenAmount, 18)
       const reminderTimestamp = Math.floor(reminderTime.getTime() / 1000)
 
-      console.log("[v0] ========== STARTING REMINDER CREATION ==========")
       console.log("[v0] Creating reminder with params:", {
         tokenAmount,
         amountInWei: amountInWei.toString(),
@@ -108,6 +114,7 @@ export class ReminderService {
       const userAddress = await this.signer.getAddress()
       console.log("[v0] User address:", userAddress)
       console.log("[v0] Vault contract:", CONTRACTS.REMINDER_VAULT)
+      console.log("[v0] Token contract:", CONTRACTS.COMMIT_TOKEN)
 
       console.log("[v0] Step 1: Checking current token allowance...")
       const currentAllowance = await this.tokenContract.allowance(userAddress, CONTRACTS.REMINDER_VAULT)
@@ -117,8 +124,8 @@ export class ReminderService {
         console.log("[v0] Step 2: Insufficient allowance, requesting approval...")
         const approveTx = await this.tokenContract.approve(CONTRACTS.REMINDER_VAULT, amountInWei)
         console.log("[v0] Approval transaction sent:", approveTx.hash)
-
         console.log("[v0] Waiting for approval confirmation...")
+
         const approveReceipt = await approveTx.wait()
         console.log("[v0] ✅ Approval confirmed in block:", approveReceipt.blockNumber)
 
@@ -132,17 +139,26 @@ export class ReminderService {
         console.log("[v0] Step 2: Sufficient allowance already exists, skipping approval")
       }
 
+      console.log("[v0] Waiting for blockchain state to settle...")
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
       console.log("[v0] Step 3: Calling createReminder on vault contract...")
       console.log("[v0] Contract address:", this.vaultContract.target || this.vaultContract.address)
 
       const username = farcasterUsername || `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`
+      console.log("[v0] Using username:", username)
 
       let createTx
       try {
+        console.log("[v0] 🚀 About to call vaultContract.createReminder...")
         createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description, username)
-        console.log("[v0] ✅ CreateReminder transaction sent:", createTx.hash)
+        console.log("[v0] ✅✅ CreateReminder transaction sent:", createTx.hash)
       } catch (vaultError: any) {
-        console.error("[v0] ❌ Error calling vault.createReminder:", vaultError)
+        console.error("[v0] ❌❌ Error calling vault.createReminder:", vaultError)
+        console.error("[v0] Error code:", vaultError.code)
+        console.error("[v0] Error message:", vaultError.message)
+        console.error("[v0] Error data:", vaultError.data)
+
         if (vaultError.code === "ACTION_REJECTED") {
           throw new Error("Transaction rejected by user")
         }
@@ -177,6 +193,7 @@ export class ReminderService {
         code: error.code,
         message: error.message,
         reason: error.reason,
+        stack: error.stack,
       })
       if (error.code === "ACTION_REJECTED") {
         throw new Error("Transaction rejected by user")
