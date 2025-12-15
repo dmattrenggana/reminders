@@ -57,22 +57,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[v0] Miniapp detected, initializing Frame SDK...")
       const { sdk } = await import("@farcaster/frame-sdk")
 
-      // Call ready() without awaiting - dismisses splash screen immediately
       sdk.actions.ready({})
-      console.log("[v0] Frame SDK ready() called - splash screen should dismiss")
-
-      // Store SDK globally for later use
+      console.log("[v0] Frame SDK ready() called")
       ;(window as any).__frameSdk = sdk
 
-      // Wait longer for SDK context to be fully available on mobile
       setTimeout(async () => {
-        console.log("[v0] Auto-connecting Farcaster in miniapp...")
+        console.log("[v0] Attempting auto-connect...")
         try {
           await autoConnectFrameSDK(sdk)
         } catch (error) {
           console.log("[v0] Auto-connect failed, user can manually connect")
         }
-      }, 1000)
+      }, 1500)
     } catch (error) {
       console.error("[v0] Error initializing miniapp:", String(error))
     }
@@ -90,7 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let userPfp = ""
 
       try {
-        // Try to serialize the context to extract data safely
         const contextStr = JSON.stringify(sdk.context)
         const contextObj = JSON.parse(contextStr)
 
@@ -101,7 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userPfp = String(contextObj.user.pfpUrl || "")
         }
       } catch (serializeError) {
-        // If serialization fails, the context might not be ready
         throw new Error("SDK context not ready for serialization")
       }
 
@@ -115,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const validDisplayName = userDisplay || userName || `User ${userFid}`
       const validPfpUrl = userPfp || "/abstract-profile.png"
 
-      // Try to get wallet
       let walletAddr: string | undefined = undefined
 
       try {
@@ -135,7 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("[v0] No wallet from SDK, will try Neynar")
       }
 
-      // Fallback to Neynar for wallet
       if (!walletAddr && userFid > 0) {
         try {
           const response = await fetch(`/api/farcaster/user?fid=${userFid}`)
@@ -166,7 +158,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (walletAddr) {
         setAddress(walletAddr)
 
-        // Try to create signer with Frame provider
         try {
           const frameProvider = (window as any).__frameEthProvider
           if (frameProvider) {
@@ -251,26 +242,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const validFid = typeof user.fid === "number" && user.fid > 0 ? user.fid : 0
 
-        // If no valid fid, clear invalid data and return
         if (validFid === 0) {
           localStorage.removeItem("farcaster_user")
           return
         }
 
-        // Validate username is a string
         const validUsername = typeof user.username === "string" && user.username.length > 0 ? user.username : "user"
 
-        // Validate displayName is a string
         const validDisplayName =
           typeof user.displayName === "string" && user.displayName.length > 0 ? user.displayName : validUsername
 
-        // Validate pfpUrl is a string
         let validPfpUrl = "/abstract-profile.png"
         if (typeof user.pfpUrl === "string" && user.pfpUrl.length > 0) {
           validPfpUrl = user.pfpUrl
         }
 
-        // Validate walletAddress is a string or undefined
         const validWalletAddr =
           typeof user.walletAddress === "string" && user.walletAddress.length > 0 ? user.walletAddress : undefined
 
@@ -288,11 +274,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("[v0] Restored Farcaster wallet:", validWalletAddr)
           setAddress(validWalletAddr)
 
-          // Create a read-only provider for balance checks
           try {
             const { JsonRpcProvider } = await import("ethers")
             const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL!)
-            setSigner(provider) // Use provider as signer for read operations
+            setSigner(provider)
           } catch (error) {
             console.error("[v0] Error creating provider for Farcaster wallet:", error)
           }
@@ -340,7 +325,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const connectFarcaster = async () => {
     try {
-      // Check if in miniapp (Frame SDK)
       if (typeof window !== "undefined" && window.self !== window.top) {
         console.log("[v0] Miniapp detected, connecting with Frame SDK...")
 
@@ -355,7 +339,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (!sdk.context || !sdk.context.user) {
             console.log("[v0] SDK context not ready yet, will use Connect button")
-            // Don't throw error, just return - let user click Connect button
             alert("Please click the Connect button to authenticate with Farcaster")
             return
           }
@@ -365,7 +348,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error("No valid user FID from Frame SDK")
           }
 
-          // Extract each property safely
           let userName = ""
           let userDisplay = ""
           let userPfp = ""
@@ -390,7 +372,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           let walletAddr: string | undefined = undefined
 
-          // Try to get wallet from SDK provider
           try {
             const provider = await sdk.wallet.getEthereumProvider()
             ;(window as any).__frameEthProvider = provider
@@ -408,7 +389,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("[v0] Could not get wallet from SDK, will try Neynar")
           }
 
-          // Fallback to Neynar if no wallet from SDK
           if (!walletAddr && userFid > 0) {
             try {
               const response = await fetch(`/api/farcaster/user?fid=${userFid}`)
@@ -479,7 +459,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[v0] Opening Farcaster web auth...")
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app"
 
-      // Open Farcaster auth in popup window
       const width = 500
       const height = 700
       const left = window.screen.width / 2 - width / 2
@@ -488,7 +467,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const authUrl = `/api/farcaster/auth?returnTo=${encodeURIComponent(window.location.href)}`
       const popup = window.open(authUrl, "Farcaster Sign In", `width=${width},height=${height},left=${left},top=${top}`)
 
-      // Listen for auth completion
       const handleMessage = (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return
 
@@ -526,7 +504,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       window.addEventListener("message", handleMessage)
 
-      // Cleanup if popup is closed
       const checkClosed = setInterval(() => {
         if (popup?.closed) {
           clearInterval(checkClosed)

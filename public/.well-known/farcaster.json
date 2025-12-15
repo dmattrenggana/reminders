@@ -4,7 +4,7 @@
     "payload": "eyJkb21haW4iOiJyZW1pbmRlcnNiYXNlLnZlcmNlbC5hcHAifQ",
     "signature": "MHg..."
   },
-  "frame": {
+  "miniapp": {
     "version": "1",
     "name": "Reminders",
     "iconUrl": "https://remindersbase.vercel.app/icon.png",
