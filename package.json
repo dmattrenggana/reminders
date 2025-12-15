@@ -9,12 +9,15 @@
     "start": "next start"
   },
   "dependencies": {
+    "@base-org/account": "latest",
     "@cloudflare/workers-types": "latest",
     "@coinbase/onchainkit": "latest",
+    "@coinbase/wallet-sdk": "latest",
     "@farcaster/hub-web": "^0.3.0",
     "@farcaster/miniapp-sdk": "latest",
     "@farcaster/miniapp-wagmi-connector": "1.1.0",
     "@hookform/resolvers": "^3.10.0",
+    "@metamask/sdk": "latest",
     "@neynar/nodejs-sdk": "^1.26.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",

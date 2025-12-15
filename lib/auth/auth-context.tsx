@@ -4,6 +4,8 @@ import { createContext, useContext, useState, useCallback, type ReactNode, useEf
 import type { FarcasterUser } from "./types"
 import { useMiniKit } from "@coinbase/onchainkit/minikit"
 
+// Auth context without wagmi hooks - uses MiniKit and window.ethereum directly
+
 interface AuthContextType {
   // Wallet Connection State
   isConnected: boolean
@@ -30,99 +32,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-function WagmiHooks({
-  onHooksReady,
-}: {
-  onHooksReady: (data: {
-    address: string | undefined
-    isConnected: boolean
-    chainId: number | undefined
-    connect: any
-    connectors: any[]
-    disconnect: any
-  }) => void
-}) {
-  const [isReady, setIsReady] = useState(false)
-
-  useEffect(() => {
-    // Wait 300ms for WagmiProvider to initialize
-    const timer = setTimeout(() => setIsReady(true), 300)
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (!isReady) {
-    return null
-  }
-
-  return <WagmiHooksInner onHooksReady={onHooksReady} />
-}
-
-function WagmiHooksInner({
-  onHooksReady,
-}: {
-  onHooksReady: (data: {
-    address: string | undefined
-    isConnected: boolean
-    chainId: number | undefined
-    connect: any
-    connectors: any[]
-    disconnect: any
-  }) => void
-}) {
-  const wagmi = require("wagmi")
-  const accountData = wagmi.useAccount()
-  const connectData = wagmi.useConnect()
-  const disconnectData = wagmi.useDisconnect()
-
-  useEffect(() => {
-    onHooksReady({
-      address: accountData.address,
-      isConnected: accountData.isConnected || false,
-      chainId: accountData.chainId,
-      connect: connectData.connect,
-      connectors: connectData.connectors || [],
-      disconnect: disconnectData.disconnect,
-    })
-  }, [
-    accountData.address,
-    accountData.isConnected,
-    accountData.chainId,
-    connectData.connect,
-    connectData.connectors,
-    disconnectData.disconnect,
-    onHooksReady,
-  ])
-
-  return null
-}
-// </CHANGE>
-
 function AuthProviderContent({ children }: { children: ReactNode }) {
   const { context: miniKitContext, setFrameReady, isFrameReady } = useMiniKit()
-
-  const [wagmiData, setWagmiData] = useState<{
-    address: string | undefined
-    isConnected: boolean
-    chainId: number | undefined
-    connect: any
-    connectors: any[]
-    disconnect: any
-  }>({
-    address: undefined,
-    isConnected: false,
-    chainId: undefined,
-    connect: async () => {},
-    connectors: [],
-    disconnect: () => {},
-  })
-  // </CHANGE>
 
   const [signer, setSigner] = useState<any>(null)
   const [isFarcasterConnected, setIsFarcasterConnected] = useState(false)
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [address, setAddress] = useState<string | null>(null)
+  const [chainId, setChainId] = useState<number | null>(null)
 
-  const { address, isConnected, chainId, connect, connectors, disconnect } = wagmiData
-
+  // Initialize miniapp context
   useEffect(() => {
     const initMiniapp = async () => {
       console.log("[v0] Initializing OnchainKit miniapp...")
@@ -146,6 +66,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           setFrameReady()
         }
 
+        // Wait for MiniKit context to be available
         let retries = 0
         const maxRetries = 10
 
@@ -178,27 +99,15 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         } else {
           console.log("[v0] No user in MiniKit context yet")
         }
-
-        if (miniKitContext && connectors.length > 0 && connect) {
-          console.log("[v0] Auto-connecting miniapp wallet...")
-          const miniappConnector = connectors[0]
-          try {
-            await connect({ connector: miniappConnector })
-            console.log("[v0] Miniapp wallet connected successfully")
-          } catch (error) {
-            console.error("[v0] Failed to auto-connect miniapp wallet:", error)
-          }
-        }
       } catch (error) {
         console.error("[v0] Miniapp initialization error:", error)
       }
     }
 
-    if (connectors.length > 0) {
-      initMiniapp()
-    }
-  }, [miniKitContext, isFrameReady, setFrameReady, connectors, connect, address])
+    initMiniapp()
+  }, [miniKitContext, isFrameReady, setFrameReady])
 
+  // Update Farcaster user when MiniKit context changes
   useEffect(() => {
     if (miniKitContext?.user && !farcasterUser) {
       console.log("[v0] MiniKit context updated with user:", miniKitContext.user)
@@ -217,46 +126,39 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     }
   }, [miniKitContext, farcasterUser, address])
 
-  useEffect(() => {
-    const updateSigner = async () => {
-      if (isConnected && address && typeof window !== "undefined" && window.ethereum) {
-        try {
+  const connectWallet = useCallback(async () => {
+    console.log("[v0] Connect wallet called")
+    try {
+      if (typeof window !== "undefined" && window.ethereum) {
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
+        if (accounts && accounts.length > 0) {
+          setAddress(accounts[0])
+          setIsConnected(true)
+
+          // Get chain ID
+          const chainIdHex = await window.ethereum.request({ method: "eth_chainId" })
+          setChainId(Number.parseInt(chainIdHex, 16))
+
+          // Create signer
           const { BrowserProvider } = await import("ethers")
           const provider = new BrowserProvider(window.ethereum)
           const newSigner = await provider.getSigner()
           setSigner(newSigner)
-          console.log("[v0] Signer updated for address:", address)
-        } catch (error) {
-          console.error("[v0] Failed to create signer:", error)
         }
-      } else {
-        setSigner(null)
-      }
-    }
-
-    updateSigner()
-  }, [isConnected, address])
-
-  const connectWallet = useCallback(async () => {
-    console.log("[v0] Connect wallet called")
-    try {
-      if (connectors.length > 0) {
-        console.log("[v0] Connecting with connector:", connectors[0].name)
-        await connect({ connector: connectors[0] })
-      } else {
-        throw new Error("No wallet connectors available")
       }
     } catch (error) {
       console.error("[v0] Failed to connect wallet:", error)
       throw error
     }
-  }, [connect, connectors])
+  }, [])
 
   const disconnectWallet = useCallback(() => {
     console.log("[v0] Disconnecting wallet")
-    disconnect()
+    setAddress(null)
+    setIsConnected(false)
+    setChainId(null)
     setSigner(null)
-  }, [disconnect])
+  }, [])
 
   const connectFarcaster = useCallback(async () => {
     try {
@@ -293,9 +195,9 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
   const value: AuthContextType = {
     isConnected,
-    address: address || null,
-    walletAddress: address || null,
-    chainId: chainId ? Number(chainId) : null,
+    address,
+    walletAddress: address,
+    chainId,
     signer,
     isFarcasterConnected,
     farcasterUser,
@@ -306,13 +208,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     ensureSigner,
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      <WagmiHooks onHooksReady={setWagmiData} />
-      {/* </CHANGE> */}
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
