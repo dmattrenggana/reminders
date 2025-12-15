@@ -53,37 +53,51 @@ export class ReminderService {
         process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL,
         "https://mainnet.base.org",
         "https://base.llamarpc.com",
-        "https://base-mainnet.public.blastapi.io",
-      ].filter(Boolean)
+        "https://base-rpc.publicnode.com",
+        "https://base.gateway.tenderly.co",
+      ].filter(Boolean) as string[]
 
       for (const rpcUrl of rpcEndpoints) {
         try {
           console.log("[v0] Trying RPC endpoint:", rpcUrl)
           const testProvider = new JsonRpcProvider(rpcUrl, 8453)
 
-          const codePromise = testProvider.getCode(CONTRACTS.REMINDER_VAULT)
-          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("RPC timeout")), 5000))
+          const networkPromise = testProvider.getNetwork()
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("RPC timeout after 10s")), 10000),
+          )
 
-          await Promise.race([codePromise, timeoutPromise])
+          await Promise.race([networkPromise, timeoutPromise])
+
+          const code = await testProvider.getCode(CONTRACTS.REMINDER_VAULT)
+          if (code === "0x" || code === "0x0") {
+            console.log("[v0] Contract not found at vault address on this RPC")
+            continue
+          }
 
           provider = testProvider
           console.log("[v0] Successfully connected to RPC:", rpcUrl)
           break
         } catch (error) {
-          console.log("[v0] RPC endpoint failed:", rpcUrl)
+          console.log("[v0] RPC endpoint failed:", rpcUrl, String(error))
           continue
         }
       }
 
       if (!provider) {
-        throw new Error("Could not connect to any Base Mainnet RPC endpoint")
+        throw new Error("Could not connect to any Base Mainnet RPC endpoint. Please check your network connection.")
       }
 
       if (this.signer && this.signer.provider) {
         try {
-          await this.signer.provider.getCode(CONTRACTS.REMINDER_VAULT)
-          this.provider = this.signer.provider
-          console.log("[v0] Using signer's provider")
+          const code = await this.signer.provider.getCode(CONTRACTS.REMINDER_VAULT)
+          if (code !== "0x" && code !== "0x0") {
+            this.provider = this.signer.provider
+            console.log("[v0] Using signer's provider")
+          } else {
+            this.provider = provider
+            console.log("[v0] Signer's provider has no contract code, using fallback")
+          }
         } catch (e) {
           this.provider = provider
           console.log("[v0] Signer's provider failed, using fallback")
@@ -98,6 +112,14 @@ export class ReminderService {
       console.log("[v0] Contracts initialized successfully")
       console.log("[v0] Vault:", CONTRACTS.REMINDER_VAULT)
       console.log("[v0] Token:", CONTRACTS.COMMIT_TOKEN)
+
+      try {
+        await this.vaultContract.nextReminderId()
+        console.log("[v0] Vault contract verified and responding")
+      } catch (verifyError) {
+        console.error("[v0] Vault contract not responding:", verifyError)
+        throw new Error("Vault contract deployed but not responding. It may be on a different network.")
+      }
     } catch (error) {
       console.error("[v0] Contract initialization error:", error)
       throw error
@@ -271,7 +293,6 @@ export class ReminderService {
 
       onProgress?.("Reminder created successfully!")
 
-      // Extract reminder ID from event
       const event = receipt.logs.find((log: any) => {
         try {
           return this.vaultContract.interface.parseLog(log)?.name === "ReminderCreated"
@@ -350,13 +371,27 @@ export class ReminderService {
         throw new Error("Vault contract not initialized")
       }
 
-      const ids = await this.vaultContract.getUserReminders(address)
-      return ids.map((id: bigint) => Number(id))
-    } catch (error: any) {
-      console.error("[v0] getUserReminderIds error:", error?.message || error)
+      let lastError: any
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const ids = await this.vaultContract.getUserReminders(address)
+          return ids.map((id: bigint) => Number(id))
+        } catch (error: any) {
+          lastError = error
+          console.error(`[v0] getUserReminderIds attempt ${attempt + 1} failed:`, error?.message || error)
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 1000))
+          }
+        }
+      }
+
+      console.error("[v0] All getUserReminderIds attempts failed:", lastError?.message || lastError)
       throw new Error(
         "Vault contract not responding at " + CONTRACTS.REMINDER_VAULT + ". Verify it's deployed on Base Mainnet.",
       )
+    } catch (error: any) {
+      console.error("[v0] getUserReminderIds error:", error?.message || error)
+      throw error
     }
   }
 
@@ -372,10 +407,8 @@ export class ReminderService {
       console.log("[v0] Reminder data array length:", data.length)
       console.log("[v0] Full data array:", data)
 
-      // Check if this is V2 (11 fields) or V3 (12 fields)
       if (data.length === 11) {
         console.warn("[v0] ⚠️ Contract appears to be V2 (11 fields), not V3 (12 fields)")
-        // V2 format (no confirmationTime)
         return {
           id: reminderId,
           user: data[0],
@@ -393,7 +426,6 @@ export class ReminderService {
         }
       } else if (data.length === 12) {
         console.log("[v0] ✅ Contract is V3 (12 fields)")
-        // V3 format (with confirmationTime)
         return {
           id: reminderId,
           user: data[0],

@@ -5,9 +5,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const fid = searchParams.get("fid")
+    const address = searchParams.get("address")
 
-    if (!fid) {
-      return NextResponse.json({ error: "FID is required" }, { status: 400 })
+    if (!fid && !address) {
+      return NextResponse.json({ error: "FID or address is required" }, { status: 400 })
     }
 
     const apiKey = process.env.NEYNAR_API_KEY
@@ -17,13 +18,26 @@ export async function GET(request: NextRequest) {
 
     const client = new NeynarAPIClient({ apiKey })
 
-    const response = await client.fetchBulkUsers([Number.parseInt(fid)])
+    let user
 
-    if (!response.users || response.users.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (fid) {
+      const response = await client.fetchBulkUsers([Number.parseInt(fid)])
+      if (!response.users || response.users.length === 0) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 })
+      }
+      user = response.users[0]
+    } else if (address) {
+      // Search for user by verified address
+      const response = await client.searchUser(address, 1)
+      if (!response.result || !response.result.users || response.result.users.length === 0) {
+        return NextResponse.json({ error: "User not found for address" }, { status: 404 })
+      }
+      user = response.result.users[0]
     }
 
-    const user = response.users[0]
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
 
     const walletAddress =
       user.custody_address || user.verified_addresses?.eth_addresses?.[0] || user.verified_addresses?.sol_addresses?.[0]

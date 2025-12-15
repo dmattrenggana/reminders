@@ -59,16 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       sdk.actions.ready({})
       console.log("[v0] Frame SDK ready() called")
-      ;(window as any).__frameSdk = sdk
 
-      setTimeout(async () => {
-        console.log("[v0] Attempting auto-connect...")
-        try {
-          await autoConnectFrameSDK(sdk)
-        } catch (error) {
-          console.log("[v0] Auto-connect failed, user can manually connect")
-        }
-      }, 1500)
+      // Store SDK globally for later use
+      ;(window as any).__frameSdk = sdk
     } catch (error) {
       console.error("[v0] Error initializing miniapp:", String(error))
     }
@@ -338,122 +331,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ;(window as any).__frameSdk = sdk
           }
 
-          console.log("[v0] Frame SDK loaded, extracting context...")
+          console.log("[v0] Getting Ethereum provider from SDK...")
+          const ethProvider = sdk.wallet.ethProvider
 
-          let attempts = 0
-          let context = null
+          if (!ethProvider) {
+            throw new Error("Ethereum provider not available from SDK")
+          }
+          // Store provider globally
+          ;(window as any).__frameEthProvider = ethProvider
 
-          while (attempts < 5 && !context) {
-            await new Promise((resolve) => setTimeout(resolve, 500))
+          console.log("[v0] Requesting accounts...")
+          const accounts = await ethProvider.request({
+            method: "eth_requestAccounts",
+            params: [],
+          })
+
+          if (!accounts || accounts.length === 0) {
+            throw new Error("No accounts returned from wallet")
+          }
+
+          const walletAddr = accounts[0]
+          console.log("[v0] Got wallet address:", walletAddr)
+
+          const context = sdk.context
+          let userFid = 0
+          let userName = "user"
+          let userDisplay = "User"
+          let userPfp = "/abstract-profile.png"
+
+          if (context?.user) {
+            userFid = context.user.fid || 0
+            userName = context.user.username || `fid-${userFid}`
+            userDisplay = context.user.displayName || userName
+            userPfp = context.user.pfpUrl || "/abstract-profile.png"
+          }
+
+          if (userFid === 0 && walletAddr) {
             try {
-              context = sdk.context
-              if (context && context.user && context.user.fid) {
-                console.log("[v0] SDK context found on attempt", attempts + 1)
-                break
-              }
-            } catch (e) {
-              console.log("[v0] Context not ready, attempt", attempts + 1)
-            }
-            attempts++
-          }
-
-          if (!context || !context.user || !context.user.fid) {
-            throw new Error("SDK context not available after waiting")
-          }
-
-          const userFid = Number(context.user.fid)
-          const userName = String(context.user.username || context.user.displayName || "")
-          const userDisplay = String(context.user.displayName || context.user.username || "")
-          const userPfp = String(context.user.pfpUrl || "")
-
-          if (userFid === 0) {
-            throw new Error("Invalid FID from SDK")
-          }
-
-          console.log("[v0] User FID:", userFid, "Username:", userName)
-
-          let walletAddr: string | undefined = undefined
-
-          try {
-            const provider = await sdk.wallet.ethProvider
-            if (provider) {
-              ;(window as any).__frameEthProvider = provider
-
-              const accounts = await provider.request({
-                method: "eth_accounts",
-                params: [],
-              })
-
-              if (accounts && accounts.length > 0) {
-                walletAddr = accounts[0]
-                console.log("[v0] Got wallet from Frame SDK:", walletAddr)
-              }
-            }
-          } catch (walletError) {
-            console.log("[v0] No wallet from SDK, will try Neynar API")
-          }
-
-          if (!walletAddr && userFid > 0) {
-            try {
-              const response = await fetch(`/api/farcaster/user?fid=${userFid}`)
+              console.log("[v0] Fetching user data from Neynar...")
+              const response = await fetch(`/api/farcaster/user?address=${walletAddr}`)
               if (response.ok) {
                 const data = await response.json()
-                walletAddr = data.custodyAddress || data.verifiedAddresses?.[0] || data.custody_address
-                if (walletAddr) {
-                  console.log("[v0] Got wallet from Neynar:", walletAddr)
-                }
+                userFid = data.fid || 0
+                userName = data.username || userName
+                userDisplay = data.displayName || userDisplay
+                userPfp = data.pfpUrl || userPfp
+                console.log("[v0] Got user data from Neynar - FID:", userFid)
               }
             } catch (apiError) {
-              console.log("[v0] Neynar API failed")
+              console.log("[v0] Neynar API failed, continuing with wallet only")
             }
           }
-
-          const validUsername = userName || userDisplay || `fid-${userFid}`
-          const validDisplayName = userDisplay || userName || `User ${userFid}`
-          const validPfpUrl = userPfp || "/abstract-profile.png"
 
           const farcasterUser: FarcasterUser = {
             fid: userFid,
-            username: validUsername,
-            displayName: validDisplayName,
-            pfpUrl: validPfpUrl,
+            username: userName,
+            displayName: userDisplay,
+            pfpUrl: userPfp,
             walletAddress: walletAddr,
           }
 
           setFarcasterUser(farcasterUser)
           localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
-          console.log("[v0] Farcaster user set:", farcasterUser)
+          console.log("[v0] Farcaster user set successfully")
 
-          if (walletAddr) {
-            setAddress(walletAddr)
+          setAddress(walletAddr)
 
-            try {
-              const frameProvider = (window as any).__frameEthProvider
-              if (frameProvider) {
-                const { BrowserProvider } = await import("ethers")
-                const provider = new BrowserProvider(frameProvider)
-                const signer = await provider.getSigner()
-                setSigner(signer)
-                setChainId(8453)
-                console.log("[v0] Wallet signer created from Frame SDK")
-              } else {
-                const { JsonRpcProvider } = await import("ethers")
-                const rpcUrl = process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL || "https://mainnet.base.org"
-                const provider = new JsonRpcProvider(rpcUrl, 8453)
-                setSigner(provider)
-                setChainId(8453)
-                console.log("[v0] Read-only provider created")
-              }
-            } catch (providerError) {
-              console.error("[v0] Provider setup error:", providerError)
-            }
+          try {
+            const { BrowserProvider } = await import("ethers")
+            const provider = new BrowserProvider(ethProvider)
+            const signer = await provider.getSigner()
+            setSigner(signer)
+            setChainId(8453) // Base Mainnet
+            console.log("[v0] Wallet signer created from Frame SDK provider")
+          } catch (providerError) {
+            console.error("[v0] Provider setup error:", providerError)
+            // Fallback to read-only provider
+            const { JsonRpcProvider } = await import("ethers")
+            const rpcUrl = process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL || "https://mainnet.base.org"
+            const provider = new JsonRpcProvider(rpcUrl, 8453)
+            setSigner(provider)
+            setChainId(8453)
           }
 
           console.log("[v0] Farcaster connection complete!")
           return
         } catch (sdkError) {
           console.error("[v0] Frame SDK connection failed:", sdkError)
-          throw new Error("Failed to connect with Frame SDK. Please try again.")
+          throw new Error("Failed to connect with Farcaster wallet. Please try again.")
         }
       }
 

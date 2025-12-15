@@ -7,6 +7,40 @@ import { Providers } from "./providers"
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app"
+
+// Miniapp embed object for Farcaster sharing
+const miniappEmbed = {
+  version: "1",
+  imageUrl: `${appUrl}/og-image.png`,
+  button: {
+    title: "Open Base Reminders",
+    action: {
+      type: "launch_miniapp",
+      url: appUrl,
+      name: "Base Reminders",
+      splashImageUrl: `${appUrl}/splash.png`,
+      splashBackgroundColor: "#4A90E2",
+    },
+  },
+}
+
+// Backward compatible frame embed
+const frameEmbed = {
+  version: "1",
+  imageUrl: `${appUrl}/og-image.png`,
+  button: {
+    title: "Open Base Reminders",
+    action: {
+      type: "launch_frame",
+      url: appUrl,
+      name: "Base Reminders",
+      splashImageUrl: `${appUrl}/splash.png`,
+      splashBackgroundColor: "#4A90E2",
+    },
+  },
+}
+
 export const metadata: Metadata = {
   title: "Base Reminders - Never Miss What Matters",
   description: "Commitment-based reminders with token stakes on Farcaster. Lock tokens to stay accountable.",
@@ -17,11 +51,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Base Reminders - Never Miss What Matters",
     description: "Commitment-based reminders with token stakes on Farcaster. Lock tokens to stay accountable.",
-    url: process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app",
+    url: appUrl,
     siteName: "Base Reminders",
     images: [
       {
-        url: "/logo.jpg",
+        url: `${appUrl}/og-image.png`,
         width: 1200,
         height: 630,
         alt: "Base Reminders",
@@ -34,14 +68,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Base Reminders - Never Miss What Matters",
     description: "Commitment-based reminders with token stakes on Farcaster. Lock tokens to stay accountable.",
-    images: ["/logo.jpg"],
+    images: [`${appUrl}/og-image.png`],
   },
   other: {
-    "fc:frame": "vNext",
-    "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app"}/logo.jpg`,
-    "fc:frame:button:1": "Open App",
-    "fc:frame:button:1:action": "link",
-    "fc:frame:button:1:target": process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app",
+    "fc:miniapp": JSON.stringify(miniappEmbed),
+    // For backward compatibility
+    "fc:frame": JSON.stringify(frameEmbed),
   },
     generator: 'v0.app'
 }
