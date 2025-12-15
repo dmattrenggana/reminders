@@ -28,10 +28,15 @@ export class NeynarNotificationService {
         return false
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://your-app.vercel.app"
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        (typeof window !== "undefined" ? window.location.origin : "") ||
+        "https://remindersbase.vercel.app"
+
       const frameUrl = `${baseUrl}/api/frame?id=${reminderId}&desc=${encodeURIComponent(description.substring(0, 100))}`
 
       console.log("[v0] Sending Neynar notification to FID:", fid)
+      console.log("[v0] Frame URL:", frameUrl)
 
       // Send cast notification
       // Note: Neynar API for notifications may vary - check latest documentation

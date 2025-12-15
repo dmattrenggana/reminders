@@ -67,10 +67,14 @@ export default function FeedPage() {
 
   useEffect(() => {
     const pendingClaim = searchParams.get("claim")
-    if (pendingClaim && walletAddress && farcasterUser) {
+    if (pendingClaim && (walletAddress || farcasterUser?.walletAddress)) {
       const reminderId = Number.parseInt(pendingClaim)
       console.log("[v0] Detected pending claim from URL param:", reminderId)
-      handleRecordReminder(reminderId)
+
+      // Give Frame SDK time to fully initialize before triggering transaction
+      setTimeout(() => {
+        handleRecordReminder(reminderId)
+      }, 1500)
     }
   }, [searchParams, walletAddress, farcasterUser])
 
@@ -90,6 +94,145 @@ export default function FeedPage() {
       setReminders([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRecordReminder = async (reminderId: number) => {
+    console.log("[v0] Attempting to record reminder and claim reward for ID:", reminderId)
+
+    if (!walletAddress && !farcasterUser?.walletAddress) {
+      console.log("[v0] No wallet available, user returned from posting but can't claim yet")
+      alert("Post completed! To claim your reward, please connect a wallet.")
+      setProcessingReminder(null)
+      return
+    }
+
+    try {
+      setProcessingReminder(reminderId)
+      console.log("[v0] Starting record reminder for ID:", reminderId)
+
+      const { ethers } = await import("ethers")
+
+      console.log("[v0] Fetching Neynar score for FID:", farcasterUser?.fid)
+      const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser?.fid}`)
+      if (!scoreResponse.ok) {
+        throw new Error("Failed to fetch Neynar score")
+      }
+      const { score } = await scoreResponse.json()
+      console.log("[v0] Neynar score:", score)
+
+      if (isInMiniapp) {
+        const frameEthProvider = (window as any).__frameEthProvider
+
+        console.log("[v0] In miniapp - checking Frame Ethereum provider...")
+        console.log("[v0] Frame eth provider available:", !!frameEthProvider)
+
+        if (!frameEthProvider) {
+          throw new Error("Frame SDK provider not available. Please make sure you're using the Farcaster app.")
+        }
+
+        try {
+          console.log("[v0] Creating ethers provider from Frame SDK...")
+
+          const provider = new ethers.BrowserProvider(frameEthProvider)
+          const signer = await provider.getSigner()
+
+          console.log("[v0] Signer obtained from Frame provider")
+
+          const vaultContract = new ethers.Contract(
+            process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
+            REMINDER_VAULT_V3_ABI,
+            signer,
+          )
+
+          console.log("[v0] 🔵 Requesting wallet signature for recordReminder...")
+          console.log("[v0] This will prompt the Frame SDK wallet in your Farcaster app")
+          const recordTx = await vaultContract.recordReminder(reminderId, score)
+          console.log("[v0] ✅ Record transaction sent:", recordTx.hash)
+
+          console.log("[v0] Waiting for record transaction confirmation...")
+          await recordTx.wait()
+          console.log("[v0] ✅ Record transaction confirmed")
+
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+
+          console.log("[v0] 🔵 Requesting wallet signature for claimReward...")
+          console.log("[v0] This will prompt the Frame SDK wallet in your Farcaster app")
+          const claimTx = await vaultContract.claimReward(reminderId)
+          console.log("[v0] ✅ Claim transaction sent:", claimTx.hash)
+
+          console.log("[v0] Waiting for claim transaction confirmation...")
+          await claimTx.wait()
+          console.log("[v0] ✅ Claim transaction confirmed")
+
+          alert(
+            `✅ Success! Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nRecord TX: ${recordTx.hash}\nClaim TX: ${claimTx.hash}`,
+          )
+
+          setProcessingReminder(null)
+          loadPublicReminders()
+          return
+        } catch (frameError: any) {
+          console.error("[v0] Frame SDK transaction error:", frameError)
+
+          if (frameError.code === "ACTION_REJECTED" || frameError.code === 4001) {
+            alert("Transaction cancelled. You can try claiming again later from the feed.")
+          } else {
+            alert(
+              `Transaction failed: ${frameError.message || "Unknown error"}\n\nYou can try claiming again later from the feed.`,
+            )
+          }
+          setProcessingReminder(null)
+          return
+        }
+      }
+
+      console.log("[v0] Not in miniapp - using web wallet for transaction")
+
+      if (!window.ethereum) {
+        alert("Please install MetaMask or connect a wallet to complete this transaction")
+        setProcessingReminder(null)
+        return
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
+      const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V3_ABI, signer)
+
+      console.log("[v0] Recording reminder with score:", score)
+      const recordTx = await vaultContract.recordReminder(reminderId, score)
+      console.log("[v0] Record transaction sent:", recordTx.hash)
+
+      await recordTx.wait()
+      console.log("[v0] Record transaction confirmed")
+
+      // Small delay before claim
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      console.log("[v0] Claiming reward...")
+      const claimTx = await vaultContract.claimReward(reminderId)
+      console.log("[v0] Claim transaction sent:", claimTx.hash)
+
+      await claimTx.wait()
+      console.log("[v0] Claim transaction confirmed")
+
+      alert(
+        `✅ Success! Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nRecord TX: ${recordTx.hash}\nClaim TX: ${claimTx.hash}`,
+      )
+
+      setProcessingReminder(null)
+      loadPublicReminders()
+    } catch (error: any) {
+      console.error("[v0] Error recording reminder:", error)
+      setProcessingReminder(null)
+
+      if (error.code === "ACTION_REJECTED" || error.code === 4001) {
+        alert("Transaction cancelled. You can try claiming again later from the feed.")
+      } else {
+        alert(
+          `Failed to complete transaction: ${error.message || "Unknown error"}\n\nYou can try claiming again later from the feed.`,
+        )
+      }
     }
   }
 
@@ -135,103 +278,6 @@ Help them stay accountable: ${returnUrl}`
       console.error("[v0] Error opening Warpcast:", error)
       setProcessingReminder(null)
       alert("Failed to open Warpcast. Please try again.")
-    }
-  }
-
-  const handleRecordReminder = async (reminderId: number) => {
-    console.log("[v0] Attempting to record reminder and claim reward for ID:", reminderId)
-
-    if (!walletAddress && !farcasterUser?.walletAddress) {
-      console.log("[v0] No wallet available, user returned from posting but can't claim yet")
-      alert("Post completed! To claim your reward, please connect a wallet.")
-      setProcessingReminder(null)
-      return
-    }
-
-    try {
-      setProcessingReminder(reminderId)
-      console.log("[v0] Starting record reminder for ID:", reminderId)
-
-      const { ethers } = await import("ethers")
-
-      console.log("[v0] Fetching Neynar score for FID:", farcasterUser?.fid)
-      const scoreResponse = await fetch(`/api/neynar/score?fid=${farcasterUser?.fid}`)
-      if (!scoreResponse.ok) {
-        throw new Error("Failed to fetch Neynar score")
-      }
-      const { score } = await scoreResponse.json()
-      console.log("[v0] Neynar score:", score)
-
-      if (isInMiniapp && typeof window !== "undefined") {
-        const frameEthProvider = (window as any).__frameEthProvider
-
-        console.log("[v0] Checking Frame Ethereum provider for transaction...")
-        console.log("[v0] Frame eth provider available:", !!frameEthProvider)
-
-        if (frameEthProvider) {
-          try {
-            console.log("[v0] Creating ethers provider from Frame SDK...")
-
-            const provider = new ethers.BrowserProvider(frameEthProvider)
-            const signer = await provider.getSigner()
-
-            console.log("[v0] Signer obtained from Frame provider")
-
-            const vaultContract = new ethers.Contract(
-              process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
-              REMINDER_VAULT_V3_ABI,
-              signer,
-            )
-
-            console.log("[v0] Recording reminder via Frame SDK provider with score:", score)
-            const tx = await vaultContract.recordReminder(reminderId, score)
-            console.log("[v0] Frame SDK transaction sent:", tx.hash)
-
-            const receipt = await tx.wait()
-            console.log("[v0] Frame SDK transaction confirmed:", receipt)
-
-            alert(`✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction: ${tx.hash}`)
-            setProcessingReminder(null)
-            loadPublicReminders()
-            return
-          } catch (frameError) {
-            console.error("[v0] Frame SDK transaction error:", frameError)
-            alert(
-              `Frame transaction failed: ${frameError instanceof Error ? frameError.message : "Unknown error"}. Falling back to MetaMask...`,
-            )
-          }
-        } else {
-          console.log("[v0] Frame SDK eth provider not available, falling back to MetaMask")
-        }
-      }
-
-      console.log("[v0] Using MetaMask/Web3 wallet for transaction")
-
-      if (!window.ethereum) {
-        alert("Please install MetaMask or connect a wallet to complete this transaction")
-        setProcessingReminder(null)
-        return
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const vaultContract = new ethers.Contract(process.env.NEXT_PUBLIC_VAULT_CONTRACT!, REMINDER_VAULT_V3_ABI, signer)
-
-      console.log("[v0] Recording reminder with score:", score)
-      const tx = await vaultContract.recordReminder(reminderId, score)
-      console.log("[v0] Transaction sent:", tx.hash)
-
-      const receipt = await tx.wait()
-      console.log("[v0] Transaction confirmed:", receipt)
-
-      alert(`✅ Reminder recorded and reward claimed!\n\nYour Neynar score: ${score}\n\nTransaction: ${tx.hash}`)
-
-      setProcessingReminder(null)
-      loadPublicReminders()
-    } catch (error) {
-      console.error("[v0] Error recording reminder:", error)
-      setProcessingReminder(null)
-      alert(`Failed to record reminder: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 

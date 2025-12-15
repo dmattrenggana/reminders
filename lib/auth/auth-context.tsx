@@ -73,19 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function initMiniapp() {
     try {
+      console.log("[v0] Initializing miniapp...")
       const { sdk } = await import("@farcaster/frame-sdk")
 
       // Store SDK globally for contract operations
       ;(window as any).__frameSdk = sdk
       ;(window as any).__frameEthProvider = sdk.wallet.ethProvider
 
-      // Dismiss splash screen
-      await sdk.actions.ready({})
+      sdk.actions.ready({})
+      console.log("[v0] Splash screen dismissed")
 
       // Auto-connect after SDK is ready
       setTimeout(() => {
         const farcasterConnector = connectors.find((c) => c.id === "farcaster")
         if (farcasterConnector && !wagmiConnected) {
+          console.log("[v0] Auto-connecting with Farcaster connector...")
           connect({ connector: farcasterConnector })
         }
       }, 1000)
@@ -117,26 +119,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function fetchMiniappProfile(walletAddr: string) {
+    console.log("[v0] Fetching miniapp profile for:", walletAddr)
     try {
       const sdk = (window as any).__frameSdk
-      if (sdk?.context?.user) {
-        const user = sdk.context.user
+      if (sdk?.context) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
 
-        // Extract each field safely
-        const profile: FarcasterUser = {
-          fid: user.fid ? Number(user.fid) : 0,
-          username: user.username ? String(user.username) : user.displayName ? String(user.displayName) : "user",
-          displayName: user.displayName ? String(user.displayName) : user.username ? String(user.username) : "User",
-          pfpUrl: user.pfpUrl ? String(user.pfpUrl) : "/abstract-profile.png",
-          walletAddress: walletAddr,
-        }
+        const context = sdk.context
+        console.log("[v0] SDK context available:", !!context)
 
-        if (profile.fid > 0) {
-          setFarcasterUser(profile)
-          return
+        if (context.user) {
+          console.log("[v0] Extracting profile from SDK context...")
+
+          const profile: FarcasterUser = {
+            fid: context.user.fid ? Number(String(context.user.fid)) : 0,
+            username: context.user.username
+              ? String(context.user.username)
+              : context.user.displayName
+                ? String(context.user.displayName)
+                : "user",
+            displayName: context.user.displayName
+              ? String(context.user.displayName)
+              : context.user.username
+                ? String(context.user.username)
+                : "User",
+            pfpUrl: context.user.pfpUrl ? String(context.user.pfpUrl) : "/abstract-profile.png",
+            walletAddress: walletAddr,
+          }
+
+          console.log("[v0] Profile extracted:", { fid: profile.fid, username: profile.username })
+
+          if (profile.fid > 0) {
+            setFarcasterUser(profile)
+            console.log("[v0] Farcaster user set successfully")
+            return
+          }
         }
       }
 
+      console.log("[v0] Falling back to API for profile...")
       // Fallback to API
       const response = await fetch(`/api/farcaster/user?address=${walletAddr}`)
       if (response.ok) {
@@ -148,10 +169,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           pfpUrl: data.pfpUrl || "/abstract-profile.png",
           walletAddress: walletAddr,
         }
+        console.log("[v0] Profile from API:", { fid: profile.fid, username: profile.username })
         setFarcasterUser(profile)
       }
     } catch (error) {
-      console.error("Profile fetch error:", error)
+      console.error("[v0] Profile fetch error:", error)
     }
   }
 
