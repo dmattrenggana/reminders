@@ -46,37 +46,59 @@ export class ReminderService {
       }
 
       const rpcEndpoints = [
+        process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL,
         "https://mainnet.base.org",
         "https://base.llamarpc.com",
-        process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL,
+        "https://base-rpc.publicnode.com",
       ].filter(Boolean) as string[]
 
+      console.log("[v0] Trying to connect to Base Mainnet RPC...")
       let provider = null
 
-      for (const rpcUrl of rpcEndpoints) {
+      for (let i = 0; i < rpcEndpoints.length; i++) {
+        const rpcUrl = rpcEndpoints[i]
         try {
+          console.log(`[v0] Attempting RPC ${i + 1}/${rpcEndpoints.length}:`, rpcUrl.slice(0, 30) + "...")
           const testProvider = new JsonRpcProvider(rpcUrl, 8453)
+
           await Promise.race([
             testProvider.getNetwork(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
           ])
 
           provider = testProvider
+          console.log("[v0] ✅ Connected to Base Mainnet via RPC", i + 1)
           break
-        } catch {
+        } catch (e) {
+          console.log(`[v0] RPC ${i + 1} failed, trying next...`)
           continue
         }
       }
 
       if (!provider) {
-        throw new Error("Could not connect to Base Mainnet")
+        throw new Error("Could not connect to Base Mainnet. All RPC endpoints failed.")
       }
 
       this.provider = provider
+
+      console.log("[v0] Initializing contracts at:")
+      console.log("[v0]   Vault:", CONTRACTS.REMINDER_VAULT)
+      console.log("[v0]   Token:", CONTRACTS.COMMIT_TOKEN)
+
       this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, this.provider)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.provider)
+
+      try {
+        await this.vaultContract.nextReminderId()
+        console.log("[v0] ✅ Vault contract verified and responding")
+      } catch (verifyError) {
+        console.error("[v0] ❌ Vault contract verification failed:", verifyError)
+        throw new Error(
+          `Vault contract not responding at ${CONTRACTS.REMINDER_VAULT}. Verify it's deployed on Base Mainnet.`,
+        )
+      }
     } catch (error) {
-      console.error("Contract initialization error:", error)
+      console.error("[v0] Contract initialization error:", error)
       throw error
     }
   }
@@ -89,7 +111,6 @@ export class ReminderService {
 
     let activeSigner = this.signer
 
-    // Try to get signer from global storage (set by auth context)
     const frameProvider = (window as any).__frameEthProvider
     const frameSigner = (window as any).__frameSigner
     const webSigner = (window as any).__webSigner
@@ -126,7 +147,6 @@ export class ReminderService {
       }
     }
 
-    // Update contracts with active signer if available
     if (activeSigner && typeof activeSigner.getAddress === "function") {
       const { Contract } = await import("ethers")
       this.signer = activeSigner
@@ -139,9 +159,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Get token balance for an address
-   */
   async getTokenBalance(address: string): Promise<string> {
     try {
       await this.ensureContracts()
@@ -153,9 +170,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Approve tokens for the vault contract
-   */
   async approveTokens(amount: string): Promise<void> {
     try {
       await this.ensureContracts()
@@ -169,9 +183,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Create a new reminder with token commitment
-   */
   async createReminder(
     tokenAmount: string,
     reminderTime: Date,
@@ -303,9 +314,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Confirm a reminder and reclaim tokens
-   */
   async confirmReminder(reminderId: number): Promise<void> {
     try {
       await this.ensureContracts()
@@ -322,9 +330,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Burn tokens for a missed reminder
-   */
   async burnMissedReminder(reminderId: number): Promise<void> {
     try {
       await this.ensureContracts()
@@ -338,9 +343,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Get all reminder IDs for a user
-   */
   async getUserReminderIds(address: string): Promise<number[]> {
     try {
       await this.ensureContracts()
@@ -373,9 +375,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Get reminder details
-   */
   async getReminder(reminderId: number): Promise<ReminderData> {
     try {
       await this.ensureContracts()
@@ -492,9 +491,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Check if a reminder can be confirmed
-   */
   async canConfirm(reminderId: number): Promise<boolean> {
     try {
       await this.ensureContracts()
@@ -505,9 +501,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Check if a reminder should be burned
-   */
   async shouldBurn(reminderId: number): Promise<boolean> {
     try {
       await this.ensureContracts()
@@ -518,9 +511,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Get all reminders with full details for a user
-   */
   async getUserReminders(address: string): Promise<ReminderData[]> {
     try {
       await this.ensureContracts()
@@ -533,9 +523,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Get unclaimed reward pool amount for a confirmed reminder
-   */
   async getUnclaimedRewardPool(reminderId: number): Promise<string> {
     try {
       await this.ensureContracts()
@@ -547,9 +534,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Check if user can withdraw unclaimed rewards (V3 feature)
-   */
   async canWithdrawUnclaimed(reminderId: number): Promise<boolean> {
     try {
       await this.ensureContracts()
@@ -560,9 +544,6 @@ export class ReminderService {
     }
   }
 
-  /**
-   * Withdraw unclaimed rewards after 24 hours (V3 feature)
-   */
   async withdrawUnclaimedRewards(reminderId: number): Promise<void> {
     try {
       await this.ensureContracts()

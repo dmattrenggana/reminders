@@ -59,8 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log("[v0] Initializing miniapp...")
       const { sdk } = await import("@farcaster/frame-sdk")
-
-      // Store SDK globally for contract operations
       ;(window as any).__frameSdk = sdk
       ;(window as any).__frameEthProvider = sdk.wallet.ethProvider
 
@@ -69,49 +67,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setTimeout(async () => {
         try {
-          console.log("[v0] Starting Frame SDK wallet connection...")
+          console.log("[v0] Starting miniapp authentication...")
 
+          const context = await sdk.context
+
+          if (!context || !context.user) {
+            console.error("[v0] SDK context or context.user not available")
+            return
+          }
+
+          console.log("[v0] SDK context loaded successfully")
+
+          const fid = context.user.fid
+          const username = context.user.username
+          const displayName = context.user.displayName || username
+          const pfpUrl = context.user.pfpUrl || "/abstract-profile.png"
+
+          console.log("[v0] ✅ Extracted - FID:", fid, "Username:", username)
+
+          if (!fid || !username) {
+            console.error("[v0] Invalid FID or username")
+            return
+          }
+
+          // Fetch wallet address from API
+          console.log("[v0] Fetching profile from API for username:", username)
+          const response = await fetch(`/api/farcaster/user?username=${username}`)
+
+          if (!response.ok) {
+            console.error("[v0] API request failed:", response.status)
+            return
+          }
+
+          const data = await response.json()
+
+          if (!data.walletAddress) {
+            console.error("[v0] No wallet address in API response")
+            return
+          }
+
+          const walletAddr = data.walletAddress
+          console.log("[v0] ✅ Wallet address:", walletAddr.slice(0, 10) + "...")
+          setAddress(walletAddr)
+
+          // Create signer from Frame SDK
           const ethProvider = sdk.wallet.ethProvider
           if (!ethProvider) {
             console.error("[v0] Frame SDK eth provider not available")
             return
           }
 
-          console.log("[v0] Requesting accounts from Frame SDK...")
-
-          const accountsPromise = ethProvider.request({
-            method: "eth_requestAccounts",
-          }) as Promise<string[]>
-
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Account request timeout")), 10000),
-          )
-
-          const accounts = (await Promise.race([accountsPromise, timeoutPromise])) as string[]
-
-          if (!accounts || accounts.length === 0) {
-            console.error("[v0] No accounts returned from Frame SDK")
-            return
-          }
-
-          const walletAddr = accounts[0]
-          console.log("[v0] ✅ Wallet address:", walletAddr.slice(0, 10) + "...")
-
-          setAddress(walletAddr)
-
           const { BrowserProvider } = await import("ethers")
           const provider = new BrowserProvider(ethProvider)
-          const frameSigner = await provider.getSigner()
+          const frameSigner = await provider.getSigner(walletAddr)
           console.log("[v0] ✅ Frame SDK signer created")
 
           setSigner(frameSigner)
           ;(window as any).__frameSigner = frameSigner
 
-          await fetchMiniappProfile(walletAddr)
+          // Set profile
+          const profile: FarcasterUser = {
+            fid,
+            username,
+            displayName,
+            pfpUrl,
+            walletAddress: walletAddr,
+          }
+          console.log("[v0] ✅ Profile set:", profile.username)
+          setFarcasterUser(profile)
         } catch (error) {
-          console.error("[v0] Frame SDK wallet connection failed:", error)
+          console.error("[v0] Miniapp authentication error:", error)
         }
-      }, 3000)
+      }, 2000)
     } catch (error) {
       console.error("[v0] Miniapp initialization error:", error)
     }
