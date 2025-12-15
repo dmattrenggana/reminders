@@ -2,275 +2,157 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useAccount, useConnect, useDisconnect } from "wagmi"
-import type { FarcasterUser } from "./types" // Assuming FarcasterUser is defined in a separate file
+import type { FarcasterUser } from "./types"
 
 interface AuthContextType {
-  // Wallet state
-  walletAddress: string | null
   address: string | null
   signer: any
   isConnected: boolean
-  chainId: number | null
-
-  // Farcaster state
   farcasterUser: FarcasterUser | null
   isFarcasterConnected: boolean
-
-  // Actions
   connectWallet: () => Promise<void>
   disconnectWallet: () => void
   connectFarcaster: () => Promise<void>
   disconnectFarcaster: () => void
-  switchNetwork: (chainId: number) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { address: wagmiAddress, isConnected: wagmiConnected, connector } = useAccount()
+  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount()
   const { connect, connectors } = useConnect()
   const { disconnect: wagmiDisconnect } = useDisconnect()
 
   const [address, setAddress] = useState<string | null>(null)
   const [signer, setSigner] = useState<any>(null)
-  const [chainId, setChainId] = useState<number | null>(null)
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null)
 
   const isConnected = !!address || wagmiConnected
   const isFarcasterConnected = !!farcasterUser
 
   useEffect(() => {
-    checkWalletConnection()
-    checkFarcasterConnection()
-
-    if (typeof window !== "undefined" && window.self !== window.top) {
-      initMiniapp()
-    }
+    initializeAuth()
   }, [])
 
   useEffect(() => {
-    console.log("[v0] Wagmi state changed:", { wagmiConnected, wagmiAddress })
-
     if (wagmiConnected && wagmiAddress) {
-      console.log("[v0] Wagmi connected with address:", wagmiAddress)
-      setAddress(wagmiAddress)
-      setChainId(8453) // Base Mainnet
-
-      const setupMiniappAuth = async () => {
-        try {
-          const frameProvider = (window as any).__frameEthProvider
-          if (frameProvider) {
-            console.log("[v0] Setting up Frame SDK signer...")
-            const { BrowserProvider } = await import("ethers")
-            const provider = new BrowserProvider(frameProvider)
-            const frameSigner = await provider.getSigner()
-            setSigner(frameSigner)
-            console.log("[v0] Frame SDK signer ready")
-          } else {
-            console.log("[v0] No Frame provider, creating dummy signer for read-only mode")
-            // Create a dummy signer that will allow service initialization
-            setSigner({ getAddress: async () => wagmiAddress })
-          }
-
-          // Fetch Farcaster profile data
-          console.log("[v0] Fetching Farcaster user profile...")
-          await fetchFarcasterUserFromWallet(wagmiAddress)
-        } catch (error) {
-          console.error("[v0] Error setting up miniapp auth:", error)
-        }
-      }
-
-      setupMiniappAuth()
-    } else if (!wagmiConnected) {
-      console.log("[v0] Wagmi disconnected")
-      if (!farcasterUser) {
-        setAddress(null)
-        setSigner(null)
-      }
+      handleWagmiConnection(wagmiAddress)
     }
   }, [wagmiConnected, wagmiAddress])
 
-  const initMiniapp = async () => {
-    try {
-      console.log("[v0] Miniapp detected, initializing Frame SDK...")
-      const { sdk } = await import("@farcaster/frame-sdk")
-
-      sdk.actions.ready({})
-      console.log("[v0] Frame SDK ready() called")
-      ;(window as any).__frameSdk = sdk
-
+  async function initializeAuth() {
+    // Check for stored Farcaster user
+    const stored = localStorage.getItem("farcaster_user")
+    if (stored) {
       try {
-        const ethProvider = sdk.wallet.ethProvider
-        ;(window as any).__frameEthProvider = ethProvider
-        console.log("[v0] Frame eth provider stored")
-      } catch (err) {
-        console.log("[v0] Could not get eth provider:", err)
-      }
-
-      setTimeout(async () => {
-        const farcasterConnector = connectors.find((c) => c.id === "farcaster")
-
-        if (farcasterConnector && !wagmiConnected) {
-          console.log("[v0] Auto-connecting with Farcaster connector...")
-          try {
-            connect({ connector: farcasterConnector })
-            console.log("[v0] Connect call completed")
-          } catch (error) {
-            console.error("[v0] Auto-connect error:", error)
-          }
+        const user = JSON.parse(stored)
+        if (user.fid > 0) {
+          setFarcasterUser(user)
+          if (user.walletAddress) setAddress(user.walletAddress)
         }
-      }, 1000)
-    } catch (error) {
-      console.error("[v0] Error initializing miniapp:", error)
+      } catch (error) {
+        localStorage.removeItem("farcaster_user")
+      }
+    }
+
+    // Initialize miniapp if in iframe
+    if (typeof window !== "undefined" && window.self !== window.top) {
+      await initMiniapp()
     }
   }
 
-  const fetchFarcasterUserFromWallet = async (walletAddr: string) => {
+  async function initMiniapp() {
     try {
-      console.log("[v0] === fetchFarcasterUserFromWallet START ===")
-      console.log("[v0] Fetching Farcaster user for wallet:", walletAddr)
+      const { sdk } = await import("@farcaster/frame-sdk")
 
-      const sdk = (window as any).__frameSdk
-      if (sdk) {
-        console.log("[v0] Frame SDK found, extracting user context...")
-        try {
-          // Wait a bit for context to be fully ready
-          await new Promise((resolve) => setTimeout(resolve, 800))
+      sdk.actions.ready({})
 
-          const contextStr = JSON.stringify(sdk.context)
-          const context = JSON.parse(contextStr)
+      // Store SDK globally
+      ;(window as any).__frameSdk = sdk
 
-          console.log("[v0] SDK context extracted successfully")
+      // Store eth provider for transactions
+      try {
+        ;(window as any).__frameEthProvider = sdk.wallet.ethProvider
+      } catch {}
 
-          if (context?.user && context.user.fid) {
-            const user = context.user
-            console.log("[v0] Got user from SDK context - FID:", user.fid, "Username:", user.username)
-
-            const farcasterUser: FarcasterUser = {
-              fid: user.fid || 0,
-              username: user.username || `fid-${user.fid}`,
-              displayName: user.displayName || user.username || `User ${user.fid}`,
-              pfpUrl: user.pfpUrl || "/abstract-profile.png",
-              walletAddress: walletAddr,
-            }
-
-            console.log("[v0] Setting Farcaster user from SDK:", farcasterUser)
-            setFarcasterUser(farcasterUser)
-            localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
-            console.log("[v0] === fetchFarcasterUserFromWallet SUCCESS (SDK) ===")
-            return
-          } else {
-            console.log("[v0] SDK context.user not available or invalid")
-          }
-        } catch (sdkError) {
-          console.log("[v0] Could not extract from SDK context, falling back to API:", sdkError)
+      // Auto-connect after a delay
+      setTimeout(() => {
+        const farcasterConnector = connectors.find((c) => c.id === "farcaster")
+        if (farcasterConnector && !wagmiConnected) {
+          connect({ connector: farcasterConnector })
         }
-      } else {
-        console.log("[v0] Frame SDK not found, using API fallback")
+      }, 1000)
+    } catch (error) {
+      console.error("Error initializing miniapp:", error)
+    }
+  }
+
+  async function handleWagmiConnection(walletAddr: string) {
+    setAddress(walletAddr)
+
+    // Setup Frame SDK signer if available
+    const frameProvider = (window as any).__frameEthProvider
+    if (frameProvider) {
+      try {
+        const { BrowserProvider } = await import("ethers")
+        const provider = new BrowserProvider(frameProvider)
+        const frameSigner = await provider.getSigner()
+        setSigner(frameSigner)
+      } catch (error) {
+        // Fallback to read-only signer
+        setSigner({ getAddress: async () => walletAddr })
+      }
+    } else {
+      setSigner({ getAddress: async () => walletAddr })
+    }
+
+    // Fetch Farcaster profile
+    await fetchFarcasterProfile(walletAddr)
+  }
+
+  async function fetchFarcasterProfile(walletAddr: string) {
+    try {
+      // Try Frame SDK first
+      const sdk = (window as any).__frameSdk
+      if (sdk?.context?.user) {
+        const user = sdk.context.user
+        const profile: FarcasterUser = {
+          fid: Number(user.fid) || 0,
+          username: String(user.username || user.displayName || "user"),
+          displayName: String(user.displayName || user.username || "User"),
+          pfpUrl: String(user.pfpUrl || "/abstract-profile.png"),
+          walletAddress: walletAddr,
+        }
+
+        if (profile.fid > 0) {
+          setFarcasterUser(profile)
+          localStorage.setItem("farcaster_user", JSON.stringify(profile))
+          return
+        }
       }
 
-      console.log("[v0] Fetching from Neynar API...")
+      // Fallback to API
       const response = await fetch(`/api/farcaster/user?address=${walletAddr}`)
-
       if (response.ok) {
         const data = await response.json()
-        console.log("[v0] Got user from Neynar API - FID:", data.fid)
-
-        const farcasterUser: FarcasterUser = {
+        const profile: FarcasterUser = {
           fid: data.fid || 0,
           username: data.username || "user",
           displayName: data.displayName || data.username || "User",
           pfpUrl: data.pfpUrl || "/abstract-profile.png",
           walletAddress: walletAddr,
         }
-
-        console.log("[v0] Setting Farcaster user from API:", farcasterUser)
-        setFarcasterUser(farcasterUser)
-        localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
-        console.log("[v0] === fetchFarcasterUserFromWallet SUCCESS (API) ===")
-      } else {
-        console.log("[v0] Neynar API failed with status:", response.status)
-        const errorText = await response.text()
-        console.log("[v0] Error response:", errorText)
+        setFarcasterUser(profile)
+        localStorage.setItem("farcaster_user", JSON.stringify(profile))
       }
     } catch (error) {
-      console.error("[v0] Error fetching Farcaster user:", error)
-      console.log("[v0] === fetchFarcasterUserFromWallet FAILED ===")
+      console.error("Error fetching Farcaster profile:", error)
     }
   }
 
-  const checkWalletConnection = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        const { BrowserProvider } = await import("ethers")
-        const provider = new BrowserProvider(window.ethereum)
-        const accounts = await provider.listAccounts()
-
-        if (accounts.length > 0) {
-          const signer = await provider.getSigner()
-          const address = await signer.getAddress()
-          const network = await provider.getNetwork()
-
-          setAddress(address)
-          setSigner(signer)
-          setChainId(Number(network.chainId))
-        }
-      } catch (error) {
-        console.error("[v0] Error checking wallet connection:", error)
-      }
-    }
-  }
-
-  const checkFarcasterConnection = async () => {
-    const stored = localStorage.getItem("farcaster_user")
-    if (stored) {
-      try {
-        const user = JSON.parse(stored)
-
-        const validFid = typeof user.fid === "number" && user.fid > 0 ? user.fid : 0
-
-        if (validFid === 0) {
-          localStorage.removeItem("farcaster_user")
-          return
-        }
-
-        const validUsername = typeof user.username === "string" && user.username.length > 0 ? user.username : "user"
-
-        const validDisplayName =
-          typeof user.displayName === "string" && user.displayName.length > 0 ? user.displayName : validUsername
-
-        let validPfpUrl = "/abstract-profile.png"
-        if (typeof user.pfpUrl === "string" && user.pfpUrl.length > 0) {
-          validPfpUrl = user.pfpUrl
-        }
-
-        const validWalletAddr =
-          typeof user.walletAddress === "string" && user.walletAddress.length > 0 ? user.walletAddress : undefined
-
-        const validatedUser: FarcasterUser = {
-          fid: validFid,
-          username: validUsername,
-          displayName: validDisplayName,
-          pfpUrl: validPfpUrl,
-          walletAddress: validWalletAddr,
-        }
-
-        setFarcasterUser(validatedUser)
-
-        if (validWalletAddr) {
-          console.log("[v0] Restored Farcaster wallet:", validWalletAddr)
-          setAddress(validWalletAddr)
-        }
-      } catch (error) {
-        console.error("Error parsing stored Farcaster user:", error)
-        localStorage.removeItem("farcaster_user")
-      }
-    }
-  }
-
-  const connectWallet = async () => {
-    if (typeof window === "undefined" || !window.ethereum) {
-      alert("Please install MetaMask or another Web3 wallet")
+  async function connectWallet() {
+    if (!window?.ethereum) {
+      alert("Please install MetaMask")
       return
     }
 
@@ -281,155 +163,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const signer = await provider.getSigner()
       const address = await signer.getAddress()
-      const network = await provider.getNetwork()
 
       setAddress(address)
       setSigner(signer)
-      setChainId(Number(network.chainId))
-
-      if (Number(network.chainId) !== 8453) {
-        await switchNetwork(8453)
-      }
     } catch (error) {
       console.error("Error connecting wallet:", error)
-      alert("Failed to connect wallet. Please try again.")
     }
   }
 
-  const disconnectWallet = () => {
+  function disconnectWallet() {
     setAddress(null)
     setSigner(null)
-    setChainId(null)
   }
 
-  const connectFarcaster = async () => {
-    try {
-      const isMiniapp = typeof window !== "undefined" && window.self !== window.top
+  async function connectFarcaster() {
+    const isMiniapp = typeof window !== "undefined" && window.self !== window.top
 
-      if (isMiniapp) {
-        console.log("[v0] Miniapp detected, connecting with Wagmi...")
-
-        const farcasterConnector = connectors.find((c) => c.id === "farcaster")
-
-        if (!farcasterConnector) {
-          throw new Error("Farcaster connector not found")
-        }
-
-        console.log("[v0] Connecting with Farcaster connector...")
+    if (isMiniapp) {
+      const farcasterConnector = connectors.find((c) => c.id === "farcaster")
+      if (farcasterConnector) {
         connect({ connector: farcasterConnector })
-
-        return
       }
-
-      console.log("[v0] Web environment, using OAuth flow...")
-      const width = 500
-      const height = 700
-      const left = window.screen.width / 2 - width / 2
-      const top = window.screen.height / 2 - height / 2
-
-      const authUrl = `/api/farcaster/auth?returnTo=${encodeURIComponent(window.location.href)}`
-      const popup = window.open(authUrl, "Farcaster Sign In", `width=${width},height=${height},left=${left},top=${top}`)
-
-      const handleMessage = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return
-
-        if (event.data.type === "FARCASTER_AUTH_SUCCESS") {
-          const userData = event.data.user
-
-          const farcasterUser: FarcasterUser = {
-            fid: userData.fid,
-            username: userData.username,
-            displayName: userData.displayName,
-            pfpUrl: userData.pfpUrl || "/abstract-profile.png",
-            walletAddress: userData.walletAddress,
-          }
-
-          setFarcasterUser(farcasterUser)
-          localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
-
-          if (farcasterUser.walletAddress) {
-            setAddress(farcasterUser.walletAddress)
-          }
-
-          popup?.close()
-          window.removeEventListener("message", handleMessage)
-        }
-      }
-
-      window.addEventListener("message", handleMessage)
-
-      const checkClosed = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(checkClosed)
-          window.removeEventListener("message", handleMessage)
-        }
-      }, 500)
-    } catch (error) {
-      console.error("[v0] Error connecting Farcaster:", error)
-      alert("Failed to connect with Farcaster. Please try again.")
+      return
     }
+
+    // OAuth flow for web
+    const width = 500
+    const height = 700
+    const left = window.screen.width / 2 - width / 2
+    const top = window.screen.height / 2 - height / 2
+
+    const authUrl = `/api/farcaster/auth?returnTo=${encodeURIComponent(window.location.href)}`
+    const popup = window.open(authUrl, "Farcaster Sign In", `width=${width},height=${height},left=${left},top=${top}`)
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return
+
+      if (event.data.type === "FARCASTER_AUTH_SUCCESS") {
+        const user = event.data.user
+        setFarcasterUser(user)
+        localStorage.setItem("farcaster_user", JSON.stringify(user))
+        if (user.walletAddress) setAddress(user.walletAddress)
+        popup?.close()
+        window.removeEventListener("message", handleMessage)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
   }
 
-  const disconnectFarcaster = () => {
-    if (wagmiConnected) {
-      wagmiDisconnect()
-    }
-
+  function disconnectFarcaster() {
+    if (wagmiConnected) wagmiDisconnect()
     setFarcasterUser(null)
     localStorage.removeItem("farcaster_user")
-  }
-
-  const switchNetwork = async (targetChainId: number) => {
-    if (!window.ethereum) return
-
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: `0x${targetChainId.toString(16)}` }],
-      })
-    } catch (error: any) {
-      if (error.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: `0x${targetChainId.toString(16)}`,
-                chainName: "Base",
-                nativeCurrency: {
-                  name: "Ether",
-                  symbol: "ETH",
-                  decimals: 18,
-                },
-                rpcUrls: ["https://mainnet.base.org"],
-                blockExplorerUrls: ["https://basescan.org"],
-              },
-            ],
-          })
-        } catch (addError) {
-          console.error("Error adding network:", addError)
-        }
-      } else {
-        console.error("Error switching network:", error)
-      }
-    }
   }
 
   return (
     <AuthContext.Provider
       value={{
-        walletAddress: address,
         address,
         signer,
         isConnected,
-        chainId,
         farcasterUser,
         isFarcasterConnected,
         connectWallet,
         disconnectWallet,
         connectFarcaster,
         disconnectFarcaster,
-        switchNetwork,
       }}
     >
       {children}
@@ -439,8 +239,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider")
   return context
 }
