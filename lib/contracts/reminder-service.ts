@@ -43,7 +43,13 @@ export class ReminderService {
       const { Contract, JsonRpcProvider } = await import("ethers")
 
       if (!CONTRACTS.COMMIT_TOKEN || !CONTRACTS.REMINDER_VAULT) {
-        throw new Error("Contract addresses not configured")
+        throw new Error(
+          "Contract addresses not configured. Please set NEXT_PUBLIC_CONTRACT_ADDRESS and NEXT_PUBLIC_VAULT_CONTRACT environment variables.",
+        )
+      }
+
+      if (!CONTRACTS.REMINDER_VAULT.match(/^0x[a-fA-F0-9]{40}$/)) {
+        throw new Error(`Invalid vault contract address format: ${CONTRACTS.REMINDER_VAULT}`)
       }
 
       const rpcEndpoints = [
@@ -54,6 +60,7 @@ export class ReminderService {
       ].filter(Boolean) as string[]
 
       let provider = null
+      let workingRpcUrl = ""
 
       for (let i = 0; i < rpcEndpoints.length; i++) {
         const rpcUrl = rpcEndpoints[i]
@@ -62,18 +69,22 @@ export class ReminderService {
 
           await Promise.race([
             testProvider.getNetwork(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("RPC connection timeout")), 5000)),
           ])
 
           provider = testProvider
+          workingRpcUrl = rpcUrl
           break
         } catch (e) {
+          console.error(`Failed to connect to RPC ${rpcUrl}:`, e)
           continue
         }
       }
 
       if (!provider) {
-        throw new Error("Could not connect to Base Mainnet. All RPC endpoints failed.")
+        throw new Error(
+          "Could not connect to Base Mainnet. All RPC endpoints failed. Please check your internet connection.",
+        )
       }
 
       this.provider = provider
@@ -85,24 +96,43 @@ export class ReminderService {
         const verifyWithRetry = async (attempts = 3) => {
           for (let i = 0; i < attempts; i++) {
             try {
-              await Promise.race([
+              const result = await Promise.race([
                 this.vaultContract.nextReminderId(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Contract call timeout")), 5000)),
               ])
               this.isVerified = true
+              console.log("Contract verified on Base Mainnet, next reminder ID:", result.toString())
               return
-            } catch (error) {
+            } catch (error: any) {
               if (i < attempts - 1) {
+                console.warn(`Contract verification attempt ${i + 1} failed, retrying...`)
                 await new Promise((resolve) => setTimeout(resolve, 1000))
+              } else {
+                throw error
               }
             }
           }
-          throw new Error("Contract verification timeout")
         }
 
         await verifyWithRetry()
-      } catch (verifyError) {
+      } catch (verifyError: any) {
         this.isVerified = false
+        console.error("Contract verification failed:", verifyError)
+
+        const errorMsg = `Failed to verify ReminderVault contract at ${CONTRACTS.REMINDER_VAULT} on Base Mainnet.
+
+Possible causes:
+1. Contract not deployed to this address on Base Mainnet (Chain ID: 8453)
+2. Wrong contract address in NEXT_PUBLIC_VAULT_CONTRACT
+3. Contract is not ReminderVaultV3 or incompatible version
+4. Network connectivity issues
+
+Please verify:
+- Contract exists on BaseScan: https://basescan.org/address/${CONTRACTS.REMINDER_VAULT}
+- Environment variable NEXT_PUBLIC_VAULT_CONTRACT is correct
+- You're connected to Base Mainnet (not testnet)`
+
+        throw new Error(errorMsg)
       }
     } catch (error) {
       console.error("Contract initialization error:", error)
@@ -324,26 +354,38 @@ export class ReminderService {
       await this.ensureContracts()
 
       if (!this.vaultContract) {
-        throw new Error("Vault contract not initialized")
+        throw new Error("Vault contract not initialized. Please refresh the page and try again.")
       }
 
       let lastError: any
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
-          const ids = await this.vaultContract.getUserReminders(address)
+          const ids = await Promise.race([
+            this.vaultContract.getUserReminders(address),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Contract call timeout")), 8000)),
+          ])
           return ids.map((id: bigint) => Number(id))
         } catch (error: any) {
           lastError = error
-          console.error(`getUserReminderIds attempt ${attempt + 1} failed:`, error?.message || error)
+          console.error(`getUserReminderIds attempt ${attempt + 1}/3 failed:`, error?.message || error)
           if (attempt < 2) {
-            await new Promise((resolve) => setTimeout(resolve, 1000))
+            await new Promise((resolve) => setTimeout(resolve, 1500))
           }
         }
       }
 
-      console.error("All getUserReminderIds attempts failed:", lastError?.message || lastError)
+      const errorDetails = lastError?.message || lastError || "Unknown error"
       throw new Error(
-        "Vault contract not responding at " + CONTRACTS.REMINDER_VAULT + ". Verify it's deployed on Base Mainnet.",
+        `ReminderVault contract not responding at ${CONTRACTS.REMINDER_VAULT}.
+
+Error: ${errorDetails}
+
+Please verify:
+1. Contract is deployed on BaseScan: https://basescan.org/address/${CONTRACTS.REMINDER_VAULT}
+2. You're connected to Base Mainnet (Chain ID: 8453)
+3. NEXT_PUBLIC_VAULT_CONTRACT environment variable is correct
+
+If the contract address is wrong, please update it in your Vercel project settings.`,
       )
     } catch (error: any) {
       console.error("getUserReminderIds error:", error?.message || error)
