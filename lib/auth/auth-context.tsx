@@ -49,15 +49,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    console.log("[v0] Wagmi state changed:", { wagmiConnected, wagmiAddress })
+
     if (wagmiConnected && wagmiAddress) {
       console.log("[v0] Wagmi connected with address:", wagmiAddress)
       setAddress(wagmiAddress)
       setChainId(8453) // Base Mainnet
 
-      setTimeout(() => {
-        console.log("[v0] Attempting to fetch Farcaster user...")
-        fetchFarcasterUserFromWallet(wagmiAddress)
-      }, 500)
+      const setupSigner = async () => {
+        try {
+          const frameProvider = (window as any).__frameEthProvider
+          if (frameProvider) {
+            console.log("[v0] Setting up signer from Frame SDK provider...")
+            const { BrowserProvider } = await import("ethers")
+            const provider = new BrowserProvider(frameProvider)
+            const frameSigner = await provider.getSigner()
+            setSigner(frameSigner)
+            console.log("[v0] Frame SDK signer ready")
+          }
+        } catch (error) {
+          console.error("[v0] Error setting up Frame signer:", error)
+        }
+      }
+
+      setupSigner()
+
+      console.log("[v0] Calling fetchFarcasterUserFromWallet...")
+      fetchFarcasterUserFromWallet(wagmiAddress)
     } else if (!wagmiConnected) {
       console.log("[v0] Wagmi disconnected")
       if (!farcasterUser) {
@@ -75,6 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sdk.actions.ready({})
       console.log("[v0] Frame SDK ready() called")
       ;(window as any).__frameSdk = sdk
+
+      try {
+        const ethProvider = sdk.wallet.ethProvider
+        ;(window as any).__frameEthProvider = ethProvider
+        console.log("[v0] Frame eth provider stored")
+      } catch (err) {
+        console.log("[v0] Could not get eth provider:", err)
+      }
 
       setTimeout(async () => {
         const farcasterConnector = connectors.find((c) => c.id === "farcaster")
@@ -96,33 +122,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchFarcasterUserFromWallet = async (walletAddr: string) => {
     try {
+      console.log("[v0] === fetchFarcasterUserFromWallet START ===")
       console.log("[v0] Fetching Farcaster user for wallet:", walletAddr)
 
       const sdk = (window as any).__frameSdk
       if (sdk) {
+        console.log("[v0] Frame SDK found, attempting to extract context...")
         try {
-          const contextString = JSON.stringify(sdk.context)
-          const context = JSON.parse(contextString)
+          await new Promise((resolve) => setTimeout(resolve, 500)) // Wait for context to be ready
 
-          if (context?.user?.fid) {
-            console.log("[v0] Got user from SDK context - FID:", context.user.fid)
+          const context = sdk.context
+          console.log("[v0] SDK context available:", !!context)
+
+          if (context?.user) {
+            const user = context.user
+            console.log("[v0] Got user from SDK context")
+            console.log("[v0] User FID:", user.fid)
+            console.log("[v0] User username:", user.username)
 
             const farcasterUser: FarcasterUser = {
-              fid: context.user.fid || 0,
-              username: context.user.username || `fid-${context.user.fid}`,
-              displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
-              pfpUrl: context.user.pfpUrl || "/abstract-profile.png",
+              fid: user.fid || 0,
+              username: user.username || `fid-${user.fid}`,
+              displayName: user.displayName || user.username || `User ${user.fid}`,
+              pfpUrl: user.pfpUrl || "/abstract-profile.png",
               walletAddress: walletAddr,
             }
 
             console.log("[v0] Setting Farcaster user from SDK:", farcasterUser.username)
             setFarcasterUser(farcasterUser)
             localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+            console.log("[v0] === fetchFarcasterUserFromWallet SUCCESS (SDK) ===")
             return
+          } else {
+            console.log("[v0] SDK context.user not available")
           }
         } catch (sdkError) {
-          console.log("[v0] Could not extract from SDK context, trying API")
+          console.log("[v0] Could not extract from SDK context:", sdkError)
         }
+      } else {
+        console.log("[v0] Frame SDK not found in window")
       }
 
       console.log("[v0] Fetching from Neynar API...")
@@ -143,11 +181,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("[v0] Setting Farcaster user from API:", farcasterUser.username)
         setFarcasterUser(farcasterUser)
         localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
+        console.log("[v0] === fetchFarcasterUserFromWallet SUCCESS (API) ===")
       } else {
         console.log("[v0] Neynar API failed with status:", response.status)
+        const errorText = await response.text()
+        console.log("[v0] Error response:", errorText)
       }
     } catch (error) {
       console.error("[v0] Error fetching Farcaster user:", error)
+      console.log("[v0] === fetchFarcasterUserFromWallet FAILED ===")
     }
   }
 

@@ -129,9 +129,9 @@ export class ReminderService {
       throw new Error("Contracts not initialized")
     }
 
-    if (typeof window !== "undefined" && this.signer) {
+    if (typeof window !== "undefined") {
       const frameProvider = (window as any).__frameEthProvider
-      if (frameProvider) {
+      if (frameProvider && this.signer) {
         try {
           const { BrowserProvider, Contract } = await import("ethers")
           const provider = new BrowserProvider(frameProvider)
@@ -139,9 +139,10 @@ export class ReminderService {
 
           this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, signer)
           this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
+          this.signer = signer
           console.log("[v0] Using Frame SDK provider for transactions")
         } catch (err) {
-          console.log("[v0] Frame SDK provider not available, using read-only provider")
+          console.log("[v0] Frame SDK provider not available for signing:", err)
         }
       }
     }
@@ -195,6 +196,19 @@ export class ReminderService {
       await this.ensureContracts()
       console.log("[v0] ✅ Contracts ready")
 
+      if (!this.signer) {
+        throw new Error("No signer available. Please connect your wallet.")
+      }
+
+      let userAddress: string
+      try {
+        userAddress = await this.signer.getAddress()
+        console.log("[v0] User address:", userAddress)
+      } catch (signerError) {
+        console.error("[v0] Error getting signer address:", signerError)
+        throw new Error("Could not get wallet address from signer. Please reconnect your wallet.")
+      }
+
       const amountInWei = parseUnits(tokenAmount, 18)
       const reminderTimestamp = Math.floor(reminderTime.getTime() / 1000)
 
@@ -206,8 +220,6 @@ export class ReminderService {
         farcasterUsername: farcasterUsername || "wallet-user",
       })
 
-      const userAddress = await this.signer.getAddress()
-      console.log("[v0] User address:", userAddress)
       console.log("[v0] Vault contract:", CONTRACTS.REMINDER_VAULT)
       console.log("[v0] Token contract:", CONTRACTS.COMMIT_TOKEN)
 
