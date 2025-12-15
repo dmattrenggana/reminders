@@ -62,14 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ;(window as any).__frameSdk = sdk
       ;(window as any).__frameEthProvider = sdk.wallet.ethProvider
 
-      const isInMiniApp = await sdk.isInMiniApp()
-      console.log("[v0] Is in miniapp:", isInMiniApp)
-
-      if (!isInMiniApp) {
-        console.log("[v0] Not in miniapp environment, skipping SDK authentication")
-        return
-      }
-
       sdk.actions.ready({})
       console.log("[v0] Splash screen dismissed")
 
@@ -77,84 +69,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           console.log("[v0] Starting miniapp authentication...")
 
-          console.log("[v0] Awaiting SDK context...")
-          const contextPromise = sdk.context
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Context timeout")), 5000),
-          )
+          // Try to get wallet address from eth provider
+          const ethProvider = sdk.wallet.ethProvider
+          const { BrowserProvider } = await import("ethers")
+          const provider = new BrowserProvider(ethProvider)
 
-          const context = await Promise.race([contextPromise, timeoutPromise])
-          console.log("[v0] SDK context loaded")
-
-          if (!context?.user) {
-            console.error("[v0] No user in SDK context")
-            return
-          }
-
-          const userData = context.user
-          const fid = userData.fid
-          const username = userData.username || ""
-          const displayName = userData.displayName || username
-          const pfpUrl = userData.pfpUrl || "/abstract-profile.png"
-
-          console.log("[v0] Extracted data - FID:", fid, "Username:", username)
-
-          if (!fid || fid === 0 || !username) {
-            console.error("[v0] Invalid user data from SDK - FID:", fid, "Username:", username)
-            return
-          }
-
-          console.log("[v0] Fetching wallet address from API...")
           try {
-            const response = await fetch(`/api/farcaster/user?username=${username}`)
-            if (response.ok) {
-              const data = await response.json()
-              const walletAddress = data.walletAddress || ""
-              console.log(
-                "[v0] Wallet address from API:",
-                walletAddress ? walletAddress.slice(0, 10) + "..." : "not found",
-              )
+            const accounts = await provider.send("eth_accounts", [])
+            if (accounts && accounts.length > 0) {
+              const walletAddress = accounts[0]
+              console.log("[v0] Got wallet address:", walletAddress.slice(0, 10) + "...")
 
-              if (walletAddress) {
-                setAddress(walletAddress)
-                console.log("[v0] Address set:", walletAddress.slice(0, 10) + "...")
+              setAddress(walletAddress)
 
-                const ethProvider = sdk.wallet.ethProvider
-                if (ethProvider) {
-                  try {
-                    console.log("[v0] Creating signer from Frame SDK...")
-                    const { BrowserProvider } = await import("ethers")
-                    const provider = new BrowserProvider(ethProvider)
-                    const frameSigner = await provider.getSigner(walletAddress)
+              // Create signer
+              const frameSigner = await provider.getSigner(walletAddress)
+              setSigner(frameSigner)
+              ;(window as any).__frameSigner = frameSigner
 
-                    setSigner(frameSigner)
-                    ;(window as any).__frameSigner = frameSigner
-                    console.log("[v0] Frame SDK signer created successfully")
-                  } catch (signerError) {
-                    console.error("[v0] Signer creation failed:", signerError)
+              // Fetch Farcaster profile from API using wallet address
+              const response = await fetch(`/api/farcaster/user?address=${walletAddress}`)
+              if (response.ok) {
+                const data = await response.json()
+                if (data.fid && data.fid > 0) {
+                  const profile: FarcasterUser = {
+                    fid: data.fid,
+                    username: data.username || "user",
+                    displayName: data.displayName || data.username || "User",
+                    pfpUrl: data.pfpUrl || "/abstract-profile.png",
+                    walletAddress: walletAddress,
                   }
+                  setFarcasterUser(profile)
+                  console.log("[v0] ✅ Miniapp authenticated:", profile.username)
+                  return
                 }
               }
 
-              const profile: FarcasterUser = {
-                fid,
-                username,
-                displayName: displayName || username,
-                pfpUrl,
-                walletAddress: walletAddress || "",
-              }
-              setFarcasterUser(profile)
-              console.log("[v0] ✅ Miniapp authentication complete:", username, displayName)
-            } else {
-              console.error("[v0] API request failed:", response.status)
+              // Fallback profile if API fails
+              setFarcasterUser({
+                fid: 0,
+                username: `user-${walletAddress.slice(0, 6)}`,
+                displayName: `User ${walletAddress.slice(0, 6)}`,
+                pfpUrl: "/abstract-profile.png",
+                walletAddress: walletAddress,
+              })
+              console.log("[v0] ✅ Miniapp connected with minimal profile")
             }
-          } catch (apiError) {
-            console.error("[v0] API fetch error:", apiError)
+          } catch (error) {
+            console.error("[v0] Failed to get accounts:", error)
           }
         } catch (error) {
           console.error("[v0] Miniapp authentication error:", error)
         }
-      }, 2000) // Wait 2 seconds for SDK to fully initialize before accessing context
+      }, 2000)
     } catch (error) {
       console.error("[v0] Miniapp initialization error:", error)
     }
