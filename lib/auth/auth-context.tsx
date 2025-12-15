@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode, useEffect } from "react"
 import type { FarcasterUser } from "./types"
-// import { useMiniKit } from "@coinbase/onchainkit/minikit"
 
 interface AuthContextType {
   // Wallet Connection State

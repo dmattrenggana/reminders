@@ -9,18 +9,11 @@ import { Card } from "@/components/ui/card"
 import { Clock, Shield, Coins, Users } from "lucide-react"
 
 export default function HomePage() {
-  console.log("[v0] HomePage rendering")
-
   const { isConnected, isFarcasterConnected } = useAuth()
-  console.log("[v0] HomePage auth state:", { isConnected, isFarcasterConnected })
-
   const isAuthenticated = isConnected || isFarcasterConnected
-
-  console.log("[v0] HomePage isAuthenticated:", isAuthenticated)
 
   return (
     <div className="min-h-screen bg-background">
-      {console.log("[v0] Rendering HomePage content")}
       <header className="border-b border-border sticky top-0 bg-background/80 backdrop-blur-md z-50">
         <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3 md:py-4">
           <div className="flex items-center justify-between gap-2">
@@ -55,12 +48,8 @@ export default function HomePage() {
       </header>
 
       <main>
-        {console.log("[v0] Rendering main content, isAuthenticated:", isAuthenticated)}
         {isAuthenticated ? (
-          <>
-            {console.log("[v0] Rendering ReminderDashboard")}
-            <ReminderDashboard />
-          </>
+          <ReminderDashboard />
         ) : (
           <div className="container mx-auto px-4 py-8 max-w-7xl">
             <div className="space-y-8">
