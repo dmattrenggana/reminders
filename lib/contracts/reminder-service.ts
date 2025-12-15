@@ -87,7 +87,6 @@ export class ReminderService {
       throw new Error("Contracts not initialized")
     }
 
-    // Check if we need to upgrade from read-only to write-enabled contracts
     let activeSigner = this.signer
 
     // Try to get signer from global storage (set by auth context)
@@ -104,22 +103,26 @@ export class ReminderService {
     } else if (frameProvider) {
       try {
         console.log("[v0] Creating signer from Frame SDK provider")
-        const { BrowserProvider, Contract } = await import("ethers")
+        const { BrowserProvider } = await import("ethers")
         const provider = new BrowserProvider(frameProvider)
         activeSigner = await provider.getSigner()
         ;(window as any).__frameSigner = activeSigner
+        console.log("[v0] Frame SDK signer created successfully")
       } catch (error) {
         console.error("[v0] Failed to create Frame SDK signer:", error)
+        throw new Error("Failed to setup wallet for transactions. Please reload the app and try again.")
       }
     } else if (window?.ethereum) {
       try {
         console.log("[v0] Creating signer from web wallet")
-        const { BrowserProvider, Contract } = await import("ethers")
+        const { BrowserProvider } = await import("ethers")
         const provider = new BrowserProvider(window.ethereum)
         activeSigner = await provider.getSigner()
         ;(window as any).__webSigner = activeSigner
+        console.log("[v0] Web wallet signer created successfully")
       } catch (error) {
         console.error("[v0] Failed to create web wallet signer:", error)
+        throw new Error("Failed to connect to your wallet. Please reconnect and try again.")
       }
     }
 
@@ -129,9 +132,10 @@ export class ReminderService {
       this.signer = activeSigner
       this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, activeSigner)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, activeSigner)
-      console.log("[v0] Contracts updated with active signer")
+      console.log("[v0] Contracts connected with active signer")
     } else {
-      console.warn("[v0] No active signer available, using read-only contracts")
+      console.warn("[v0] No active signer available - transactions will fail")
+      throw new Error("Wallet not connected. Please connect your wallet to perform transactions.")
     }
   }
 

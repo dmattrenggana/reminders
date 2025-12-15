@@ -24,7 +24,7 @@ interface PublicReminder {
 }
 
 export default function FeedPage() {
-  const { walletAddress, farcasterUser, connectWallet, connectFarcaster } = useAuth()
+  const { address: walletAddress, farcasterUser, connectWallet, connectFarcaster } = useAuth()
   const [reminders, setReminders] = useState<PublicReminder[]>([])
   const [loading, setLoading] = useState(true)
   const [processingReminder, setProcessingReminder] = useState<number | null>(null)

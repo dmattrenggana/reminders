@@ -121,57 +121,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function fetchMiniappProfile(walletAddr: string) {
     console.log("[v0] Fetching miniapp profile for:", walletAddr)
     try {
-      const sdk = (window as any).__frameSdk
-      if (sdk?.context) {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-
-        const context = sdk.context
-        console.log("[v0] SDK context available:", !!context)
-
-        if (context.user) {
-          console.log("[v0] Extracting profile from SDK context...")
-
-          const profile: FarcasterUser = {
-            fid: context.user.fid ? Number(String(context.user.fid)) : 0,
-            username: context.user.username
-              ? String(context.user.username)
-              : context.user.displayName
-                ? String(context.user.displayName)
-                : "user",
-            displayName: context.user.displayName
-              ? String(context.user.displayName)
-              : context.user.username
-                ? String(context.user.username)
-                : "User",
-            pfpUrl: context.user.pfpUrl ? String(context.user.pfpUrl) : "/abstract-profile.png",
-            walletAddress: walletAddr,
-          }
-
-          console.log("[v0] Profile extracted:", { fid: profile.fid, username: profile.username })
-
-          if (profile.fid > 0) {
-            setFarcasterUser(profile)
-            console.log("[v0] Farcaster user set successfully")
-            return
-          }
-        }
-      }
-
-      console.log("[v0] Falling back to API for profile...")
-      // Fallback to API
+      console.log("[v0] Fetching profile from API...")
       const response = await fetch(`/api/farcaster/user?address=${walletAddr}`)
       if (response.ok) {
         const data = await response.json()
-        const profile: FarcasterUser = {
-          fid: data.fid || 0,
-          username: data.username || "user",
-          displayName: data.displayName || data.username || "User",
-          pfpUrl: data.pfpUrl || "/abstract-profile.png",
-          walletAddress: walletAddr,
+        if (data.fid && data.fid > 0) {
+          const profile: FarcasterUser = {
+            fid: data.fid || 0,
+            username: data.username || "user",
+            displayName: data.displayName || data.username || "User",
+            pfpUrl: data.pfpUrl || "/abstract-profile.png",
+            walletAddress: walletAddr,
+          }
+          console.log("[v0] Profile from API:", { fid: profile.fid, username: profile.username })
+          setFarcasterUser(profile)
+          return
         }
-        console.log("[v0] Profile from API:", { fid: profile.fid, username: profile.username })
-        setFarcasterUser(profile)
       }
+
+      console.log("[v0] API fetch failed, trying SDK context...")
+      const { sdk } = await import("@farcaster/frame-sdk")
+
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      try {
+        const context = sdk.context
+        if (context?.user) {
+          console.log("[v0] SDK context available, extracting user data...")
+
+          let fid = 0
+          let username = "user"
+          let displayName = "User"
+          let pfpUrl = "/abstract-profile.png"
+
+          try {
+            fid = context.user.fid ? Number(context.user.fid) : 0
+          } catch (e) {
+            console.log("[v0] Could not read FID from SDK")
+          }
+
+          try {
+            username = context.user.username ? String(context.user.username) : "user"
+          } catch (e) {
+            console.log("[v0] Could not read username from SDK")
+          }
+
+          try {
+            displayName = context.user.displayName ? String(context.user.displayName) : username
+          } catch (e) {
+            console.log("[v0] Could not read displayName from SDK")
+          }
+
+          try {
+            pfpUrl = context.user.pfpUrl ? String(context.user.pfpUrl) : "/abstract-profile.png"
+          } catch (e) {
+            console.log("[v0] Could not read pfpUrl from SDK")
+          }
+
+          if (fid > 0) {
+            const profile: FarcasterUser = {
+              fid,
+              username,
+              displayName,
+              pfpUrl,
+              walletAddress: walletAddr,
+            }
+            console.log("[v0] Profile extracted from SDK:", { fid: profile.fid, username: profile.username })
+            setFarcasterUser(profile)
+            return
+          }
+        }
+      } catch (sdkError) {
+        console.log("[v0] SDK context extraction error:", sdkError)
+      }
+
+      console.log("[v0] Using minimal profile with wallet address only")
+      setFarcasterUser({
+        fid: 0,
+        username: `wallet-${walletAddr.slice(0, 6)}`,
+        displayName: `User ${walletAddr.slice(0, 6)}`,
+        pfpUrl: "/abstract-profile.png",
+        walletAddress: walletAddr,
+      })
     } catch (error) {
       console.error("[v0] Profile fetch error:", error)
     }
@@ -215,7 +246,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function connectFarcaster() {
     if (isMiniapp) {
-      // Miniapp: use Wagmi connector
       const farcasterConnector = connectors.find((c) => c.id === "farcaster")
       if (farcasterConnector) {
         connect({ connector: farcasterConnector })
@@ -223,7 +253,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Web: OAuth flow
     const width = 500
     const height = 700
     const left = window.screen.width / 2 - width / 2
@@ -262,7 +291,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return signer
     }
 
-    // Try to get from global storage
     const storedFrameSigner = (window as any).__frameSigner
     const storedWebSigner = (window as any).__webSigner
 
@@ -278,7 +306,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return storedWebSigner
     }
 
-    // Try to create signer based on environment
     if (isMiniapp) {
       const frameProvider = (window as any).__frameEthProvider
       if (frameProvider) {
