@@ -57,13 +57,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[v0] Miniapp detected, initializing Frame SDK...")
       const { sdk } = await import("@farcaster/frame-sdk")
 
-      // Call ready to dismiss splash screen
-      await sdk.actions.ready()
-      console.log("[v0] Frame SDK ready() called - splash screen dismissed")
+      // Call ready() without awaiting - dismisses splash screen immediately
+      sdk.actions.ready({})
+      console.log("[v0] Frame SDK ready() called - splash screen should dismiss")
 
       // Store SDK globally for later use
       ;(window as any).__frameSdk = sdk
 
+      // Wait longer for SDK context to be fully available on mobile
       setTimeout(async () => {
         console.log("[v0] Auto-connecting Farcaster in miniapp...")
         try {
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.log("[v0] Auto-connect failed, user can manually connect")
         }
-      }, 500)
+      }, 1000)
     } catch (error) {
       console.error("[v0] Error initializing miniapp:", String(error))
     }
@@ -79,35 +80,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const autoConnectFrameSDK = async (sdk: any) => {
     try {
-      if (!sdk.context || !sdk.context.user) {
+      if (!sdk || !sdk.context) {
         throw new Error("SDK context not available")
       }
 
-      const userFid = Number(sdk.context.user.fid || 0)
-      if (userFid === 0) {
-        throw new Error("No valid user FID")
-      }
-
-      console.log("[v0] Extracting user data from Frame SDK...")
-
-      // Extract user data safely
+      let userFid = 0
       let userName = ""
       let userDisplay = ""
       let userPfp = ""
 
       try {
-        userName = String(sdk.context.user.username || "")
-        userDisplay = String(sdk.context.user.displayName || "")
-        userPfp = String(sdk.context.user.pfpUrl || "")
-      } catch (e) {
-        console.log("[v0] Could not extract some user properties")
+        // Try to serialize the context to extract data safely
+        const contextStr = JSON.stringify(sdk.context)
+        const contextObj = JSON.parse(contextStr)
+
+        if (contextObj.user) {
+          userFid = Number(contextObj.user.fid) || 0
+          userName = String(contextObj.user.username || "")
+          userDisplay = String(contextObj.user.displayName || "")
+          userPfp = String(contextObj.user.pfpUrl || "")
+        }
+      } catch (serializeError) {
+        // If serialization fails, the context might not be ready
+        throw new Error("SDK context not ready for serialization")
       }
+
+      if (userFid === 0) {
+        throw new Error("No valid user FID")
+      }
+
+      console.log("[v0] User data extracted - FID:", userFid)
 
       const validUsername = userName || userDisplay || `fid-${userFid}`
       const validDisplayName = userDisplay || userName || `User ${userFid}`
       const validPfpUrl = userPfp || "/abstract-profile.png"
-
-      console.log("[v0] User data extracted - FID:", userFid, "Username:", validUsername)
 
       // Try to get wallet
       let walletAddr: string | undefined = undefined
