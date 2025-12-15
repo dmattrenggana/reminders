@@ -1,6 +1,5 @@
 import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V3_ABI } from "./config"
 import { parseUnits, formatUnits } from "@/lib/utils/ethers-utils"
-import { BrowserProvider } from "ethers"
 
 export interface ReminderData {
   id: number
@@ -58,6 +57,8 @@ export class ReminderService {
         "https://1rpc.io/base",
       ].filter(Boolean) as string[]
 
+      console.log("[v0] Initializing RPC provider...")
+
       for (const rpcUrl of rpcEndpoints) {
         try {
           console.log("[v0] Testing RPC endpoint:", rpcUrl)
@@ -65,7 +66,7 @@ export class ReminderService {
 
           const networkPromise = testProvider.getNetwork()
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Network check timeout")), 15000),
+            setTimeout(() => reject(new Error("Network check timeout")), 10000),
           )
 
           await Promise.race([networkPromise, timeoutPromise])
@@ -73,7 +74,7 @@ export class ReminderService {
 
           const codePromise = testProvider.getCode(CONTRACTS.REMINDER_VAULT)
           const codeTimeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("getCode timeout")), 15000),
+            setTimeout(() => reject(new Error("getCode timeout")), 10000),
           )
 
           const code = await Promise.race([codePromise, codeTimeoutPromise])
@@ -86,17 +87,17 @@ export class ReminderService {
           const testContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, testProvider)
           const callPromise = testContract.nextReminderId()
           const callTimeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Contract call timeout")), 15000),
+            setTimeout(() => reject(new Error("Contract call timeout")), 10000),
           )
 
-          await Promise.race([callPromise, callTimeoutPromise])
-          console.log("[v0] Contract is responding to calls")
+          const nextId = await Promise.race([callPromise, callTimeoutPromise])
+          console.log("[v0] Contract is responding, next ID:", nextId.toString())
 
           provider = testProvider
           console.log("[v0] Successfully connected to RPC:", rpcUrl)
           break
         } catch (error) {
-          console.log("[v0] RPC endpoint failed:", rpcUrl, String(error))
+          console.log("[v0] RPC endpoint failed:", rpcUrl, error)
           continue
         }
       }
@@ -113,7 +114,6 @@ export class ReminderService {
       console.log("[v0] Contracts initialized successfully")
       console.log("[v0] Vault:", CONTRACTS.REMINDER_VAULT)
       console.log("[v0] Token:", CONTRACTS.COMMIT_TOKEN)
-      console.log("[v0] Using provider for read operations")
     } catch (error) {
       console.error("[v0] Contract initialization error:", error)
       throw error
@@ -126,22 +126,19 @@ export class ReminderService {
     }
 
     if (!this.vaultContract || !this.tokenContract) {
-      await this.initializeContracts()
+      throw new Error("Contracts not initialized")
     }
 
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && this.signer) {
       const frameProvider = (window as any).__frameEthProvider
-      if (frameProvider && this.signer) {
+      if (frameProvider) {
         try {
+          const { BrowserProvider, Contract } = await import("ethers")
           const provider = new BrowserProvider(frameProvider)
           const signer = await provider.getSigner()
 
-          const { Contract } = await import("ethers")
-          const vaultWithSigner = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, signer)
-          const tokenWithSigner = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
-
-          this.vaultContract = vaultWithSigner
-          this.tokenContract = tokenWithSigner
+          this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, signer)
+          this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
           console.log("[v0] Using Frame SDK provider for transactions")
         } catch (err) {
           console.log("[v0] Frame SDK provider not available, using read-only provider")
