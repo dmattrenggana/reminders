@@ -1,14 +1,14 @@
 {
   "accountAssociation": {
-    "header": "eyJmaWQiOjEyMzQ1NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweEFiQ2RFZjEyMzQ1Njc4OTBBYkNkRWYxMjM0NTY3ODkwQWJDZEVmIn0",
+    "header": "eyJmaWQiOjUwOTU3OCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDI2NzdDMjNmMkViYjY3NjBFZTkzMjRCNmExZDNkRTIyNTg4NWU5N0QifQ",
     "payload": "eyJkb21haW4iOiJyZW1pbmRlcnNiYXNlLnZlcmNlbC5hcHAifQ",
-    "signature": "MHg..."
+    "signature": "O0dZuSBpNKIAHatj2bTSNfbRMXn9wkeLmbovJR6/54dDUIYl5PbpYWYeZ/A3e+umnIVV5dn5mCLSlbD5yMdZnRs="
   },
   "miniapp": {
     "version": "1",
     "name": "Reminders",
-    "iconUrl": "https://remindersbase.vercel.app/icon.png",
-    "splashImageUrl": "https://remindersbase.vercel.app/splash.png",
+    "iconUrl": "https://remindersbase.vercel.app/logo.jpg",
+    "splashImageUrl": "https://remindersbase.vercel.app/logo.jpg",
     "splashBackgroundColor": "#0f172a",
     "homeUrl": "https://remindersbase.vercel.app",
     "webhookUrl": "https://remindersbase.vercel.app/api/frame/webhook"
