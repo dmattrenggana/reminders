@@ -22,16 +22,16 @@ export async function GET() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "80px",
+          padding: "60px",
           textAlign: "center",
         }}
       >
         <div
           style={{
-            fontSize: 72,
+            fontSize: 64,
             fontWeight: "bold",
             color: "white",
-            marginBottom: 20,
+            marginBottom: 16,
             textShadow: "0 4px 8px rgba(0,0,0,0.3)",
           }}
         >
@@ -39,19 +39,19 @@ export async function GET() {
         </div>
         <div
           style={{
-            fontSize: 32,
+            fontSize: 28,
             color: "rgba(255,255,255,0.9)",
-            marginBottom: 40,
-            maxWidth: 800,
+            marginBottom: 32,
+            maxWidth: 700,
           }}
         >
-          Never Miss What Matters
+          Never Miss What Matters - Commitment-based reminders with token stakes
         </div>
         <div
           style={{
             display: "flex",
-            gap: 40,
-            marginTop: 20,
+            gap: 32,
+            marginTop: 16,
           }}
         >
           <div
@@ -59,55 +59,46 @@ export async function GET() {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              padding: "20px 30px",
+              padding: "16px 24px",
               backgroundColor: "rgba(255,255,255,0.1)",
-              borderRadius: 16,
+              borderRadius: 12,
             }}
           >
-            <div style={{ fontSize: 48, color: "white" }}>⏰</div>
-            <div style={{ fontSize: 20, color: "white", marginTop: 10 }}>Set Reminders</div>
+            <div style={{ fontSize: 40, color: "white" }}>⏰</div>
+            <div style={{ fontSize: 18, color: "white", marginTop: 8 }}>Set Reminders</div>
           </div>
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              padding: "20px 30px",
+              padding: "16px 24px",
               backgroundColor: "rgba(255,255,255,0.1)",
-              borderRadius: 16,
+              borderRadius: 12,
             }}
           >
-            <div style={{ fontSize: 48, color: "white" }}>🪙</div>
-            <div style={{ fontSize: 20, color: "white", marginTop: 10 }}>Stake Tokens</div>
+            <div style={{ fontSize: 40, color: "white" }}>🪙</div>
+            <div style={{ fontSize: 18, color: "white", marginTop: 8 }}>Stake Tokens</div>
           </div>
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              padding: "20px 30px",
+              padding: "16px 24px",
               backgroundColor: "rgba(255,255,255,0.1)",
-              borderRadius: 16,
+              borderRadius: 12,
             }}
           >
-            <div style={{ fontSize: 48, color: "white" }}>✅</div>
-            <div style={{ fontSize: 20, color: "white", marginTop: 10 }}>Stay Accountable</div>
+            <div style={{ fontSize: 40, color: "white" }}>✅</div>
+            <div style={{ fontSize: 18, color: "white", marginTop: 8 }}>Stay Accountable</div>
           </div>
-        </div>
-        <div
-          style={{
-            fontSize: 24,
-            color: "rgba(255,255,255,0.7)",
-            marginTop: 60,
-          }}
-        >
-          Commitment-based reminders on Base Mainnet
         </div>
       </div>
     </div>,
     {
       width: 1200,
-      height: 630,
+      height: 800,
     },
   )
 }

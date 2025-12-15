@@ -12,15 +12,15 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.
 // Miniapp embed object for Farcaster sharing
 const miniappEmbed = {
   version: "1",
-  imageUrl: `${appUrl}/og-image.png`,
+  imageUrl: `${appUrl}/api/og-image`,
   button: {
     title: "Open Base Reminders",
     action: {
-      type: "launch_miniapp",
+      type: "launch_frame",
       url: appUrl,
       name: "Base Reminders",
-      splashImageUrl: `${appUrl}/splash.png`,
-      splashBackgroundColor: "#4A90E2",
+      splashImageUrl: `${appUrl}/icon.png`,
+      splashBackgroundColor: "#667eea",
     },
   },
 }
