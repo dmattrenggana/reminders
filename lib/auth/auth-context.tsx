@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode, useEffect } from "react"
 import type { FarcasterUser } from "./types"
 import sdk, { type Context } from "@farcaster/frame-sdk"
+import { useAccount, useConnect, useDisconnect } from "wagmi"
 
 interface AuthContextType {
   // Wallet Connection State
@@ -31,13 +32,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isConnected, setIsConnected] = useState(false)
-  const [address, setAddress] = useState<string | null>(null)
-  const [chainId, setChainId] = useState<number | null>(null)
+  const { address: wagmiAddress, isConnected: wagmiConnected, chainId: wagmiChainId } = useAccount()
+  const { connect, connectors } = useConnect()
+  const { disconnect } = useDisconnect()
+
   const [signer, setSigner] = useState<any>(null)
   const [isFarcasterConnected, setIsFarcasterConnected] = useState(false)
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null)
   const [sdkContext, setSdkContext] = useState<Context | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
     const initMiniapp = async () => {
@@ -54,8 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!inFrame && !hasFrameContext) {
           console.log("[v0] Not in miniapp context")
+          setIsInitialized(true)
           return
         }
+
+        console.log("[v0] Detected miniapp context, initializing SDK...")
 
         // Initialize SDK
         const context = await sdk.actions.ready()
@@ -80,80 +86,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("[v0] No user in SDK context")
         }
 
-        // Handle wallet connection from miniapp
-        if (context?.client?.ethProviderUrl) {
-          console.log("[v0] Miniapp wallet is auto-connected")
-          setIsConnected(true)
+        if (context && connectors.length > 0) {
+          console.log("[v0] Auto-connecting miniapp wallet...")
+          const miniappConnector = connectors[0]
+          try {
+            await connect({ connector: miniappConnector })
+            console.log("[v0] Miniapp wallet connected successfully")
+          } catch (error) {
+            console.error("[v0] Failed to auto-connect miniapp wallet:", error)
+          }
         }
+
+        setIsInitialized(true)
       } catch (error) {
         console.error("[v0] Miniapp initialization error:", error)
+        setIsInitialized(true)
       }
     }
 
     initMiniapp()
-  }, [])
+  }, [connect, connectors])
 
   useEffect(() => {
-    const initializeWallet = async () => {
-      if (typeof window !== "undefined" && window.ethereum) {
+    const updateSigner = async () => {
+      if (wagmiConnected && wagmiAddress && typeof window !== "undefined" && window.ethereum) {
         try {
           const { BrowserProvider } = await import("ethers")
-          const accounts = await window.ethereum.request({ method: "eth_accounts" })
-
-          if (accounts.length > 0) {
-            setAddress(accounts[0])
-            setIsConnected(true)
-
-            const provider = new BrowserProvider(window.ethereum)
-            const network = await provider.getNetwork()
-            setChainId(Number(network.chainId))
-
-            const signer = await provider.getSigner()
-            setSigner(signer)
-
-            console.log("[v0] Wallet initialized:", accounts[0])
-          }
+          const provider = new BrowserProvider(window.ethereum)
+          const newSigner = await provider.getSigner()
+          setSigner(newSigner)
+          console.log("[v0] Signer updated for address:", wagmiAddress)
         } catch (error) {
-          console.error("[v0] Failed to initialize wallet:", error)
+          console.error("[v0] Failed to create signer:", error)
         }
+      } else {
+        setSigner(null)
       }
     }
 
-    initializeWallet()
-  }, [])
+    updateSigner()
+  }, [wagmiConnected, wagmiAddress])
 
   const connectWallet = useCallback(async () => {
+    console.log("[v0] Connect wallet called")
     try {
-      if (!window.ethereum) throw new Error("MetaMask not installed")
-
-      const { BrowserProvider } = await import("ethers")
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      })
-
-      if (accounts.length > 0) {
-        setAddress(accounts[0])
-        setIsConnected(true)
-
-        const provider = new BrowserProvider(window.ethereum)
-        const network = await provider.getNetwork()
-        setChainId(Number(network.chainId))
-
-        const signer = await provider.getSigner()
-        setSigner(signer)
+      if (connectors.length > 0) {
+        console.log("[v0] Connecting with connector:", connectors[0].name)
+        await connect({ connector: connectors[0] })
+      } else {
+        throw new Error("No wallet connectors available")
       }
     } catch (error) {
-      console.error("Failed to connect wallet:", error)
+      console.error("[v0] Failed to connect wallet:", error)
       throw error
     }
-  }, [])
+  }, [connect, connectors])
 
   const disconnectWallet = useCallback(() => {
-    setIsConnected(false)
-    setAddress(null)
-    setChainId(null)
+    console.log("[v0] Disconnecting wallet")
+    disconnect()
     setSigner(null)
-  }, [])
+  }, [disconnect])
 
   const connectFarcaster = useCallback(async () => {
     try {
@@ -177,20 +170,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const ensureSigner = useCallback(async () => {
     if (signer) return signer
 
-    if (!window.ethereum) throw new Error("Wallet not connected")
+    if (!wagmiConnected || !window.ethereum) {
+      throw new Error("Wallet not connected")
+    }
 
     const { BrowserProvider } = await import("ethers")
     const provider = new BrowserProvider(window.ethereum)
     const newSigner = await provider.getSigner()
     setSigner(newSigner)
     return newSigner
-  }, [signer])
+  }, [signer, wagmiConnected])
 
   const value: AuthContextType = {
-    isConnected,
-    address,
-    walletAddress: address,
-    chainId,
+    isConnected: wagmiConnected,
+    address: wagmiAddress || null,
+    walletAddress: wagmiAddress || null,
+    chainId: wagmiChainId ? Number(wagmiChainId) : null,
     signer,
     isFarcasterConnected,
     farcasterUser,
