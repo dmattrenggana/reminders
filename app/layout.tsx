@@ -96,21 +96,6 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined') {
-                const originalError = console.error;
-                console.error = function(...args) {
-                  if (args[0]?.includes?.('Analytics SDK') || args[0]?.context === 'AnalyticsSDKApiError') {
-                    return;
-                  }
-                  originalError.apply(console, args);
-                };
-              }
-            `,
-          }}
-        />
       </head>
       <body className={`font-sans antialiased ${_geist.className}`}>
         <Providers>{children}</Providers>

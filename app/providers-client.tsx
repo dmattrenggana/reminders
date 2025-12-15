@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import { OnchainKitProvider } from "@coinbase/onchainkit"
 import { base } from "wagmi/chains"
 import "@coinbase/onchainkit/styles.css"
+import { ErrorSuppressor } from "./error-suppressor"
 
 function AuthWrapper({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -12,20 +13,23 @@ function AuthWrapper({ children }: { children: ReactNode }) {
 
 export function ProvidersClient({ children }: { children: ReactNode }) {
   return (
-    <OnchainKitProvider
-      chain={base}
-      miniKit={{ enabled: true }}
-      config={{
-        appearance: {
-          mode: "auto",
-          name: "Reminders",
-        },
-        analytics: {
-          enabled: false,
-        },
-      }}
-    >
-      <AuthWrapper>{children}</AuthWrapper>
-    </OnchainKitProvider>
+    <>
+      <ErrorSuppressor />
+      <OnchainKitProvider
+        chain={base}
+        miniKit={{ enabled: true }}
+        config={{
+          appearance: {
+            mode: "auto",
+            name: "Reminders",
+          },
+          analytics: {
+            enabled: false,
+          },
+        }}
+      >
+        <AuthWrapper>{children}</AuthWrapper>
+      </OnchainKitProvider>
+    </>
   )
 }

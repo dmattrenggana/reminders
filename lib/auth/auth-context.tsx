@@ -59,7 +59,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         : null,
     })
 
-    if (miniKitContext?.user) {
+    if (miniKitContext?.user && !farcasterUser) {
       const user = miniKitContext.user
 
       const profile: FarcasterUser = {
@@ -79,7 +79,32 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         setIsConnected(true)
       }
     }
-  }, [miniKitContext, isFrameReady])
+  }, [miniKitContext, isFrameReady, farcasterUser])
+
+  useEffect(() => {
+    const checkFarcasterSession = async () => {
+      try {
+        const response = await fetch("/api/farcaster/user")
+        if (response.ok) {
+          const userData = await response.json()
+          if (userData.user) {
+            console.log("[v0] Restored Farcaster session:", userData.user)
+            setFarcasterUser(userData.user)
+            setIsFarcasterConnected(true)
+
+            if (userData.user.walletAddress) {
+              setAddress(userData.user.walletAddress)
+              setIsConnected(true)
+            }
+          }
+        }
+      } catch (error) {
+        console.log("[v0] No existing Farcaster session")
+      }
+    }
+
+    checkFarcasterSession()
+  }, [])
 
   const connectWallet = useCallback(async () => {
     try {
@@ -113,10 +138,12 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
   const connectFarcaster = useCallback(async () => {
     try {
+      console.log("[v0] Starting Farcaster authentication flow...")
       const response = await fetch("/api/farcaster/auth", { method: "POST" })
       const { authUrl } = await response.json()
 
       if (authUrl) {
+        console.log("[v0] Redirecting to Farcaster auth:", authUrl)
         window.location.href = authUrl
       }
     } catch (error) {
