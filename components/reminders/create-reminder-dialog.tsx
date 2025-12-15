@@ -61,9 +61,18 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
   }
 
   const handleCreate = async () => {
+    console.log("[v0] ========== CREATE REMINDER BUTTON CLICKED ==========")
+    console.log("[v0] Service available:", !!service)
+    console.log("[v0] Description:", description)
+    console.log("[v0] Token amount:", tokenAmount)
+    console.log("[v0] Date:", date)
+    console.log("[v0] Time:", time)
+    console.log("[v0] Farcaster user:", farcasterUser)
+
     setTxStatus("Checking fields...")
 
     if (!description || !tokenAmount || !date || !time) {
+      console.log("[v0] Missing fields validation failed")
       toast({
         title: "Missing Information",
         description: "Please fill in all fields",
@@ -74,6 +83,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
     }
 
     if (!service) {
+      console.error("[v0] No service available!")
       toast({
         title: "Not Connected",
         description: "Please connect your wallet first",
@@ -84,6 +94,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
     }
 
     if (Number.parseInt(balance) < Number.parseInt(tokenAmount)) {
+      console.log("[v0] Insufficient balance")
       toast({
         title: "Insufficient Balance",
         description: `You need ${tokenAmount} ${TOKEN_SYMBOL} tokens. Current balance: ${balance} ${TOKEN_SYMBOL}`,
@@ -97,8 +108,16 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
     setTxStatus("Preparing transaction...")
 
     try {
+      console.log("[v0] All validations passed, preparing to call service.createReminder")
       const reminderDate = new Date(date)
       reminderDate.setHours(Number.parseInt(hours), Number.parseInt(minutes), 0, 0)
+
+      console.log("[v0] Reminder date set to:", reminderDate)
+      console.log("[v0] About to call service.createReminder with:")
+      console.log("[v0] - tokenAmount:", tokenAmount)
+      console.log("[v0] - reminderDate:", reminderDate)
+      console.log("[v0] - description:", description)
+      console.log("[v0] - farcasterUsername:", farcasterUser?.username)
 
       const reminderId = await service.createReminder(
         tokenAmount,
@@ -106,10 +125,12 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
         description,
         farcasterUser?.username,
         (status) => {
+          console.log("[v0] Progress update:", status)
           setTxStatus(status)
         },
       )
 
+      console.log("[v0] createReminder returned ID:", reminderId)
       setTxStatus("✅ Reminder created!")
 
       toast({
@@ -132,7 +153,10 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
         onOpenChange(false)
       }, 2000)
     } catch (error: any) {
-      console.error("[v0] Error creating reminder:", error)
+      console.error("[v0] ❌❌❌ Error in handleCreate:", error)
+      console.error("[v0] Error type:", typeof error)
+      console.error("[v0] Error message:", error?.message)
+      console.error("[v0] Error stack:", error?.stack)
       setTxStatus("")
       toast({
         title: "Creation Failed",
@@ -141,6 +165,7 @@ export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateRe
       })
     } finally {
       setIsCreating(false)
+      console.log("[v0] ========== CREATE REMINDER FLOW COMPLETED ==========")
     }
   }
 

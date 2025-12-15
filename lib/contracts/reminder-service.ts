@@ -89,16 +89,21 @@ export class ReminderService {
 
     if (typeof window !== "undefined") {
       const frameProvider = (window as any).__frameEthProvider
-      if (frameProvider && this.signer) {
+      if (frameProvider) {
         try {
+          console.log("[v0] Setting up Frame SDK signer for contract operation")
           const { BrowserProvider, Contract } = await import("ethers")
           const provider = new BrowserProvider(frameProvider)
           const signer = await provider.getSigner()
 
+          // Update contracts with the signer for write operations
           this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, signer)
           this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
           this.signer = signer
-        } catch {}
+          console.log("[v0] Contracts updated with Frame SDK signer")
+        } catch (error) {
+          console.error("[v0] Error setting up Frame SDK signer:", error)
+        }
       }
     }
   }
@@ -145,23 +150,24 @@ export class ReminderService {
   ): Promise<number> {
     try {
       console.log("[v0] ========== STARTING REMINDER CREATION ==========")
+      console.log("[v0] Parameters:", { tokenAmount, reminderTime, description, farcasterUsername })
       onProgress?.("Initializing contracts...")
 
-      console.log("[v0] Step 0: Ensuring contracts are initialized...")
       await this.ensureContracts()
-      console.log("[v0] ✅ Contracts ready")
 
       if (!this.signer) {
+        console.error("[v0] No signer available after ensureContracts")
         throw new Error("No signer available. Please connect your wallet.")
       }
 
+      console.log("[v0] Getting signer address...")
       let userAddress: string
       try {
         userAddress = await this.signer.getAddress()
         console.log("[v0] User address:", userAddress)
       } catch (signerError) {
         console.error("[v0] Error getting signer address:", signerError)
-        throw new Error("Could not get wallet address from signer. Please reconnect your wallet.")
+        throw new Error("Could not get wallet address. Please reconnect.")
       }
 
       const amountInWei = parseUnits(tokenAmount, 18)
@@ -178,77 +184,55 @@ export class ReminderService {
       console.log("[v0] Vault contract:", CONTRACTS.REMINDER_VAULT)
       console.log("[v0] Token contract:", CONTRACTS.COMMIT_TOKEN)
 
+      onProgress?.("Checking token balance...")
+      console.log("[v0] Step 1: Checking token balance...")
+      const balance = await this.tokenContract.balanceOf(userAddress)
+      console.log("[v0] Token balance:", balance.toString(), "Required:", amountInWei.toString())
+
+      if (balance < amountInWei) {
+        throw new Error(
+          `Insufficient token balance. You have ${formatUnits(balance, 18)} tokens but need ${tokenAmount}`,
+        )
+      }
+
       onProgress?.("Checking token allowance...")
-      console.log("[v0] Step 1: Checking current token allowance...")
+      console.log("[v0] Step 2: Checking current token allowance...")
       const currentAllowance = await this.tokenContract.allowance(userAddress, CONTRACTS.REMINDER_VAULT)
       console.log("[v0] Current allowance:", currentAllowance.toString(), "Required:", amountInWei.toString())
 
       if (currentAllowance < amountInWei) {
-        onProgress?.("Step 1/2: Requesting token approval...")
-        console.log("[v0] Step 2: Insufficient allowance, requesting approval...")
+        onProgress?.("Requesting token approval...")
+        console.log("[v0] Step 3: Insufficient allowance, requesting approval...")
         console.log("[v0] 🔵 USER ACTION REQUIRED: Please approve the token transaction in your wallet")
 
         const approveTx = await this.tokenContract.approve(CONTRACTS.REMINDER_VAULT, amountInWei)
         console.log("[v0] Approval transaction sent:", approveTx.hash)
 
-        onProgress?.("Step 1/2: Waiting for approval confirmation...")
+        onProgress?.("Waiting for approval confirmation...")
         console.log("[v0] Waiting for approval confirmation...")
 
         const approveReceipt = await approveTx.wait()
         console.log("[v0] ✅ Approval confirmed in block:", approveReceipt.blockNumber)
-
-        const newAllowance = await this.tokenContract.allowance(userAddress, CONTRACTS.REMINDER_VAULT)
-        console.log("[v0] New allowance after approval:", newAllowance.toString())
-
-        if (newAllowance < amountInWei) {
-          throw new Error("Approval failed: allowance not set correctly")
-        }
-
-        console.log("[v0] ✅ Approval successful! Moving to create reminder...")
-        onProgress?.("Step 1/2: Approval complete! Preparing createReminder...")
       } else {
-        console.log("[v0] Step 2: Sufficient allowance already exists, skipping approval")
-        onProgress?.("Sufficient allowance exists, preparing transaction...")
+        console.log("[v0] Step 3: Sufficient allowance already exists, skipping approval")
       }
 
-      console.log("[v0] Waiting 1 second for blockchain state to settle...")
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      onProgress?.("Creating reminder...")
+      console.log("[v0] Step 4: Calling vault contract createReminder...")
 
-      onProgress?.("Step 2/2: Creating reminder on vault contract...")
-      console.log("[v0] ============================================")
-      console.log("[v0] Step 3: NOW CALLING VAULT CONTRACT")
-      console.log("[v0] ============================================")
+      const username = farcasterUsername || `wallet-${userAddress.slice(0, 6)}`
 
-      const username = farcasterUsername || `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`
-      console.log("[v0] Final parameters:")
-      console.log("[v0] - Amount (wei):", amountInWei.toString())
-      console.log("[v0] - Time (unix):", reminderTimestamp)
-      console.log("[v0] - Description:", description)
-      console.log("[v0] - Username:", username)
-      console.log("[v0] - Vault address:", this.vaultContract.target || this.vaultContract.address)
+      console.log("[v0] 🚀 Calling vaultContract.createReminder with params:")
+      console.log("[v0]   - totalAmount (wei):", amountInWei.toString())
+      console.log("[v0]   - reminderTime:", reminderTimestamp)
+      console.log("[v0]   - description:", description)
+      console.log("[v0]   - farcasterUsername:", username)
 
-      let createTx
-      try {
-        console.log("[v0] 🚀 Calling vaultContract.createReminder NOW...")
-        createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description, username)
+      const createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description, username)
 
-        console.log("[v0] ✅ CreateReminder transaction sent:", createTx.hash)
-        onProgress?.("Step 2/2: Waiting for confirmation...")
-      } catch (vaultError: any) {
-        console.error("[v0] ❌ VAULT CONTRACT CALL FAILED")
-        console.error("[v0] Error:", vaultError)
-        console.error("[v0] Error code:", vaultError.code)
-        console.error("[v0] Error message:", vaultError.message)
-        console.error("[v0] Error reason:", vaultError.reason)
-        alert(`Vault contract error: ${vaultError.message || "Unknown error"}. Check console for details.`)
+      console.log("[v0] ✅ CreateReminder transaction sent:", createTx.hash)
+      onProgress?.("Waiting for confirmation...")
 
-        if (vaultError.code === "ACTION_REJECTED" || vaultError.code === 4001) {
-          throw new Error("Transaction rejected by user")
-        }
-        throw new Error(`Vault call failed: ${vaultError.message || vaultError.reason || "Unknown error"}`)
-      }
-
-      console.log("[v0] Step 4: Waiting for createReminder confirmation...")
       const receipt = await createTx.wait()
       console.log("[v0] ✅ CreateReminder confirmed in block:", receipt.blockNumber)
 
@@ -256,7 +240,8 @@ export class ReminderService {
 
       const event = receipt.logs.find((log: any) => {
         try {
-          return this.vaultContract.interface.parseLog(log)?.name === "ReminderCreated"
+          const parsed = this.vaultContract.interface.parseLog(log)
+          return parsed?.name === "ReminderCreated"
         } catch {
           return false
         }
@@ -273,7 +258,7 @@ export class ReminderService {
       throw new Error("Failed to get reminder ID from event")
     } catch (error: any) {
       console.error("[v0] ❌ ERROR IN createReminder:", error)
-      if (error.code === "ACTION_REJECTED") {
+      if (error.code === "ACTION_REJECTED" || error.code === 4001) {
         throw new Error("Transaction rejected by user")
       }
       if (error.message?.includes("insufficient allowance")) {
@@ -281,6 +266,9 @@ export class ReminderService {
       }
       if (error.message?.includes("insufficient funds")) {
         throw new Error("Insufficient gas or token balance")
+      }
+      if (error.message?.includes("Insufficient token balance")) {
+        throw error
       }
       throw new Error(error.message || "Failed to create reminder")
     }

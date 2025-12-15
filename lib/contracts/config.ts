@@ -98,7 +98,7 @@ export const REMINDER_VAULT_V1_ABI = [
 ] as const
 
 export const REMINDER_VAULT_V3_ABI = [
-  "function createReminder(uint256 tokenAmount, uint256 reminderTime, string memory description, string memory farcasterUsername) returns (uint256)",
+  "function createReminder(uint256 totalAmount, uint256 reminderTime, string memory description, string memory farcasterUsername) returns (uint256)",
   "function confirmReminder(uint256 reminderId)",
   "function burnMissedReminder(uint256 reminderId)",
   "function recordReminder(uint256 reminderId, uint256 neynarScore)",

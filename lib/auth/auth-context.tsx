@@ -94,19 +94,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const frameProvider = (window as any).__frameEthProvider
     if (frameProvider) {
       try {
+        console.log("[v0] Setting up Frame SDK signer for wallet:", walletAddr)
         const { BrowserProvider } = await import("ethers")
         const provider = new BrowserProvider(frameProvider)
         const frameSigner = await provider.getSigner()
         setSigner(frameSigner)
+        console.log("[v0] Frame SDK signer ready")
       } catch (error) {
-        // Fallback to read-only signer
+        console.error("[v0] Error creating Frame SDK signer:", error)
+        // Create a minimal signer for read operations
         setSigner({ getAddress: async () => walletAddr })
       }
     } else {
+      // Create a minimal signer for read operations
       setSigner({ getAddress: async () => walletAddr })
     }
 
-    // Fetch Farcaster profile
+    // Fetch Farcaster profile after signer is set
     await fetchFarcasterProfile(walletAddr)
   }
 
