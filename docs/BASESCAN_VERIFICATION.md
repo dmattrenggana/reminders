@@ -23,14 +23,14 @@ Copy the entire flattened contract from: `/contracts/ReminderVaultV3_Flattened.s
 
 You need to encode your token address. Use this format:
 
-\`\`\`
+```
 000000000000000000000000[YOUR_TOKEN_ADDRESS_WITHOUT_0x]
-\`\`\`
+```
 
 **Example:** If your token address is `0x1234567890123456789012345678901234567890`, the constructor argument would be:
-\`\`\`
+```
 0000000000000000000000001234567890123456789012345678901234567890
-\`\`\`
+```
 
 **Easy way to get this:**
 - Go to: https://abi.hashex.org/

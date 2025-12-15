@@ -3,41 +3,41 @@
 ## Prerequisites
 
 1. Install dependencies:
-   \`\`\`bash
+   ```bash
    npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
    npm install @openzeppelin/contracts ethers
-   \`\`\`
+   ```
 
 2. Set up environment variables:
-   \`\`\`
+   ```
    DEPLOYER_PRIVATE_KEY=your_private_key_here
    NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
-   \`\`\`
+   ```
 
 ## Deployment Steps
 
 ### 1. Compile Contracts
-\`\`\`bash
+```bash
 npx hardhat compile
-\`\`\`
+```
 
 ### 2. Deploy to Base Mainnet
-\`\`\`bash
+```bash
 npx hardhat run scripts/deploy-contracts.ts --network base
-\`\`\`
+```
 
 ### 3. Verify Contracts (Optional)
-\`\`\`bash
+```bash
 npx hardhat verify --network base COMMIT_TOKEN_ADDRESS "CommitToken" "RMND" "1000000"
 npx hardhat verify --network base REMINDER_VAULT_ADDRESS COMMIT_TOKEN_ADDRESS
-\`\`\`
+```
 
 ### 4. Update Environment Variables
 Add the deployed contract addresses to your `.env`:
-\`\`\`
+```
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_VAULT_CONTRACT=0x...
-\`\`\`
+```
 
 ## Contract Functionality
 

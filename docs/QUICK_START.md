@@ -33,7 +33,7 @@
 
 If you download the code and want to deploy manually:
 
-\`\`\`bash
+```bash
 # Install dependencies
 npm install
 
@@ -41,7 +41,7 @@ npm install
 npm run deploy:sepolia
 
 # Copy the addresses from the output
-\`\`\`
+```
 
 ## Step 3: Test the App
 

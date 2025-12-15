@@ -35,10 +35,10 @@ The manifest is located at `public/.well-known/farcaster.json`
 
 To generate the proper `accountAssociation` signature:
 
-\`\`\`bash
+```bash
 # Use the Farcaster CLI or use the Warpcast developer portal
 # This requires your custody private key
-\`\`\`
+```
 
 Or use Warpcast Developer Portal:
 1. Go to https://warpcast.com/~/developers
@@ -67,17 +67,18 @@ Or use Warpcast Developer Portal:
 - Verify accountAssociation is properly signed
 
 ### User Info Shows "@user"
-- Check Frame SDK initialization in auth context
-- Verify the SDK context is available
+- Check OnchainKit MiniKit initialization in auth context
+- Verify the `useMiniKit()` context is available
 - Check browser console for errors
+- Ensure `setFrameReady()` is called after initialization
 
 ### Transactions Fail
 - Verify wallet permission is requested
-- Check that ethProvider is available
+- Check that miniapp wallet connector is available
 - Ensure you're on Base Mainnet (chain ID 8453)
 
 ## Resources
 
 - [Base Mini Apps Documentation](https://docs.base.org/mini-apps/)
-- [Farcaster Frame SDK](https://github.com/farcasterxyz/miniapps)
+- [OnchainKit MiniKit Documentation](https://docs.base.org/onchainkit/latest/components/minikit/overview)
 - [Warpcast Developer Portal](https://warpcast.com/~/developers)

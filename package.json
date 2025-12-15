@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "latest",
-    "@farcaster/frame-sdk": "^0.1.0",
+    "@coinbase/onchainkit": "latest",
     "@farcaster/hub-web": "^0.3.0",
     "@farcaster/miniapp-sdk": "latest",
     "@farcaster/miniapp-wagmi-connector": "1.1.0",

@@ -33,17 +33,17 @@ Add these to your Vercel project:
 ## Setup Steps
 
 1. **Create a Cron Wallet**
-   \`\`\`
+   ```
    - Create new MetaMask wallet
    - Export private key
    - Fund with 0.01 ETH for gas (Base Sepolia)
-   \`\`\`
+   ```
 
 2. **Add Environment Variables in Vercel**
-   \`\`\`
+   ```
    CRON_SECRET=your-secure-random-string
    CRON_WALLET_PRIVATE_KEY=0x...your-private-key
-   \`\`\`
+   ```
 
 3. **Deploy**
    - Push to Vercel
@@ -81,10 +81,10 @@ Upgrade to Vercel Pro for native cron job support:
 ## Testing
 
 Test manually by calling:
-\`\`\`bash
+```bash
 curl -X GET https://your-app.vercel.app/api/cron/process-reminders \
   -H "Authorization: Bearer your-cron-secret"
-\`\`\`
+```
 
 ## Monitoring
 

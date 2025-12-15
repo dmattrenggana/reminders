@@ -30,14 +30,17 @@ export function UnifiedConnectButton() {
 
       const isMiniappFrame = inFrame || hasFrameContext
       setIsMiniapp(isMiniappFrame)
+      console.log("[v0] UnifiedConnectButton - isMiniapp:", isMiniappFrame)
+      console.log("[v0] UnifiedConnectButton - isFarcasterConnected:", isFarcasterConnected)
+      console.log("[v0] UnifiedConnectButton - farcasterUser:", farcasterUser)
     }
-  }, [])
+  }, [isFarcasterConnected, farcasterUser])
 
   if (isFarcasterConnected && farcasterUser) {
     const avatarSrc =
       typeof farcasterUser.pfpUrl === "string" && farcasterUser.pfpUrl.length > 0
         ? farcasterUser.pfpUrl
-        : "/abstract-profile.png"
+        : "/placeholder.svg?height=40&width=40"
 
     const displayName =
       typeof farcasterUser.displayName === "string" && farcasterUser.displayName.length > 0
@@ -48,6 +51,8 @@ export function UnifiedConnectButton() {
 
     const username =
       typeof farcasterUser.username === "string" && farcasterUser.username.length > 0 ? farcasterUser.username : "user"
+
+    console.log("[v0] Rendering Farcaster profile button:", { displayName, username, avatarSrc })
 
     return (
       <DropdownMenu>
@@ -69,6 +74,11 @@ export function UnifiedConnectButton() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {address && (
+            <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+              {address.slice(0, 6)}...{address.slice(-4)}
+            </DropdownMenuItem>
+          )}
           {!isMiniapp && <DropdownMenuItem onClick={disconnectFarcaster}>Disconnect Farcaster</DropdownMenuItem>}
           {isMiniapp && <DropdownMenuItem disabled>Connected via Farcaster</DropdownMenuItem>}
         </DropdownMenuContent>

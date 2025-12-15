@@ -29,6 +29,7 @@ export class ReminderService {
   private signer: any
   private provider: any
   private initPromise: Promise<void> | null = null
+  private isVerified = false
 
   constructor(signer: any) {
     this.signer = signer
@@ -63,7 +64,7 @@ export class ReminderService {
 
           await Promise.race([
             testProvider.getNetwork(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
           ])
 
           provider = testProvider
@@ -89,13 +90,32 @@ export class ReminderService {
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.provider)
 
       try {
-        await this.vaultContract.nextReminderId()
-        console.log("[v0] ✅ Vault contract verified and responding")
+        const verifyWithRetry = async (attempts = 3) => {
+          for (let i = 0; i < attempts; i++) {
+            try {
+              await Promise.race([
+                this.vaultContract.nextReminderId(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+              ])
+              console.log("[v0] ✅ Vault contract verified and responding")
+              this.isVerified = true
+              return
+            } catch (error) {
+              console.log(`[v0] Verification attempt ${i + 1}/${attempts} failed`)
+              if (i < attempts - 1) {
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+              }
+            }
+          }
+          throw new Error("Contract verification timeout")
+        }
+
+        await verifyWithRetry()
       } catch (verifyError) {
-        console.error("[v0] ❌ Vault contract verification failed:", verifyError)
-        throw new Error(
-          `Vault contract not responding at ${CONTRACTS.REMINDER_VAULT}. Verify it's deployed on Base Mainnet.`,
-        )
+        console.warn("[v0] ⚠️ Initial contract verification failed, will retry on first use")
+        console.warn("[v0] Error:", verifyError)
+        // Don't throw here - allow lazy verification on first actual contract call
+        this.isVerified = false
       }
     } catch (error) {
       console.error("[v0] Contract initialization error:", error)
@@ -105,10 +125,40 @@ export class ReminderService {
 
   private async ensureContracts() {
     if (this.initPromise) await this.initPromise
+
+    if (!this.isVerified && this.vaultContract) {
+      console.log("[v0] Attempting lazy contract verification...")
+      try {
+        await Promise.race([
+          this.vaultContract.nextReminderId(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+        ])
+        console.log("[v0] ✅ Lazy verification successful")
+        this.isVerified = true
+      } catch (verifyError) {
+        console.error("[v0] ❌ Lazy verification failed:", verifyError)
+        // Continue anyway - let the actual operation fail with better error
+      }
+    }
+
     if (!this.vaultContract || !this.tokenContract) {
       throw new Error("Contracts not initialized")
     }
 
+    await this.ensureSigner()
+
+    if (this.signer && typeof this.signer.getAddress === "function") {
+      const { Contract } = await import("ethers")
+      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, this.signer)
+      this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.signer)
+      console.log("[v0] Contracts connected with active signer")
+    } else {
+      console.warn("[v0] No active signer available - transactions will fail")
+      throw new Error("Wallet not connected. Please connect your wallet to perform transactions.")
+    }
+  }
+
+  private async ensureSigner(): Promise<void> {
     let activeSigner = this.signer
 
     const frameProvider = (window as any).__frameEthProvider
@@ -116,21 +166,21 @@ export class ReminderService {
     const webSigner = (window as any).__webSigner
 
     if (frameSigner) {
-      console.log("[v0] Using stored Frame SDK signer")
+      console.log("[v0] Using stored miniapp signer")
       activeSigner = frameSigner
     } else if (webSigner) {
       console.log("[v0] Using stored web signer")
       activeSigner = webSigner
     } else if (frameProvider) {
       try {
-        console.log("[v0] Creating signer from Frame SDK provider")
+        console.log("[v0] Creating signer from miniapp provider")
         const { BrowserProvider } = await import("ethers")
         const provider = new BrowserProvider(frameProvider)
         activeSigner = await provider.getSigner()
         ;(window as any).__frameSigner = activeSigner
-        console.log("[v0] Frame SDK signer created successfully")
+        console.log("[v0] Miniapp signer created successfully")
       } catch (error) {
-        console.error("[v0] Failed to create Frame SDK signer:", error)
+        console.error("[v0] Failed to create miniapp signer:", error)
         throw new Error("Failed to setup wallet for transactions. Please reload the app and try again.")
       }
     } else if (window?.ethereum) {
@@ -147,16 +197,7 @@ export class ReminderService {
       }
     }
 
-    if (activeSigner && typeof activeSigner.getAddress === "function") {
-      const { Contract } = await import("ethers")
-      this.signer = activeSigner
-      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, activeSigner)
-      this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, activeSigner)
-      console.log("[v0] Contracts connected with active signer")
-    } else {
-      console.warn("[v0] No active signer available - transactions will fail")
-      throw new Error("Wallet not connected. Please connect your wallet to perform transactions.")
-    }
+    this.signer = activeSigner
   }
 
   async getTokenBalance(address: string): Promise<string> {

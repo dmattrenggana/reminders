@@ -41,9 +41,9 @@ Go to [https://remix.ethereum.org](https://remix.ethereum.org)
 4. Redeploy your app
 
 ## Your Token Address
-\`\`\`
+```
 0x9e4F3d07B469ECA25055366913cC3F6e158d0A08
-\`\`\`
+```
 
 ## Base Sepolia Network Details
 - Chain ID: 84532

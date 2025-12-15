@@ -33,7 +33,7 @@ In your Vercel project or v0 workspace, add these environment variables:
 
 ### Required Variables
 
-\`\`\`bash
+```bash
 # Your deployed contract addresses
 NEXT_PUBLIC_CONTRACT_ADDRESS=0xYourTokenAddressFromStep1.1
 NEXT_PUBLIC_VAULT_CONTRACT=0xYourVaultAddressFromStep1.2
@@ -54,7 +54,7 @@ FARCASTER_SIGNER_UUID=your_signer_uuid
 # Cron Job (for automated reminder burning)
 CRON_SECRET=your_random_secret_string
 CRON_WALLET_PRIVATE_KEY=your_wallet_private_key_for_cron
-\`\`\`
+```
 
 ### Where to Set Environment Variables
 
@@ -100,13 +100,13 @@ Before creating reminders, users need to approve the vault to spend tokens:
 
 If you need more tokens, use the mint script:
 
-\`\`\`bash
+```bash
 # Set your token address
 NEXT_PUBLIC_CONTRACT_ADDRESS=0xYourTokenAddress
 
 # Run mint script (requires deployer wallet)
 npm run mint-tokens
-\`\`\`
+```
 
 Or mint directly through BaseScan:
 1. Go to your token contract on BaseScan

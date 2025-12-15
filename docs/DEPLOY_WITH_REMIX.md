@@ -39,9 +39,9 @@ Visit [https://remix.ethereum.org](https://remix.ethereum.org)
 
 In the "Deploy" section, you'll see a field next to the "Deploy" button:
 
-\`\`\`
+```
 _COMMITTOKEN: 0x9e4F3d07B469ECA25055366913cC3F6e158d0A08
-\`\`\`
+```
 
 Paste your token address: `0x9e4F3d07B469ECA25055366913cC3F6e158d0A08`
 
@@ -63,9 +63,9 @@ After deployment:
 
 Go to your Vercel project or v0 Vars section and add:
 
-\`\`\`
+```
 NEXT_PUBLIC_VAULT_CONTRACT=0xYourDeployedContractAddress
-\`\`\`
+```
 
 ### 9. Verify Deployment (Optional)
 

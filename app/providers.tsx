@@ -2,19 +2,28 @@
 
 import { AuthProvider } from "@/lib/auth/auth-context"
 import type { ReactNode } from "react"
-import { WagmiProvider } from "wagmi"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { wagmiConfig } from "@/lib/wagmi/config"
-import { useState } from "react"
+import { OnchainKitProvider } from "@coinbase/onchainkit"
+import { base } from "wagmi/chains"
+import "@coinbase/onchainkit/styles.css"
+
+function AuthWrapper({ children }: { children: ReactNode }) {
+  return <AuthProvider>{children}</AuthProvider>
+}
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient())
-
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>{children}</AuthProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <OnchainKitProvider
+      apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY || ""}
+      chain={base}
+      miniKit={{ enabled: true }}
+      config={{
+        appearance: {
+          mode: "auto",
+          name: "Reminders",
+        },
+      }}
+    >
+      <AuthWrapper>{children}</AuthWrapper>
+    </OnchainKitProvider>
   )
 }

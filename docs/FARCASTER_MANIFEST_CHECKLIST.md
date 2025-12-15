@@ -31,16 +31,16 @@
 ## Common Issues
 
 ### Stuck on Splash Screen
-- Ensure `sdk.actions.ready()` is called without await
+- Ensure `setFrameReady()` from `useMiniKit()` is called in your component
 - Check that all images are accessible (200 status code)
 - Verify manifest has correct format
 
-### Cannot Convert Object to Primitive Value
-- Don't log SDK objects directly (use JSON.stringify or specific properties only)
-- Don't access nested SDK properties in template literals
+### Context Data Not Available
+- Use `useMiniKit().context` to access user data (unverified)
+- For verified auth, use `useAuthenticate()` hook
+- Don't access nested context properties in template literals without checking
 
 ### Auto-connect Fails
-- This is expected if SDK context isn't available immediately
+- This is expected if miniapp context isn't available immediately
 - Users can manually click Connect button
-- Make sure Neynar API is configured for fallback wallet lookup
-</markdown>
+- Make sure wallet connector is properly configured in OnchainKitProvider

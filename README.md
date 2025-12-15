@@ -61,36 +61,36 @@ Core contract managing all reminder logic:
 ### Installation
 
 1. Clone and install dependencies:
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 2. Set up environment variables:
-\`\`\`env
+```env
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_VAULT_CONTRACT=0x...
 NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 FARCASTER_API_KEY=your_key
 CRON_SECRET=your_secret
-\`\`\`
+```
 
 3. Deploy smart contracts:
-\`\`\`bash
+```bash
 npx hardhat compile
 npx hardhat run scripts/deploy-contracts.ts --network baseSepolia
-\`\`\`
+```
 
 4. Run development server:
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 ### Deployment
 
 Deploy to Vercel:
-\`\`\`bash
+```bash
 vercel --prod
-\`\`\`
+```
 
 The app includes automatic cron jobs for notifications.
 
@@ -103,7 +103,7 @@ The app includes automatic cron jobs for notifications.
 
 ### Confirmation Window
 
-\`\`\`
+```
 Reminder Time: T
 Notification Start: T - 1 hour
 Confirmation Deadline: T + 1 hour
@@ -112,18 +112,18 @@ Confirmation Deadline: T + 1 hour
    ^                    ^
    Notify           Deadline
    Start
-\`\`\`
+```
 
 ### Notification Flow
 
-\`\`\`
+```
 1. User creates reminder
 2. Tokens locked in smart contract
 3. Cron job checks hourly (every 10 min on Pro plan)
 4. Sends Farcaster Frame notifications
 5. User confirms (or doesn't)
 6. Tokens returned or burned
-\`\`\`
+```
 
 ## Security
 

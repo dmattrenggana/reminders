@@ -131,16 +131,21 @@ export default function FeedPage() {
         console.log("[v0] Frame eth provider available:", !!frameEthProvider)
 
         if (!frameEthProvider) {
-          throw new Error("Frame SDK provider not available. Please make sure you're using the Farcaster app.")
+          console.warn("[v0] Frame provider not yet available, checking wallet state...")
+          if (!walletAddress) {
+            alert("Please ensure your wallet is connected in the miniapp.")
+            setProcessingReminder(null)
+            return
+          }
         }
 
         try {
-          console.log("[v0] Creating ethers provider from Frame SDK...")
+          console.log("[v0] Creating ethers provider from miniapp wallet...")
 
-          const provider = new ethers.BrowserProvider(frameEthProvider)
+          const provider = new ethers.BrowserProvider(frameEthProvider || window.ethereum)
           const signer = await provider.getSigner()
 
-          console.log("[v0] Signer obtained from Frame provider")
+          console.log("[v0] Signer obtained from miniapp provider")
 
           const vaultContract = new ethers.Contract(
             process.env.NEXT_PUBLIC_VAULT_CONTRACT!,
@@ -149,7 +154,7 @@ export default function FeedPage() {
           )
 
           console.log("[v0] 🔵 Requesting wallet signature for recordReminder...")
-          console.log("[v0] This will prompt the Frame SDK wallet in your Farcaster app")
+          console.log("[v0] This will prompt the miniapp wallet in your Farcaster app")
           const recordTx = await vaultContract.recordReminder(reminderId, score)
           console.log("[v0] ✅ Record transaction sent:", recordTx.hash)
 
@@ -160,7 +165,7 @@ export default function FeedPage() {
           await new Promise((resolve) => setTimeout(resolve, 2000))
 
           console.log("[v0] 🔵 Requesting wallet signature for claimReward...")
-          console.log("[v0] This will prompt the Frame SDK wallet in your Farcaster app")
+          console.log("[v0] This will prompt the miniapp wallet in your Farcaster app")
           const claimTx = await vaultContract.claimReward(reminderId)
           console.log("[v0] ✅ Claim transaction sent:", claimTx.hash)
 
@@ -176,7 +181,7 @@ export default function FeedPage() {
           loadPublicReminders()
           return
         } catch (frameError: any) {
-          console.error("[v0] Frame SDK transaction error:", frameError)
+          console.error("[v0] Miniapp transaction error:", frameError)
 
           if (frameError.code === "ACTION_REJECTED" || frameError.code === 4001) {
             alert("Transaction cancelled. You can try claiming again later from the feed.")
