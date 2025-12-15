@@ -96,24 +96,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const sdk = (window as any).__frameSdk
       if (sdk?.context?.user) {
+        console.log("[v0] SDK context user found")
         const user = sdk.context.user
+
+        const fid = typeof user.fid === "number" ? user.fid : 0
+        const username = typeof user.username === "string" && user.username ? user.username : `fid-${fid}`
+        const displayName = typeof user.displayName === "string" && user.displayName ? user.displayName : username
+        const pfpUrl = typeof user.pfpUrl === "string" && user.pfpUrl ? user.pfpUrl : "/abstract-profile.png"
+
+        console.log("[v0] Extracted FID:", fid)
+        console.log("[v0] Extracted username:", username)
+        console.log("[v0] Extracted displayName:", displayName)
+
         const farcasterUser: FarcasterUser = {
-          fid: user.fid || 0,
-          username: user.username || `fid-${user.fid}`,
-          displayName: user.displayName || user.username || `User ${user.fid}`,
-          pfpUrl: user.pfpUrl || "/abstract-profile.png",
+          fid,
+          username,
+          displayName,
+          pfpUrl,
           walletAddress: walletAddr,
         }
 
+        console.log("[v0] Setting Farcaster user:", farcasterUser.username, farcasterUser.displayName)
         setFarcasterUser(farcasterUser)
         localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
         console.log("[v0] Got Farcaster user from SDK context")
         return
       }
 
+      console.log("[v0] No SDK context, trying Neynar API...")
       const response = await fetch(`/api/farcaster/user?address=${walletAddr}`)
       if (response.ok) {
         const data = await response.json()
+        console.log("[v0] Neynar API response:", data.username, data.displayName)
         const farcasterUser: FarcasterUser = {
           fid: data.fid || 0,
           username: data.username || "user",
@@ -125,6 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFarcasterUser(farcasterUser)
         localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
         console.log("[v0] Got Farcaster user from Neynar API")
+      } else {
+        console.log("[v0] Neynar API returned non-OK status:", response.status)
       }
     } catch (error) {
       console.error("[v0] Error fetching Farcaster user:", error)

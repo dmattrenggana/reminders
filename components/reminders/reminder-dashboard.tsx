@@ -4,6 +4,7 @@ import { useState } from "react"
 import { CreateReminderDialog } from "./create-reminder-dialog"
 import { ReminderList } from "./reminder-list"
 import { ReminderStats } from "./reminder-stats"
+import { FarcasterProfileCard } from "@/components/auth/farcaster-profile-card"
 import { Button } from "@/components/ui/button"
 import { Plus, Users } from "lucide-react"
 import Link from "next/link"
@@ -20,6 +21,8 @@ export function ReminderDashboard() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="space-y-8">
+        <FarcasterProfileCard />
+
         {/* Stats Section */}
         <ReminderStats key={`stats-${refreshKey}`} />
 
