@@ -17,14 +17,10 @@ export function ProvidersClient({ children }: { children: ReactNode }) {
       <ErrorSuppressor />
       <OnchainKitProvider
         chain={base}
-        miniKit={{ enabled: true }}
         config={{
           appearance: {
             mode: "auto",
             name: "Reminders",
-          },
-          analytics: {
-            enabled: false,
           },
         }}
       >

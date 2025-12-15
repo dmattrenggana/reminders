@@ -41,8 +41,6 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   const [chainId, setChainId] = useState<number | null>(null)
 
   useEffect(() => {
-    console.log("[v0] Auth context initialized")
-
     // Check if we have Farcaster auth data in URL params
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
@@ -53,7 +51,6 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       const verifiedAddress = params.get("farcaster_address")
 
       if (fid && username) {
-        console.log("[v0] Farcaster auth callback detected, setting user data")
         const user: FarcasterUser = {
           fid: Number.parseInt(fid),
           username,
@@ -115,12 +112,10 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
   const connectFarcaster = useCallback(async () => {
     try {
-      console.log("[v0] Starting Farcaster authentication flow...")
       const response = await fetch("/api/farcaster/auth", { method: "POST" })
       const { authUrl } = await response.json()
 
       if (authUrl) {
-        console.log("[v0] Redirecting to Farcaster auth:", authUrl)
         window.location.href = authUrl
       }
     } catch (error) {
