@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode, useEffect } from "react"
 import type { FarcasterUser } from "./types"
-import { useMiniKit } from "@coinbase/onchainkit/minikit"
+// import { useMiniKit } from "@coinbase/onchainkit/minikit"
 
 interface AuthContextType {
   // Wallet Connection State
@@ -31,7 +31,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 function AuthProviderContent({ children }: { children: ReactNode }) {
-  const { setFrameReady, isFrameReady, context: miniKitContext } = useMiniKit()
+  // const { setFrameReady, isFrameReady, context: miniKitContext } = useMiniKit()
 
   const [signer, setSigner] = useState<any>(null)
   const [isFarcasterConnected, setIsFarcasterConnected] = useState(false)
@@ -40,46 +40,46 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
 
-  useEffect(() => {
-    setFrameReady()
-  }, [setFrameReady])
+  // useEffect(() => {
+  //   setFrameReady()
+  // }, [setFrameReady])
 
   useEffect(() => {
     console.log("[v0] MiniKit state:", {
-      isFrameReady,
-      hasContext: !!miniKitContext,
-      contextKeys: miniKitContext ? Object.keys(miniKitContext) : [],
-      hasUser: !!miniKitContext?.user,
-      userDetails: miniKitContext?.user
-        ? {
-            fid: miniKitContext.user.fid,
-            username: miniKitContext.user.username,
-            hasAddress: !!miniKitContext.user.address,
-          }
-        : null,
+      // isFrameReady,
+      // hasContext: !!miniKitContext,
+      // contextKeys: miniKitContext ? Object.keys(miniKitContext) : [],
+      // hasUser: !!miniKitContext?.user,
+      // userDetails: miniKitContext?.user
+      //   ? {
+      //       fid: miniKitContext.user.fid,
+      //       username: miniKitContext.user.username,
+      //       hasAddress: !!miniKitContext.user.address,
+      //     }
+      //   : null,
     })
 
-    if (miniKitContext?.user && !farcasterUser) {
-      const user = miniKitContext.user
+    // if (miniKitContext?.user && !farcasterUser) {
+    //   const user = miniKitContext.user
 
-      const profile: FarcasterUser = {
-        fid: user.fid,
-        username: user.username || `fid-${user.fid}`,
-        displayName: user.displayName || user.username || `User ${user.fid}`,
-        pfpUrl: user.pfpUrl || "/placeholder.svg?height=40&width=40",
-        walletAddress: user.address || undefined,
-      }
+    //   const profile: FarcasterUser = {
+    //     fid: user.fid,
+    //     username: user.username || `fid-${user.fid}`,
+    //     displayName: user.displayName || user.username || `User ${user.fid}`,
+    //     pfpUrl: user.pfpUrl || "/placeholder.svg?height=40&width=40",
+    //     walletAddress: user.address || undefined,
+    //   }
 
-      console.log("[v0] Auto-authenticated from MiniKit context:", profile)
-      setFarcasterUser(profile)
-      setIsFarcasterConnected(true)
+    //   console.log("[v0] Auto-authenticated from MiniKit context:", profile)
+    //   setFarcasterUser(profile)
+    //   setIsFarcasterConnected(true)
 
-      if (user.address) {
-        setAddress(user.address)
-        setIsConnected(true)
-      }
-    }
-  }, [miniKitContext, isFrameReady, farcasterUser])
+    //   if (user.address) {
+    //     setAddress(user.address)
+    //     setIsConnected(true)
+    //   }
+    // }
+  }, [/* miniKitContext, isFrameReady, */ farcasterUser])
 
   useEffect(() => {
     const checkFarcasterSession = async () => {
