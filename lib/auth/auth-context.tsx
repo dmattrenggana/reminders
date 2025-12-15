@@ -40,70 +40,47 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
 
-  // useEffect(() => {
-  //   setFrameReady()
-  // }, [setFrameReady])
-
   useEffect(() => {
-    console.log("[v0] MiniKit state:", {
-      // isFrameReady,
-      // hasContext: !!miniKitContext,
-      // contextKeys: miniKitContext ? Object.keys(miniKitContext) : [],
-      // hasUser: !!miniKitContext?.user,
-      // userDetails: miniKitContext?.user
-      //   ? {
-      //       fid: miniKitContext.user.fid,
-      //       username: miniKitContext.user.username,
-      //       hasAddress: !!miniKitContext.user.address,
-      //     }
-      //   : null,
-    })
+    console.log("[v0] Auth context initialized")
 
-    // if (miniKitContext?.user && !farcasterUser) {
-    //   const user = miniKitContext.user
+    // Check if we have Farcaster auth data in URL params
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const fid = params.get("farcaster_fid")
+      const username = params.get("farcaster_username")
+      const displayName = params.get("farcaster_display_name")
+      const pfpUrl = params.get("farcaster_pfp")
+      const verifiedAddress = params.get("farcaster_address")
 
-    //   const profile: FarcasterUser = {
-    //     fid: user.fid,
-    //     username: user.username || `fid-${user.fid}`,
-    //     displayName: user.displayName || user.username || `User ${user.fid}`,
-    //     pfpUrl: user.pfpUrl || "/placeholder.svg?height=40&width=40",
-    //     walletAddress: user.address || undefined,
-    //   }
-
-    //   console.log("[v0] Auto-authenticated from MiniKit context:", profile)
-    //   setFarcasterUser(profile)
-    //   setIsFarcasterConnected(true)
-
-    //   if (user.address) {
-    //     setAddress(user.address)
-    //     setIsConnected(true)
-    //   }
-    // }
-  }, [/* miniKitContext, isFrameReady, */ farcasterUser])
-
-  useEffect(() => {
-    const checkFarcasterSession = async () => {
-      try {
-        const response = await fetch("/api/farcaster/user")
-        if (response.ok) {
-          const userData = await response.json()
-          if (userData.user) {
-            console.log("[v0] Restored Farcaster session:", userData.user)
-            setFarcasterUser(userData.user)
-            setIsFarcasterConnected(true)
-
-            if (userData.user.walletAddress) {
-              setAddress(userData.user.walletAddress)
-              setIsConnected(true)
-            }
-          }
+      if (fid && username) {
+        console.log("[v0] Farcaster auth callback detected, setting user data")
+        const user: FarcasterUser = {
+          fid: Number.parseInt(fid),
+          username,
+          displayName: displayName || username,
+          pfpUrl: pfpUrl || "",
+          verifiedAddresses: verifiedAddress ? [verifiedAddress] : [],
         }
-      } catch (error) {
-        console.log("[v0] No existing Farcaster session")
+
+        setFarcasterUser(user)
+        setIsFarcasterConnected(true)
+
+        // Set wallet address if available
+        if (verifiedAddress) {
+          setAddress(verifiedAddress)
+          setIsConnected(true)
+        }
+
+        // Clean up URL params
+        const cleanUrl = new URL(window.location.href)
+        cleanUrl.searchParams.delete("farcaster_fid")
+        cleanUrl.searchParams.delete("farcaster_username")
+        cleanUrl.searchParams.delete("farcaster_display_name")
+        cleanUrl.searchParams.delete("farcaster_pfp")
+        cleanUrl.searchParams.delete("farcaster_address")
+        window.history.replaceState({}, "", cleanUrl.toString())
       }
     }
-
-    checkFarcasterSession()
   }, [])
 
   const connectWallet = useCallback(async () => {
