@@ -48,6 +48,13 @@ export const metadata: Metadata = {
     icon: "/logo.jpg",
     apple: "/logo.jpg",
   },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: "cover",
+  },
   openGraph: {
     title: "Base Reminders - Never Miss What Matters",
     description: "Commitment-based reminders with token stakes on Farcaster. Lock tokens to stay accountable.",
@@ -72,7 +79,6 @@ export const metadata: Metadata = {
   },
   other: {
     "fc:miniapp": JSON.stringify(miniappEmbed),
-    // For backward compatibility
     "fc:frame": JSON.stringify(frameEmbed),
   },
     generator: 'v0.app'
@@ -85,6 +91,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="theme-color" content="#667eea" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
       <body className={`font-sans antialiased ${_geist.className}`}>
         <Providers>{children}</Providers>
       </body>

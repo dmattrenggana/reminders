@@ -1,22 +1,29 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth/auth-context"
 import { ReminderService } from "@/lib/contracts/reminder-service"
 
 export function useReminderService() {
-  const { signer, isConnected, address } = useAuth()
+  const { signer, isConnected, address, ensureSigner } = useAuth()
+  const [service, setService] = useState<ReminderService | null>(null)
 
-  const service = useMemo(() => {
+  useEffect(() => {
     if (!isConnected && !address) {
-      console.log("[v0] Not connected, no service")
-      return null
+      console.log("[v0] Not connected, clearing service")
+      setService(null)
+      return
+    }
+
+    if (service) {
+      console.log("[v0] Service already exists")
+      return
     }
 
     console.log("[v0] Creating ReminderService with signer:", !!signer)
-    // Pass signer if available, otherwise pass a dummy signer for initialization
-    return new ReminderService(signer || { getAddress: async () => address })
-  }, [signer, isConnected, address])
+    const newService = new ReminderService(signer || { getAddress: async () => address })
+    setService(newService)
+  }, [isConnected, address, signer])
 
   return service
 }

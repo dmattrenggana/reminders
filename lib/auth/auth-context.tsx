@@ -10,10 +10,12 @@ interface AuthContextType {
   isConnected: boolean
   farcasterUser: FarcasterUser | null
   isFarcasterConnected: boolean
+  isMiniapp: boolean
   connectWallet: () => Promise<void>
   disconnectWallet: () => void
   connectFarcaster: () => Promise<void>
   disconnectFarcaster: () => void
+  ensureSigner: () => Promise<any>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -26,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null)
   const [signer, setSigner] = useState<any>(null)
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null)
+  const [isMiniapp, setIsMiniapp] = useState(false)
 
   const isConnected = !!address || wagmiConnected
   const isFarcasterConnected = !!farcasterUser
@@ -36,12 +39,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (wagmiConnected && wagmiAddress) {
-      handleWagmiConnection(wagmiAddress)
+      if (isMiniapp) {
+        handleMiniappConnection(wagmiAddress)
+      } else {
+        // For web, just set the address
+        setAddress(wagmiAddress)
+      }
     }
-  }, [wagmiConnected, wagmiAddress])
+  }, [wagmiConnected, wagmiAddress, isMiniapp])
 
   async function initializeAuth() {
-    // Check for stored Farcaster user
+    const isInIframe = typeof window !== "undefined" && window.self !== window.top
+    setIsMiniapp(isInIframe)
+
+    // Check for stored Farcaster user (web OAuth flow)
     const stored = localStorage.getItem("farcaster_user")
     if (stored) {
       try {
@@ -55,8 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Initialize miniapp if in iframe
-    if (typeof window !== "undefined" && window.self !== window.top) {
+    if (isInIframe) {
       await initMiniapp()
     }
   }
@@ -65,17 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { sdk } = await import("@farcaster/frame-sdk")
 
-      sdk.actions.ready({})
-
-      // Store SDK globally
+      // Store SDK globally for contract operations
       ;(window as any).__frameSdk = sdk
+      ;(window as any).__frameEthProvider = sdk.wallet.ethProvider
 
-      // Store eth provider for transactions
-      try {
-        ;(window as any).__frameEthProvider = sdk.wallet.ethProvider
-      } catch {}
+      // Dismiss splash screen
+      await sdk.actions.ready({})
 
-      // Auto-connect after a delay
+      // Auto-connect after SDK is ready
       setTimeout(() => {
         const farcasterConnector = connectors.find((c) => c.id === "farcaster")
         if (farcasterConnector && !wagmiConnected) {
@@ -83,54 +90,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }, 1000)
     } catch (error) {
-      console.error("Error initializing miniapp:", error)
+      console.error("Miniapp initialization error:", error)
     }
   }
 
-  async function handleWagmiConnection(walletAddr: string) {
+  async function handleMiniappConnection(walletAddr: string) {
+    console.log("[v0] Setting up miniapp connection for:", walletAddr)
     setAddress(walletAddr)
 
-    // Setup Frame SDK signer if available
     const frameProvider = (window as any).__frameEthProvider
     if (frameProvider) {
       try {
-        console.log("[v0] Setting up Frame SDK signer for wallet:", walletAddr)
         const { BrowserProvider } = await import("ethers")
         const provider = new BrowserProvider(frameProvider)
         const frameSigner = await provider.getSigner()
+        console.log("[v0] Frame SDK signer created successfully")
         setSigner(frameSigner)
-        console.log("[v0] Frame SDK signer ready")
+        // Store globally for contract service
+        ;(window as any).__frameSigner = frameSigner
       } catch (error) {
-        console.error("[v0] Error creating Frame SDK signer:", error)
-        // Create a minimal signer for read operations
-        setSigner({ getAddress: async () => walletAddr })
+        console.error("[v0] Frame signer setup error:", error)
       }
-    } else {
-      // Create a minimal signer for read operations
-      setSigner({ getAddress: async () => walletAddr })
     }
 
-    // Fetch Farcaster profile after signer is set
-    await fetchFarcasterProfile(walletAddr)
+    await fetchMiniappProfile(walletAddr)
   }
 
-  async function fetchFarcasterProfile(walletAddr: string) {
+  async function fetchMiniappProfile(walletAddr: string) {
     try {
-      // Try Frame SDK first
       const sdk = (window as any).__frameSdk
       if (sdk?.context?.user) {
         const user = sdk.context.user
+
+        // Extract each field safely
         const profile: FarcasterUser = {
-          fid: Number(user.fid) || 0,
-          username: String(user.username || user.displayName || "user"),
-          displayName: String(user.displayName || user.username || "User"),
-          pfpUrl: String(user.pfpUrl || "/abstract-profile.png"),
+          fid: user.fid ? Number(user.fid) : 0,
+          username: user.username ? String(user.username) : user.displayName ? String(user.displayName) : "user",
+          displayName: user.displayName ? String(user.displayName) : user.username ? String(user.username) : "User",
+          pfpUrl: user.pfpUrl ? String(user.pfpUrl) : "/abstract-profile.png",
           walletAddress: walletAddr,
         }
 
         if (profile.fid > 0) {
           setFarcasterUser(profile)
-          localStorage.setItem("farcaster_user", JSON.stringify(profile))
           return
         }
       }
@@ -147,16 +149,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           walletAddress: walletAddr,
         }
         setFarcasterUser(profile)
-        localStorage.setItem("farcaster_user", JSON.stringify(profile))
       }
     } catch (error) {
-      console.error("Error fetching Farcaster profile:", error)
+      console.error("Profile fetch error:", error)
     }
   }
 
   async function connectWallet() {
+    if (isMiniapp) {
+      connectFarcaster()
+      return
+    }
+
+    console.log("[v0] Connecting web wallet...")
     if (!window?.ethereum) {
-      alert("Please install MetaMask")
+      alert("Please install MetaMask or another Web3 wallet")
       return
     }
 
@@ -168,10 +175,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const signer = await provider.getSigner()
       const address = await signer.getAddress()
 
+      console.log("[v0] Web wallet connected:", address)
       setAddress(address)
       setSigner(signer)
+      // Store globally for contract service
+      ;(window as any).__webSigner = signer
     } catch (error) {
-      console.error("Error connecting wallet:", error)
+      console.error("[v0] Wallet connection error:", error)
+      throw error
     }
   }
 
@@ -181,9 +192,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function connectFarcaster() {
-    const isMiniapp = typeof window !== "undefined" && window.self !== window.top
-
     if (isMiniapp) {
+      // Miniapp: use Wagmi connector
       const farcasterConnector = connectors.find((c) => c.id === "farcaster")
       if (farcasterConnector) {
         connect({ connector: farcasterConnector })
@@ -191,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // OAuth flow for web
+    // Web: OAuth flow
     const width = 500
     const height = 700
     const left = window.screen.width / 2 - width / 2
@@ -222,6 +232,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("farcaster_user")
   }
 
+  async function ensureSigner(): Promise<any> {
+    console.log("[v0] ensureSigner called, current signer:", !!signer)
+
+    if (signer) {
+      console.log("[v0] Signer already available")
+      return signer
+    }
+
+    // Try to get from global storage
+    const storedFrameSigner = (window as any).__frameSigner
+    const storedWebSigner = (window as any).__webSigner
+
+    if (storedFrameSigner) {
+      console.log("[v0] Using stored Frame SDK signer")
+      setSigner(storedFrameSigner)
+      return storedFrameSigner
+    }
+
+    if (storedWebSigner) {
+      console.log("[v0] Using stored web signer")
+      setSigner(storedWebSigner)
+      return storedWebSigner
+    }
+
+    // Try to create signer based on environment
+    if (isMiniapp) {
+      const frameProvider = (window as any).__frameEthProvider
+      if (frameProvider) {
+        try {
+          console.log("[v0] Creating new Frame SDK signer")
+          const { BrowserProvider } = await import("ethers")
+          const provider = new BrowserProvider(frameProvider)
+          const frameSigner = await provider.getSigner()
+          setSigner(frameSigner)
+          ;(window as any).__frameSigner = frameSigner
+          return frameSigner
+        } catch (error) {
+          console.error("[v0] Failed to create Frame SDK signer:", error)
+          throw new Error("Failed to setup Frame SDK signer. Please reconnect.")
+        }
+      }
+    } else if (window?.ethereum) {
+      try {
+        console.log("[v0] Creating new web wallet signer")
+        const { BrowserProvider } = await import("ethers")
+        const provider = new BrowserProvider(window.ethereum)
+        const signer = await provider.getSigner()
+        setSigner(signer)
+        ;(window as any).__webSigner = signer
+        return signer
+      } catch (error) {
+        console.error("[v0] Failed to create web signer:", error)
+        throw new Error("Failed to connect wallet. Please reconnect.")
+      }
+    }
+
+    throw new Error("No wallet provider available. Please connect your wallet.")
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -230,10 +299,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isConnected,
         farcasterUser,
         isFarcasterConnected,
+        isMiniapp,
         connectWallet,
         disconnectWallet,
         connectFarcaster,
         disconnectFarcaster,
+        ensureSigner,
       }}
     >
       {children}

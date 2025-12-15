@@ -9,15 +9,7 @@
     "name": "Reminders",
     "iconUrl": "https://remindersbase.vercel.app/logo.jpg",
     "splashImageUrl": "https://remindersbase.vercel.app/logo.jpg",
-    "splashBackgroundColor": "#0f172a",
-    "homeUrl": "https://remindersbase.vercel.app",
-    "webhookUrl": "https://remindersbase.vercel.app/api/frame/webhook"
+    "splashBackgroundColor": "#667eea",
+    "homeUrl": "https://remindersbase.vercel.app"
   }
-  "redirects": [
-    {
-      "source": "/.well-known/farcaster.json",
-      "destination": "https://api.farcaster.xyz/miniapps/hosted-manifest/019ae4e2-2306-a7a6-e1e4-c07c554280b1",
-      "permanent": false
-    }
-  ]
 }

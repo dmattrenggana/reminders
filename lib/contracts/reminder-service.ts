@@ -46,9 +46,9 @@ export class ReminderService {
       }
 
       const rpcEndpoints = [
-        process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL,
         "https://mainnet.base.org",
         "https://base.llamarpc.com",
+        process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL,
       ].filter(Boolean) as string[]
 
       let provider = null
@@ -58,7 +58,7 @@ export class ReminderService {
           const testProvider = new JsonRpcProvider(rpcUrl, 8453)
           await Promise.race([
             testProvider.getNetwork(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
           ])
 
           provider = testProvider
@@ -87,24 +87,51 @@ export class ReminderService {
       throw new Error("Contracts not initialized")
     }
 
-    if (typeof window !== "undefined") {
-      const frameProvider = (window as any).__frameEthProvider
-      if (frameProvider) {
-        try {
-          console.log("[v0] Setting up Frame SDK signer for contract operation")
-          const { BrowserProvider, Contract } = await import("ethers")
-          const provider = new BrowserProvider(frameProvider)
-          const signer = await provider.getSigner()
+    // Check if we need to upgrade from read-only to write-enabled contracts
+    let activeSigner = this.signer
 
-          // Update contracts with the signer for write operations
-          this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, signer)
-          this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
-          this.signer = signer
-          console.log("[v0] Contracts updated with Frame SDK signer")
-        } catch (error) {
-          console.error("[v0] Error setting up Frame SDK signer:", error)
-        }
+    // Try to get signer from global storage (set by auth context)
+    const frameProvider = (window as any).__frameEthProvider
+    const frameSigner = (window as any).__frameSigner
+    const webSigner = (window as any).__webSigner
+
+    if (frameSigner) {
+      console.log("[v0] Using stored Frame SDK signer")
+      activeSigner = frameSigner
+    } else if (webSigner) {
+      console.log("[v0] Using stored web signer")
+      activeSigner = webSigner
+    } else if (frameProvider) {
+      try {
+        console.log("[v0] Creating signer from Frame SDK provider")
+        const { BrowserProvider, Contract } = await import("ethers")
+        const provider = new BrowserProvider(frameProvider)
+        activeSigner = await provider.getSigner()
+        ;(window as any).__frameSigner = activeSigner
+      } catch (error) {
+        console.error("[v0] Failed to create Frame SDK signer:", error)
       }
+    } else if (window?.ethereum) {
+      try {
+        console.log("[v0] Creating signer from web wallet")
+        const { BrowserProvider, Contract } = await import("ethers")
+        const provider = new BrowserProvider(window.ethereum)
+        activeSigner = await provider.getSigner()
+        ;(window as any).__webSigner = activeSigner
+      } catch (error) {
+        console.error("[v0] Failed to create web wallet signer:", error)
+      }
+    }
+
+    // Update contracts with active signer if available
+    if (activeSigner && typeof activeSigner.getAddress === "function") {
+      const { Contract } = await import("ethers")
+      this.signer = activeSigner
+      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, activeSigner)
+      this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, activeSigner)
+      console.log("[v0] Contracts updated with active signer")
+    } else {
+      console.warn("[v0] No active signer available, using read-only contracts")
     }
   }
 
@@ -155,9 +182,9 @@ export class ReminderService {
 
       await this.ensureContracts()
 
-      if (!this.signer) {
-        console.error("[v0] No signer available after ensureContracts")
-        throw new Error("No signer available. Please connect your wallet.")
+      if (!this.signer || typeof this.signer.getAddress !== "function") {
+        console.error("[v0] No valid signer after ensureContracts")
+        throw new Error("Wallet not connected properly. Please reconnect and try again.")
       }
 
       console.log("[v0] Getting signer address...")
@@ -167,7 +194,7 @@ export class ReminderService {
         console.log("[v0] User address:", userAddress)
       } catch (signerError) {
         console.error("[v0] Error getting signer address:", signerError)
-        throw new Error("Could not get wallet address. Please reconnect.")
+        throw new Error("Could not access wallet. Please reconnect and try again.")
       }
 
       const amountInWei = parseUnits(tokenAmount, 18)
@@ -180,9 +207,6 @@ export class ReminderService {
         description,
         farcasterUsername: farcasterUsername || "wallet-user",
       })
-
-      console.log("[v0] Vault contract:", CONTRACTS.REMINDER_VAULT)
-      console.log("[v0] Token contract:", CONTRACTS.COMMIT_TOKEN)
 
       onProgress?.("Checking token balance...")
       console.log("[v0] Step 1: Checking token balance...")
@@ -227,6 +251,7 @@ export class ReminderService {
       console.log("[v0]   - reminderTime:", reminderTimestamp)
       console.log("[v0]   - description:", description)
       console.log("[v0]   - farcasterUsername:", username)
+      console.log("[v0] 🔵 USER ACTION REQUIRED: Please confirm the transaction in your wallet")
 
       const createTx = await this.vaultContract.createReminder(amountInWei, reminderTimestamp, description, username)
 
@@ -267,10 +292,10 @@ export class ReminderService {
       if (error.message?.includes("insufficient funds")) {
         throw new Error("Insufficient gas or token balance")
       }
-      if (error.message?.includes("Insufficient token balance")) {
+      if (error.message?.includes("Wallet not connected")) {
         throw error
       }
-      throw new Error(error.message || "Failed to create reminder")
+      throw new Error(error.message || "Failed to create reminder. Please try again.")
     }
   }
 
