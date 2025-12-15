@@ -1,7 +1,6 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { useAccount, useConnect, useDisconnect } from "wagmi"
 import type { FarcasterUser } from "./types"
 
 interface AuthContextType {
@@ -21,32 +20,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount()
-  const { connect, connectors } = useConnect()
-  const { disconnect: wagmiDisconnect } = useDisconnect()
-
   const [address, setAddress] = useState<string | null>(null)
   const [signer, setSigner] = useState<any>(null)
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null)
   const [isMiniapp, setIsMiniapp] = useState(false)
 
-  const isConnected = !!address || wagmiConnected
+  const isConnected = !!address
   const isFarcasterConnected = !!farcasterUser
 
   useEffect(() => {
     initializeAuth()
   }, [])
-
-  useEffect(() => {
-    if (wagmiConnected && wagmiAddress) {
-      if (isMiniapp) {
-        handleMiniappConnection(wagmiAddress)
-      } else {
-        // For web, just set the address
-        setAddress(wagmiAddress)
-      }
-    }
-  }, [wagmiConnected, wagmiAddress, isMiniapp])
 
   async function initializeAuth() {
     const isInIframe = typeof window !== "undefined" && window.self !== window.top
@@ -83,122 +67,137 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sdk.actions.ready({})
       console.log("[v0] Splash screen dismissed")
 
-      // Auto-connect after SDK is ready
-      setTimeout(() => {
-        const farcasterConnector = connectors.find((c) => c.id === "farcaster")
-        if (farcasterConnector && !wagmiConnected) {
-          console.log("[v0] Auto-connecting with Farcaster connector...")
-          connect({ connector: farcasterConnector })
+      setTimeout(async () => {
+        try {
+          console.log("[v0] Starting Frame SDK wallet connection...")
+
+          const ethProvider = sdk.wallet.ethProvider
+          if (!ethProvider) {
+            console.error("[v0] Frame SDK eth provider not available")
+            return
+          }
+
+          console.log("[v0] Requesting accounts from Frame SDK...")
+
+          const accountsPromise = ethProvider.request({
+            method: "eth_requestAccounts",
+          }) as Promise<string[]>
+
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Account request timeout")), 10000),
+          )
+
+          const accounts = (await Promise.race([accountsPromise, timeoutPromise])) as string[]
+
+          if (!accounts || accounts.length === 0) {
+            console.error("[v0] No accounts returned from Frame SDK")
+            return
+          }
+
+          const walletAddr = accounts[0]
+          console.log("[v0] ✅ Wallet address:", walletAddr.slice(0, 10) + "...")
+
+          setAddress(walletAddr)
+
+          const { BrowserProvider } = await import("ethers")
+          const provider = new BrowserProvider(ethProvider)
+          const frameSigner = await provider.getSigner()
+          console.log("[v0] ✅ Frame SDK signer created")
+
+          setSigner(frameSigner)
+          ;(window as any).__frameSigner = frameSigner
+
+          await fetchMiniappProfile(walletAddr)
+        } catch (error) {
+          console.error("[v0] Frame SDK wallet connection failed:", error)
         }
-      }, 1000)
+      }, 3000)
     } catch (error) {
-      console.error("Miniapp initialization error:", error)
+      console.error("[v0] Miniapp initialization error:", error)
     }
-  }
-
-  async function handleMiniappConnection(walletAddr: string) {
-    console.log("[v0] Setting up miniapp connection for:", walletAddr)
-    setAddress(walletAddr)
-
-    const frameProvider = (window as any).__frameEthProvider
-    if (frameProvider) {
-      try {
-        const { BrowserProvider } = await import("ethers")
-        const provider = new BrowserProvider(frameProvider)
-        const frameSigner = await provider.getSigner()
-        console.log("[v0] Frame SDK signer created successfully")
-        setSigner(frameSigner)
-        // Store globally for contract service
-        ;(window as any).__frameSigner = frameSigner
-      } catch (error) {
-        console.error("[v0] Frame signer setup error:", error)
-      }
-    }
-
-    await fetchMiniappProfile(walletAddr)
   }
 
   async function fetchMiniappProfile(walletAddr: string) {
-    console.log("[v0] Fetching miniapp profile for:", walletAddr)
+    console.log("[v0] Fetching miniapp profile...")
+
     try {
+      const { sdk } = await import("@farcaster/frame-sdk")
+
+      try {
+        const context = sdk.context
+
+        if (context?.user) {
+          console.log("[v0] Extracting profile from SDK context...")
+
+          // Extract each property individually to avoid conversion errors
+          let fid = 0
+          let username = ""
+          let displayName = ""
+          let pfpUrl = ""
+
+          try {
+            fid = Number(context.user.fid)
+          } catch (e) {
+            console.log("[v0] Could not extract FID")
+          }
+
+          try {
+            username = String(context.user.username || "")
+          } catch (e) {
+            console.log("[v0] Could not extract username")
+          }
+
+          try {
+            displayName = String(context.user.displayName || username)
+          } catch (e) {
+            console.log("[v0] Could not extract displayName")
+          }
+
+          try {
+            pfpUrl = String(context.user.pfpUrl || "")
+          } catch (e) {
+            console.log("[v0] Could not extract pfpUrl")
+          }
+
+          if (fid > 0 && username) {
+            const profile: FarcasterUser = {
+              fid,
+              username,
+              displayName: displayName || username,
+              pfpUrl: pfpUrl || "/abstract-profile.png",
+              walletAddress: walletAddr,
+            }
+            console.log("[v0] ✅ Profile from SDK:", profile)
+            setFarcasterUser(profile)
+            return
+          }
+        }
+      } catch (sdkError) {
+        console.log("[v0] SDK context extraction failed:", sdkError)
+      }
+
       console.log("[v0] Fetching profile from API...")
       const response = await fetch(`/api/farcaster/user?address=${walletAddr}`)
       if (response.ok) {
         const data = await response.json()
         if (data.fid && data.fid > 0) {
           const profile: FarcasterUser = {
-            fid: data.fid || 0,
+            fid: data.fid,
             username: data.username || "user",
             displayName: data.displayName || data.username || "User",
             pfpUrl: data.pfpUrl || "/abstract-profile.png",
             walletAddress: walletAddr,
           }
-          console.log("[v0] Profile from API:", { fid: profile.fid, username: profile.username })
+          console.log("[v0] ✅ Profile from API:", profile)
           setFarcasterUser(profile)
           return
         }
       }
 
-      console.log("[v0] API fetch failed, trying SDK context...")
-      const { sdk } = await import("@farcaster/frame-sdk")
-
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      try {
-        const context = sdk.context
-        if (context?.user) {
-          console.log("[v0] SDK context available, extracting user data...")
-
-          let fid = 0
-          let username = "user"
-          let displayName = "User"
-          let pfpUrl = "/abstract-profile.png"
-
-          try {
-            fid = context.user.fid ? Number(context.user.fid) : 0
-          } catch (e) {
-            console.log("[v0] Could not read FID from SDK")
-          }
-
-          try {
-            username = context.user.username ? String(context.user.username) : "user"
-          } catch (e) {
-            console.log("[v0] Could not read username from SDK")
-          }
-
-          try {
-            displayName = context.user.displayName ? String(context.user.displayName) : username
-          } catch (e) {
-            console.log("[v0] Could not read displayName from SDK")
-          }
-
-          try {
-            pfpUrl = context.user.pfpUrl ? String(context.user.pfpUrl) : "/abstract-profile.png"
-          } catch (e) {
-            console.log("[v0] Could not read pfpUrl from SDK")
-          }
-
-          if (fid > 0) {
-            const profile: FarcasterUser = {
-              fid,
-              username,
-              displayName,
-              pfpUrl,
-              walletAddress: walletAddr,
-            }
-            console.log("[v0] Profile extracted from SDK:", { fid: profile.fid, username: profile.username })
-            setFarcasterUser(profile)
-            return
-          }
-        }
-      } catch (sdkError) {
-        console.log("[v0] SDK context extraction error:", sdkError)
-      }
-
-      console.log("[v0] Using minimal profile with wallet address only")
+      console.log("[v0] Using minimal profile")
       setFarcasterUser({
         fid: 0,
-        username: `wallet-${walletAddr.slice(0, 6)}`,
+        username: `user-${walletAddr.slice(0, 6)}`,
         displayName: `User ${walletAddr.slice(0, 6)}`,
         pfpUrl: "/abstract-profile.png",
         walletAddress: walletAddr,
@@ -210,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function connectWallet() {
     if (isMiniapp) {
-      connectFarcaster()
+      console.log("[v0] Miniapp wallet is auto-connected")
       return
     }
 
@@ -228,10 +227,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const signer = await provider.getSigner()
       const address = await signer.getAddress()
 
-      console.log("[v0] Web wallet connected:", address)
+      console.log("[v0] ✅ Web wallet connected:", address.slice(0, 10) + "...")
       setAddress(address)
       setSigner(signer)
-      // Store globally for contract service
       ;(window as any).__webSigner = signer
     } catch (error) {
       console.error("[v0] Wallet connection error:", error)
@@ -242,14 +240,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function disconnectWallet() {
     setAddress(null)
     setSigner(null)
+    ;(window as any).__webSigner = null
+    ;(window as any).__frameSigner = null
   }
 
   async function connectFarcaster() {
     if (isMiniapp) {
-      const farcasterConnector = connectors.find((c) => c.id === "farcaster")
-      if (farcasterConnector) {
-        connect({ connector: farcasterConnector })
-      }
+      console.log("[v0] Miniapp Farcaster is auto-connected")
       return
     }
 
@@ -278,13 +275,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function disconnectFarcaster() {
-    if (wagmiConnected) wagmiDisconnect()
     setFarcasterUser(null)
     localStorage.removeItem("farcaster_user")
   }
 
   async function ensureSigner(): Promise<any> {
-    console.log("[v0] ensureSigner called, current signer:", !!signer)
+    console.log("[v0] ensureSigner called")
 
     if (signer) {
       console.log("[v0] Signer already available")
@@ -319,7 +315,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return frameSigner
         } catch (error) {
           console.error("[v0] Failed to create Frame SDK signer:", error)
-          throw new Error("Failed to setup Frame SDK signer. Please reconnect.")
+          throw new Error("Failed to setup Frame SDK signer. Please refresh the miniapp.")
         }
       }
     } else if (window?.ethereum) {

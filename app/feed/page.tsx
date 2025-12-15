@@ -24,7 +24,8 @@ interface PublicReminder {
 }
 
 export default function FeedPage() {
-  const { address: walletAddress, farcasterUser, connectWallet, connectFarcaster } = useAuth()
+  const { address, farcasterUser, connectWallet, connectFarcaster } = useAuth()
+  const walletAddress = address
   const [reminders, setReminders] = useState<PublicReminder[]>([])
   const [loading, setLoading] = useState(true)
   const [processingReminder, setProcessingReminder] = useState<number | null>(null)
@@ -38,15 +39,15 @@ export default function FeedPage() {
   }, [])
 
   useEffect(() => {
-    console.log("[v0] AUTH STATE UPDATE:")
+    console.log("[v0] FEED PAGE - AUTH STATE UPDATE:")
+    console.log("[v0] - Address:", address)
     console.log("[v0] - Farcaster User:", farcasterUser)
-    console.log("[v0] - Wallet Address:", walletAddress)
     console.log("[v0] - Is in miniapp:", isInMiniapp)
-  }, [farcasterUser, walletAddress, isInMiniapp])
+  }, [farcasterUser, address, isInMiniapp])
 
   useEffect(() => {
     loadPublicReminders()
-  }, [walletAddress])
+  }, [address])
 
   useEffect(() => {
     const reminderIdParam = searchParams.get("reminder")
@@ -80,7 +81,8 @@ export default function FeedPage() {
 
   const loadPublicReminders = async () => {
     try {
-      const url = walletAddress ? `/api/reminders/public?walletAddress=${walletAddress}` : "/api/reminders/public"
+      console.log("[v0] Loading public reminders, wallet address:", address)
+      const url = address ? `/api/reminders/public?walletAddress=${address}` : "/api/reminders/public"
       const response = await fetch(url)
       if (!response.ok) {
         console.error("[v0] Failed to fetch reminders:", response.statusText)
@@ -88,9 +90,10 @@ export default function FeedPage() {
         return
       }
       const data = await response.json()
+      console.log("[v0] Loaded reminders:", data.reminders?.length || 0)
       setReminders(Array.isArray(data.reminders) ? data.reminders : [])
     } catch (error) {
-      console.error("Error loading public reminders:", error)
+      console.error("[v0] Error loading public reminders:", error)
       setReminders([])
     } finally {
       setLoading(false)
