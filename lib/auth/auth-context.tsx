@@ -54,7 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAddress(wagmiAddress)
       setChainId(8453) // Base Mainnet
 
-      fetchFarcasterUserFromWallet(wagmiAddress)
+      setTimeout(() => {
+        console.log("[v0] Attempting to fetch Farcaster user...")
+        fetchFarcasterUserFromWallet(wagmiAddress)
+      }, 500)
     } else if (!wagmiConnected) {
       console.log("[v0] Wagmi disconnected")
       if (!farcasterUser) {
@@ -73,6 +76,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[v0] Frame SDK ready() called")
       ;(window as any).__frameSdk = sdk
 
+      setTimeout(() => {
+        console.log("[v0] Checking SDK context availability...")
+        const context = sdk.context
+        if (context) {
+          console.log("[v0] SDK context exists:", !!context.user)
+          if (context.user) {
+            console.log("[v0] SDK user FID:", context.user.fid)
+            console.log("[v0] SDK user username:", context.user.username)
+          }
+        } else {
+          console.log("[v0] SDK context not available yet")
+        }
+      }, 200)
+
       setTimeout(async () => {
         const farcasterConnector = connectors.find((c) => c.id === "farcaster")
 
@@ -80,9 +97,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("[v0] Auto-connecting with Farcaster connector...")
           try {
             connect({ connector: farcasterConnector })
+            console.log("[v0] Connect call completed")
           } catch (error) {
             console.error("[v0] Auto-connect error:", String(error))
           }
+        } else {
+          console.log("[v0] Cannot auto-connect:", {
+            hasConnector: !!farcasterConnector,
+            alreadyConnected: wagmiConnected,
+          })
         }
       }, 1000)
     } catch (error) {
@@ -95,18 +118,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[v0] Fetching Farcaster user for wallet:", walletAddr)
 
       const sdk = (window as any).__frameSdk
+      console.log("[v0] SDK available:", !!sdk)
+
       if (sdk?.context?.user) {
-        console.log("[v0] SDK context user found")
+        console.log("[v0] SDK context user found, extracting data...")
         const user = sdk.context.user
 
-        const fid = typeof user.fid === "number" ? user.fid : 0
-        const username = typeof user.username === "string" && user.username ? user.username : `fid-${fid}`
-        const displayName = typeof user.displayName === "string" && user.displayName ? user.displayName : username
-        const pfpUrl = typeof user.pfpUrl === "string" && user.pfpUrl ? user.pfpUrl : "/abstract-profile.png"
+        let fid = 0
+        let username = ""
+        let displayName = ""
+        let pfpUrl = "/abstract-profile.png"
 
-        console.log("[v0] Extracted FID:", fid)
-        console.log("[v0] Extracted username:", username)
-        console.log("[v0] Extracted displayName:", displayName)
+        try {
+          if (typeof user.fid === "number") {
+            fid = user.fid
+            console.log("[v0] Extracted FID:", fid)
+          }
+        } catch (e) {
+          console.error("[v0] Error extracting FID:", e)
+        }
+
+        try {
+          if (typeof user.username === "string" && user.username) {
+            username = user.username
+            console.log("[v0] Extracted username:", username)
+          } else {
+            username = `fid-${fid}`
+          }
+        } catch (e) {
+          console.error("[v0] Error extracting username:", e)
+          username = `fid-${fid}`
+        }
+
+        try {
+          if (typeof user.displayName === "string" && user.displayName) {
+            displayName = user.displayName
+            console.log("[v0] Extracted displayName:", displayName)
+          } else {
+            displayName = username
+          }
+        } catch (e) {
+          console.error("[v0] Error extracting displayName:", e)
+          displayName = username
+        }
+
+        try {
+          if (typeof user.pfpUrl === "string" && user.pfpUrl) {
+            pfpUrl = user.pfpUrl
+            console.log("[v0] Extracted pfpUrl:", pfpUrl)
+          }
+        } catch (e) {
+          console.error("[v0] Error extracting pfpUrl:", e)
+        }
 
         const farcasterUser: FarcasterUser = {
           fid,
@@ -116,18 +179,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           walletAddress: walletAddr,
         }
 
-        console.log("[v0] Setting Farcaster user:", farcasterUser.username, farcasterUser.displayName)
+        console.log("[v0] Setting Farcaster user - FID:", fid, "Username:", username, "Display:", displayName)
         setFarcasterUser(farcasterUser)
         localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
         console.log("[v0] Got Farcaster user from SDK context")
         return
       }
 
-      console.log("[v0] No SDK context, trying Neynar API...")
+      console.log("[v0] No SDK context user, trying Neynar API...")
       const response = await fetch(`/api/farcaster/user?address=${walletAddr}`)
+      console.log("[v0] Neynar API status:", response.status)
+
       if (response.ok) {
         const data = await response.json()
-        console.log("[v0] Neynar API response:", data.username, data.displayName)
+        console.log(
+          "[v0] Neynar API response - FID:",
+          data.fid,
+          "Username:",
+          data.username,
+          "Display:",
+          data.displayName,
+        )
+
         const farcasterUser: FarcasterUser = {
           fid: data.fid || 0,
           username: data.username || "user",
@@ -136,11 +209,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           walletAddress: walletAddr,
         }
 
+        console.log(
+          "[v0] Setting Farcaster user from API - FID:",
+          farcasterUser.fid,
+          "Username:",
+          farcasterUser.username,
+        )
         setFarcasterUser(farcasterUser)
         localStorage.setItem("farcaster_user", JSON.stringify(farcasterUser))
         console.log("[v0] Got Farcaster user from Neynar API")
       } else {
         console.log("[v0] Neynar API returned non-OK status:", response.status)
+        const errorText = await response.text()
+        console.log("[v0] Error response:", errorText)
       }
     } catch (error) {
       console.error("[v0] Error fetching Farcaster user:", error)
