@@ -48,26 +48,56 @@ export class ReminderService {
         )
       }
 
-      // Use signer's provider if available, otherwise create a new one
-      if (this.signer && this.signer.provider) {
-        this.provider = this.signer.provider
-      } else {
-        // Create a simple provider with the primary RPC endpoint
-        this.provider = new JsonRpcProvider("https://mainnet.base.org", 8453)
+      let provider = null
+      const rpcEndpoints = [
+        process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL,
+        "https://mainnet.base.org",
+        "https://base.llamarpc.com",
+        "https://base-mainnet.public.blastapi.io",
+      ].filter(Boolean)
+
+      for (const rpcUrl of rpcEndpoints) {
+        try {
+          console.log("[v0] Trying RPC endpoint:", rpcUrl)
+          const testProvider = new JsonRpcProvider(rpcUrl, 8453)
+
+          const codePromise = testProvider.getCode(CONTRACTS.REMINDER_VAULT)
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("RPC timeout")), 5000))
+
+          await Promise.race([codePromise, timeoutPromise])
+
+          provider = testProvider
+          console.log("[v0] Successfully connected to RPC:", rpcUrl)
+          break
+        } catch (error) {
+          console.log("[v0] RPC endpoint failed:", rpcUrl)
+          continue
+        }
       }
 
-      // Initialize contracts with V3 ABI
+      if (!provider) {
+        throw new Error("Could not connect to any Base Mainnet RPC endpoint")
+      }
+
+      if (this.signer && this.signer.provider) {
+        try {
+          await this.signer.provider.getCode(CONTRACTS.REMINDER_VAULT)
+          this.provider = this.signer.provider
+          console.log("[v0] Using signer's provider")
+        } catch (e) {
+          this.provider = provider
+          console.log("[v0] Signer's provider failed, using fallback")
+        }
+      } else {
+        this.provider = provider
+      }
+
       this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, this.signer || this.provider)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.signer || this.provider)
 
-      // Test the provider by checking if contracts are deployed
-      try {
-        await this.provider.getCode(CONTRACTS.REMINDER_VAULT)
-      } catch (testError) {
-        throw new Error(
-          "Vault contract not responding at " + CONTRACTS.REMINDER_VAULT + ". Verify it's deployed on Base Mainnet.",
-        )
-      }
+      console.log("[v0] Contracts initialized successfully")
+      console.log("[v0] Vault:", CONTRACTS.REMINDER_VAULT)
+      console.log("[v0] Token:", CONTRACTS.COMMIT_TOKEN)
     } catch (error) {
       console.error("[v0] Contract initialization error:", error)
       throw error
