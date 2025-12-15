@@ -62,6 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ;(window as any).__frameSdk = sdk
       ;(window as any).__frameEthProvider = sdk.wallet.ethProvider
 
+      const isInMiniApp = await sdk.isInMiniApp()
+      console.log("[v0] Is in miniapp:", isInMiniApp)
+
+      if (!isInMiniApp) {
+        console.log("[v0] Not in miniapp environment, skipping SDK authentication")
+        return
+      }
+
       sdk.actions.ready({})
       console.log("[v0] Splash screen dismissed")
 
@@ -69,76 +77,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           console.log("[v0] Starting miniapp authentication...")
 
-          const context = await sdk.context
+          console.log("[v0] Awaiting SDK context...")
+          const contextPromise = sdk.context
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Context timeout")), 5000),
+          )
 
-          if (!context || !context.user) {
-            console.error("[v0] SDK context or context.user not available")
+          const context = await Promise.race([contextPromise, timeoutPromise])
+          console.log("[v0] SDK context loaded")
+
+          if (!context?.user) {
+            console.error("[v0] No user in SDK context")
             return
           }
 
-          console.log("[v0] SDK context loaded successfully")
+          const userData = context.user
+          const fid = userData.fid
+          const username = userData.username || ""
+          const displayName = userData.displayName || username
+          const pfpUrl = userData.pfpUrl || "/abstract-profile.png"
 
-          const fid = context.user.fid
-          const username = context.user.username
-          const displayName = context.user.displayName || username
-          const pfpUrl = context.user.pfpUrl || "/abstract-profile.png"
+          console.log("[v0] Extracted data - FID:", fid, "Username:", username)
 
-          console.log("[v0] ✅ Extracted - FID:", fid, "Username:", username)
-
-          if (!fid || !username) {
-            console.error("[v0] Invalid FID or username")
+          if (!fid || fid === 0 || !username) {
+            console.error("[v0] Invalid user data from SDK - FID:", fid, "Username:", username)
             return
           }
 
-          // Fetch wallet address from API
-          console.log("[v0] Fetching profile from API for username:", username)
-          const response = await fetch(`/api/farcaster/user?username=${username}`)
+          console.log("[v0] Fetching wallet address from API...")
+          try {
+            const response = await fetch(`/api/farcaster/user?username=${username}`)
+            if (response.ok) {
+              const data = await response.json()
+              const walletAddress = data.walletAddress || ""
+              console.log(
+                "[v0] Wallet address from API:",
+                walletAddress ? walletAddress.slice(0, 10) + "..." : "not found",
+              )
 
-          if (!response.ok) {
-            console.error("[v0] API request failed:", response.status)
-            return
+              if (walletAddress) {
+                setAddress(walletAddress)
+                console.log("[v0] Address set:", walletAddress.slice(0, 10) + "...")
+
+                const ethProvider = sdk.wallet.ethProvider
+                if (ethProvider) {
+                  try {
+                    console.log("[v0] Creating signer from Frame SDK...")
+                    const { BrowserProvider } = await import("ethers")
+                    const provider = new BrowserProvider(ethProvider)
+                    const frameSigner = await provider.getSigner(walletAddress)
+
+                    setSigner(frameSigner)
+                    ;(window as any).__frameSigner = frameSigner
+                    console.log("[v0] Frame SDK signer created successfully")
+                  } catch (signerError) {
+                    console.error("[v0] Signer creation failed:", signerError)
+                  }
+                }
+              }
+
+              const profile: FarcasterUser = {
+                fid,
+                username,
+                displayName: displayName || username,
+                pfpUrl,
+                walletAddress: walletAddress || "",
+              }
+              setFarcasterUser(profile)
+              console.log("[v0] ✅ Miniapp authentication complete:", username, displayName)
+            } else {
+              console.error("[v0] API request failed:", response.status)
+            }
+          } catch (apiError) {
+            console.error("[v0] API fetch error:", apiError)
           }
-
-          const data = await response.json()
-
-          if (!data.walletAddress) {
-            console.error("[v0] No wallet address in API response")
-            return
-          }
-
-          const walletAddr = data.walletAddress
-          console.log("[v0] ✅ Wallet address:", walletAddr.slice(0, 10) + "...")
-          setAddress(walletAddr)
-
-          // Create signer from Frame SDK
-          const ethProvider = sdk.wallet.ethProvider
-          if (!ethProvider) {
-            console.error("[v0] Frame SDK eth provider not available")
-            return
-          }
-
-          const { BrowserProvider } = await import("ethers")
-          const provider = new BrowserProvider(ethProvider)
-          const frameSigner = await provider.getSigner(walletAddr)
-          console.log("[v0] ✅ Frame SDK signer created")
-
-          setSigner(frameSigner)
-          ;(window as any).__frameSigner = frameSigner
-
-          // Set profile
-          const profile: FarcasterUser = {
-            fid,
-            username,
-            displayName,
-            pfpUrl,
-            walletAddress: walletAddr,
-          }
-          console.log("[v0] ✅ Profile set:", profile.username)
-          setFarcasterUser(profile)
         } catch (error) {
           console.error("[v0] Miniapp authentication error:", error)
         }
-      }, 2000)
+      }, 2000) // Wait 2 seconds for SDK to fully initialize before accessing context
     } catch (error) {
       console.error("[v0] Miniapp initialization error:", error)
     }
