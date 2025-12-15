@@ -73,7 +73,8 @@
     "vaul": "^1.1.2",
     "viem": "latest",
     "wagmi": "3.1.0",
-    "zod": "3.25.76"
+    "zod": "3.25.76",
+    "@coinbase/onchainkit": "latest"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
