@@ -62,45 +62,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       initFrameSigner()
     }
-  }, [])
+  }, []) // Empty dependency array ensures this only runs once
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search)
-      const fid = params.get("farcaster_fid")
-      const username = params.get("farcaster_username")
-      const displayName = params.get("farcaster_display_name")
-      const pfpUrl = params.get("farcaster_pfp")
-      const verifiedAddress = params.get("farcaster_address")
+    const params = new URLSearchParams(window.location.search)
+    const fid = params.get("farcaster_fid")
+    const username = params.get("farcaster_username")
+    const displayName = params.get("farcaster_display_name")
+    const pfpUrl = params.get("farcaster_pfp")
+    const verifiedAddress = params.get("farcaster_address")
 
-      if (fid && username) {
-        const user: FarcasterUser = {
-          fid: Number.parseInt(fid),
-          username,
-          displayName: displayName || username,
-          pfpUrl: pfpUrl || "",
-          verifiedAddresses: verifiedAddress ? [verifiedAddress] : [],
-        }
-
-        setFarcasterUser(user)
-        setIsFarcasterConnected(true)
-
-        if (verifiedAddress) {
-          setAddress(verifiedAddress)
-          setIsConnected(true)
-        }
-
-        // Clean up URL params
-        const cleanUrl = new URL(window.location.href)
-        cleanUrl.searchParams.delete("farcaster_fid")
-        cleanUrl.searchParams.delete("farcaster_username")
-        cleanUrl.searchParams.delete("farcaster_display_name")
-        cleanUrl.searchParams.delete("farcaster_pfp")
-        cleanUrl.searchParams.delete("farcaster_address")
-        window.history.replaceState({}, "", cleanUrl.toString())
+    if (fid && username) {
+      const user: FarcasterUser = {
+        fid: Number.parseInt(fid),
+        username,
+        displayName: displayName || username,
+        pfpUrl: pfpUrl || "",
+        verifiedAddresses: verifiedAddress ? [verifiedAddress] : [],
       }
+
+      setFarcasterUser(user)
+      setIsFarcasterConnected(true)
+
+      if (verifiedAddress) {
+        setAddress(verifiedAddress)
+        setIsConnected(true)
+      }
+
+      // Clean up URL params
+      const cleanUrl = new URL(window.location.href)
+      cleanUrl.searchParams.delete("farcaster_fid")
+      cleanUrl.searchParams.delete("farcaster_username")
+      cleanUrl.searchParams.delete("farcaster_display_name")
+      cleanUrl.searchParams.delete("farcaster_pfp")
+      cleanUrl.searchParams.delete("farcaster_address")
+      window.history.replaceState({}, "", cleanUrl.toString())
     }
-  }, [])
+  }, []) // Empty dependency array ensures this only runs once
 
   const connectWallet = useCallback(async () => {
     try {

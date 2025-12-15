@@ -7,10 +7,6 @@ import { base } from "wagmi/chains"
 import "@coinbase/onchainkit/styles.css"
 import { ErrorSuppressor } from "./error-suppressor"
 
-function AuthWrapper({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>
-}
-
 export function ProvidersClient({ children }: { children: ReactNode }) {
   return (
     <>
@@ -24,7 +20,7 @@ export function ProvidersClient({ children }: { children: ReactNode }) {
           },
         }}
       >
-        <AuthWrapper>{children}</AuthWrapper>
+        <AuthProvider>{children}</AuthProvider>
       </OnchainKitProvider>
     </>
   )
