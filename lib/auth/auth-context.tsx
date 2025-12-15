@@ -72,6 +72,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sdk.actions.ready({})
       console.log("[v0] Frame SDK ready() called")
       ;(window as any).__frameSdk = sdk
+
+      setTimeout(async () => {
+        const farcasterConnector = connectors.find((c) => c.id === "farcaster")
+
+        if (farcasterConnector && !wagmiConnected) {
+          console.log("[v0] Auto-connecting with Farcaster connector...")
+          try {
+            connect({ connector: farcasterConnector })
+          } catch (error) {
+            console.error("[v0] Auto-connect error:", String(error))
+          }
+        }
+      }, 1000)
     } catch (error) {
       console.error("[v0] Error initializing miniapp:", String(error))
     }
