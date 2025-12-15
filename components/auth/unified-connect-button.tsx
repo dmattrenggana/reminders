@@ -30,9 +30,6 @@ export function UnifiedConnectButton() {
 
       const isMiniappFrame = inFrame || hasFrameContext
       setIsMiniapp(isMiniappFrame)
-      console.log("[v0] UnifiedConnectButton - isMiniapp:", isMiniappFrame)
-      console.log("[v0] UnifiedConnectButton - isFarcasterConnected:", isFarcasterConnected)
-      console.log("[v0] UnifiedConnectButton - farcasterUser:", farcasterUser)
     }
   }, [isFarcasterConnected, farcasterUser])
 
@@ -51,8 +48,6 @@ export function UnifiedConnectButton() {
 
     const username =
       typeof farcasterUser.username === "string" && farcasterUser.username.length > 0 ? farcasterUser.username : "user"
-
-    console.log("[v0] Rendering Farcaster profile button:", { displayName, username, avatarSrc })
 
     return (
       <DropdownMenu>
