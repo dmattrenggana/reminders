@@ -1,21 +1,35 @@
 {
-  "name": "Base Reminders",
-  "short_name": "Reminders",
-  "description": "Commitment-based reminders with token stakes on Farcaster",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#667eea",
-  "icons": [
-    {
-      "src": "/logo.jpg",
-      "sizes": "192x192",
-      "type": "image/jpeg"
-    },
-    {
-      "src": "/logo.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg"
-    }
-  ]
+  "frame": {
+    "name": "Reminders",
+    "version": "1",
+    "iconUrl": "https://remindersbase.vercel.app/logo.jpg",
+    "homeUrl": "https://remindersbase.vercel.app/",
+    "imageUrl": "https://remindersbase.vercel.app/logo.jpg",
+    "buttonTitle": "Remind me",
+    "splashImageUrl": "https://remindersbase.vercel.app/logo.jpg",
+    "splashBackgroundColor": "#1e90ff",
+    "subtitle": "Reminders",
+    "description": "Never Miss What Matters",
+    "screenshotUrls": [
+      "https://remindersbase.vercel.app/logo.jpg"
+    ],
+    "primaryCategory": "social",
+    "tags": [
+      "social",
+      "messaging",
+      "crypto",
+      "onchain",
+      "community"
+    ],
+    "heroImageUrl": "https://remindersbase.vercel.app/logo.jpg",
+    "tagline": "Never Miss What Matters",
+    "ogTitle": "Reminders",
+    "ogDescription": "Never Miss What Matters",
+    "ogImageUrl": "https://remindersbase.vercel.app/logo.jpg"
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjUwOTU3OCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDI2NzdDMjNmMkViYjY3NjBFZTkzMjRCNmExZDNkRTIyNTg4NWU5N0QifQ",
+    "payload": "eyJkb21haW4iOiJmYXJjYXN0ZXIueHl6In0",
+    "signature": "Nc7c7LX1RUFrsAPRhujQBDjaPGTXVJTMuUPZ9Hb40bAP6CR4JV2m5dxfDwwZ5ulmGXitFIPX8WIwSkklmYeIFBw="
+  }
 }
