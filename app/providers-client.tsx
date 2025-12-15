@@ -20,6 +20,9 @@ export function ProvidersClient({ children }: { children: ReactNode }) {
           mode: "auto",
           name: "Reminders",
         },
+        analytics: {
+          enabled: false,
+        },
       }}
     >
       <AuthWrapper>{children}</AuthWrapper>
