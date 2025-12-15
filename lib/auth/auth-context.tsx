@@ -42,7 +42,6 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
 
-  // Initialize miniapp context
   useEffect(() => {
     const initMiniapp = async () => {
       console.log("[v0] Initializing OnchainKit miniapp...")
@@ -55,60 +54,73 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
             !!(window as any).farcaster?.context ||
             !!(window as any).frameContext)
 
-        if (!inFrame && !hasFrameContext) {
+        const isMiniappContext = inFrame || hasFrameContext
+        console.log("[v0] Frame detection:", { inFrame, hasFrameContext, isMiniappContext })
+
+        if (!isMiniappContext) {
           console.log("[v0] Not in miniapp context")
           return
         }
 
         console.log("[v0] Detected miniapp context, signaling frame ready...")
 
+        // Signal frame ready first
         if (!isFrameReady) {
           setFrameReady()
+          console.log("[v0] Frame ready signal sent")
         }
 
-        // Wait for MiniKit context to be available
+        // Wait for MiniKit context to populate with retries
         let retries = 0
-        const maxRetries = 10
+        const maxRetries = 15 // Increased retries
+        const retryDelay = 500 // Increased delay
 
-        while (!miniKitContext && retries < maxRetries) {
-          console.log("[v0] Waiting for MiniKit context... attempt", retries + 1)
-          await new Promise((resolve) => setTimeout(resolve, 300))
-          retries++
-        }
+        while (retries < maxRetries) {
+          console.log("[v0] Checking for MiniKit context... attempt", retries + 1)
+          console.log("[v0] Current miniKitContext:", miniKitContext)
 
-        if (miniKitContext?.user) {
-          console.log("[v0] MiniKit user found:", {
-            fid: miniKitContext.user.fid,
-            username: miniKitContext.user.username,
-            displayName: miniKitContext.user.displayName,
-            pfpUrl: miniKitContext.user.pfpUrl,
-          })
+          if (miniKitContext?.user) {
+            console.log("[v0] MiniKit user found:", miniKitContext.user)
 
-          const profile: FarcasterUser = {
-            fid: miniKitContext.user.fid,
-            username: miniKitContext.user.username || `fid-${miniKitContext.user.fid}`,
-            displayName:
-              miniKitContext.user.displayName || miniKitContext.user.username || `User ${miniKitContext.user.fid}`,
-            pfpUrl: miniKitContext.user.pfpUrl || "/placeholder.svg?height=40&width=40",
-            walletAddress: address || undefined,
+            const profile: FarcasterUser = {
+              fid: miniKitContext.user.fid,
+              username: miniKitContext.user.username || `fid-${miniKitContext.user.fid}`,
+              displayName:
+                miniKitContext.user.displayName || miniKitContext.user.username || `User ${miniKitContext.user.fid}`,
+              pfpUrl: miniKitContext.user.pfpUrl || "/placeholder.svg?height=40&width=40",
+              walletAddress: miniKitContext.user.address || address || undefined,
+            }
+
+            console.log("[v0] Setting Farcaster profile:", profile)
+            setFarcasterUser(profile)
+            setIsFarcasterConnected(true)
+
+            // Also set wallet address if provided
+            if (miniKitContext.user.address) {
+              console.log("[v0] Setting wallet address from MiniKit:", miniKitContext.user.address)
+              setAddress(miniKitContext.user.address)
+              setIsConnected(true)
+            }
+
+            return // Exit once user is found
           }
 
-          console.log("[v0] Setting Farcaster profile:", profile)
-          setFarcasterUser(profile)
-          setIsFarcasterConnected(true)
-        } else {
-          console.log("[v0] No user in MiniKit context yet")
+          retries++
+          await new Promise((resolve) => setTimeout(resolve, retryDelay))
         }
+
+        console.log("[v0] No user in MiniKit context after max retries")
       } catch (error) {
         console.error("[v0] Miniapp initialization error:", error)
       }
     }
 
     initMiniapp()
-  }, [miniKitContext, isFrameReady, setFrameReady])
+  }, [isFrameReady, setFrameReady]) // Removed miniKitContext from deps to prevent re-running
 
-  // Update Farcaster user when MiniKit context changes
   useEffect(() => {
+    console.log("[v0] MiniKitContext updated:", miniKitContext)
+
     if (miniKitContext?.user && !farcasterUser) {
       console.log("[v0] MiniKit context updated with user:", miniKitContext.user)
 
@@ -118,11 +130,19 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         displayName:
           miniKitContext.user.displayName || miniKitContext.user.username || `User ${miniKitContext.user.fid}`,
         pfpUrl: miniKitContext.user.pfpUrl || "/placeholder.svg?height=40&width=40",
-        walletAddress: address || undefined,
+        walletAddress: miniKitContext.user.address || address || undefined,
       }
 
+      console.log("[v0] Setting Farcaster profile from context update:", profile)
       setFarcasterUser(profile)
       setIsFarcasterConnected(true)
+
+      // Also set wallet address if provided
+      if (miniKitContext.user.address) {
+        console.log("[v0] Setting wallet address from MiniKit context:", miniKitContext.user.address)
+        setAddress(miniKitContext.user.address)
+        setIsConnected(true)
+      }
     }
   }, [miniKitContext, farcasterUser, address])
 
