@@ -39,6 +39,7 @@ export class ReminderService {
     if (typeof window === "undefined") return
 
     try {
+      console.log("[v0] ========== CONTRACT INITIALIZATION START ==========")
       const { Contract, JsonRpcProvider } = await import("ethers")
 
       if (!CONTRACTS.COMMIT_TOKEN || !CONTRACTS.REMINDER_VAULT) {
@@ -47,6 +48,10 @@ export class ReminderService {
         )
       }
 
+      console.log("[v0] Contract addresses:")
+      console.log("[v0] - Token:", CONTRACTS.COMMIT_TOKEN)
+      console.log("[v0] - Vault:", CONTRACTS.REMINDER_VAULT)
+
       let provider = null
       const rpcEndpoints = [
         process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL,
@@ -54,50 +59,50 @@ export class ReminderService {
         "https://mainnet.base.org",
         "https://base-rpc.publicnode.com",
         "https://base.gateway.tenderly.co",
-        "https://1rpc.io/base",
       ].filter(Boolean) as string[]
 
-      console.log("[v0] Initializing RPC provider...")
+      console.log("[v0] Testing RPC endpoints...")
 
       for (const rpcUrl of rpcEndpoints) {
         try {
-          console.log("[v0] Testing RPC endpoint:", rpcUrl)
+          console.log("[v0] Testing RPC:", rpcUrl)
           const testProvider = new JsonRpcProvider(rpcUrl, 8453)
 
+          // Test network connectivity
           const networkPromise = testProvider.getNetwork()
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Network check timeout")), 10000),
+          const networkTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Network check timeout")), 8000),
           )
 
-          await Promise.race([networkPromise, timeoutPromise])
-          console.log("[v0] Network check passed")
+          await Promise.race([networkPromise, networkTimeout])
+          console.log("[v0] ✓ Network check passed")
 
+          // Verify contract exists
           const codePromise = testProvider.getCode(CONTRACTS.REMINDER_VAULT)
-          const codeTimeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("getCode timeout")), 10000),
-          )
+          const codeTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("getCode timeout")), 8000))
 
-          const code = await Promise.race([codePromise, codeTimeoutPromise])
+          const code = await Promise.race([codePromise, codeTimeout])
           if (code === "0x" || code === "0x0") {
-            console.log("[v0] Contract not found at vault address on this RPC")
+            console.log("[v0] ✗ Contract not found at vault address")
             continue
           }
-          console.log("[v0] Contract exists on chain")
+          console.log("[v0] ✓ Contract code exists")
 
+          // Test contract call
           const testContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, testProvider)
           const callPromise = testContract.nextReminderId()
-          const callTimeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Contract call timeout")), 10000),
+          const callTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Contract call timeout")), 8000),
           )
 
-          const nextId = await Promise.race([callPromise, callTimeoutPromise])
-          console.log("[v0] Contract is responding, next ID:", nextId.toString())
+          const nextId = await Promise.race([callPromise, callTimeout])
+          console.log("[v0] ✓ Contract responding, next ID:", nextId.toString())
 
           provider = testProvider
-          console.log("[v0] Successfully connected to RPC:", rpcUrl)
+          console.log("[v0] ✅ Connected to RPC:", rpcUrl)
           break
-        } catch (error) {
-          console.log("[v0] RPC endpoint failed:", rpcUrl, error)
+        } catch (error: any) {
+          console.log("[v0] ✗ RPC failed:", rpcUrl, "-", error.message)
           continue
         }
       }
@@ -111,11 +116,10 @@ export class ReminderService {
       this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, this.provider)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.provider)
 
-      console.log("[v0] Contracts initialized successfully")
-      console.log("[v0] Vault:", CONTRACTS.REMINDER_VAULT)
-      console.log("[v0] Token:", CONTRACTS.COMMIT_TOKEN)
+      console.log("[v0] ✅ Contracts initialized successfully")
+      console.log("[v0] ========== CONTRACT INITIALIZATION COMPLETE ==========")
     } catch (error) {
-      console.error("[v0] Contract initialization error:", error)
+      console.error("[v0] ❌ Contract initialization error:", error)
       throw error
     }
   }
@@ -129,20 +133,21 @@ export class ReminderService {
       throw new Error("Contracts not initialized")
     }
 
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && this.signer) {
       const frameProvider = (window as any).__frameEthProvider
-      if (frameProvider && this.signer) {
+      if (frameProvider) {
         try {
           const { BrowserProvider, Contract } = await import("ethers")
           const provider = new BrowserProvider(frameProvider)
           const signer = await provider.getSigner()
 
+          // Reconnect contracts with signer for write operations
           this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, signer)
           this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, signer)
           this.signer = signer
-          console.log("[v0] Using Frame SDK provider for transactions")
+          console.log("[v0] ✅ Contracts connected with Frame SDK signer for transactions")
         } catch (err) {
-          console.log("[v0] Frame SDK provider not available for signing:", err)
+          console.log("[v0] Frame SDK signer not available, using read-only mode:", err)
         }
       }
     }

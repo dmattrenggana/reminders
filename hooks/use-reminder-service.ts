@@ -8,10 +8,14 @@ export function useReminderService() {
   const { signer, isConnected, address } = useAuth()
 
   const service = useMemo(() => {
-    if (!isConnected && !address) return null
+    if (!isConnected && !address) {
+      console.log("[v0] Not connected, no service")
+      return null
+    }
 
-    // Pass signer if available, otherwise pass null for read-only mode
-    return new ReminderService(signer || null)
+    console.log("[v0] Creating ReminderService with signer:", !!signer)
+    // Pass signer if available, otherwise pass a dummy signer for initialization
+    return new ReminderService(signer || { getAddress: async () => address })
   }, [signer, isConnected, address])
 
   return service
