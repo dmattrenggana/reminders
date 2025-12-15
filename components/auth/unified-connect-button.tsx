@@ -100,7 +100,10 @@ export function UnifiedConnectButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="default" size="sm" className="h-6 md:h-10 px-2 md:px-4 text-[10px] md:text-sm gap-1 md:gap-2">
+        <Button
+          size="sm"
+          className="h-6 md:h-10 px-2 md:px-4 text-[10px] md:text-sm gap-1 md:gap-2 bg-blue-500 hover:bg-blue-600 text-white"
+        >
           Connect
         </Button>
       </DropdownMenuTrigger>

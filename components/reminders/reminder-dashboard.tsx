@@ -9,6 +9,8 @@ import { Plus, Users } from "lucide-react"
 import Link from "next/link"
 
 export function ReminderDashboard() {
+  console.log("[v0] ReminderDashboard rendering")
+
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -19,6 +21,7 @@ export function ReminderDashboard() {
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl">
+      {console.log("[v0] ReminderDashboard content rendering")}
       <div className="space-y-6 sm:space-y-8">
         {/* Stats Section */}
         <ReminderStats key={`stats-${refreshKey}`} />
