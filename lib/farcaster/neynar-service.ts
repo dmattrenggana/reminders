@@ -12,9 +12,7 @@ export class NeynarNotificationService {
   constructor() {
     this.apiKey = process.env.FARCASTER_API_KEY
     if (this.apiKey) {
-      this.client = new NeynarAPIClient({
-        apiKey: this.apiKey,
-      })
+      this.client = new NeynarAPIClient(this.apiKey) // Perbaikan cara inisialisasi SDK v3
     }
   }
 
@@ -23,7 +21,7 @@ export class NeynarNotificationService {
    */
   async sendReminderNotification(fid: number, reminderId: string, description: string): Promise<boolean> {
     try {
-      if (!this.client) {
+      if (!this.client || !this.apiKey) {
         console.warn("[v0] Neynar client not initialized - API key missing")
         return false
       }
@@ -36,32 +34,35 @@ export class NeynarNotificationService {
       const frameUrl = `${baseUrl}/api/frame?id=${reminderId}&desc=${encodeURIComponent(description.substring(0, 100))}`
 
       console.log("[v0] Sending Neynar notification to FID:", fid)
-      console.log("[v0] Frame URL:", frameUrl)
+      
+      const signerUuid = process.env.FARCASTER_SIGNER_UUID
+      if (!signerUuid) {
+        console.error("[v0] FARCASTER_SIGNER_UUID is missing")
+        return false
+      }
 
-      // Send cast notification
-      // Note: Neynar API for notifications may vary - check latest documentation
+      // Send cast notification menggunakan fetch API
       const response = await fetch("https://api.neynar.com/v2/farcaster/cast", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-API-Key": this.apiKey!,
+          "X-API-Key": this.apiKey,
         },
         body: JSON.stringify({
-          signer_uuid: process.env.FARCASTER_SIGNER_UUID,
+          signer_uuid: signerUuid,
           text: `Reminder: ${description}\n\nConfirm your commitment before the deadline!`,
           embeds: [
             {
               url: frameUrl,
             },
           ],
-          reply: {
-            parent: fid,
-          },
+          // Menggunakan channel atau parent yang sesuai jika diperlukan
         }),
       })
 
       if (!response.ok) {
-        console.error("[v0] Neynar API error:", await response.text())
+        const errorText = await response.text()
+        console.error("[v0] Neynar API error:", errorText)
         return false
       }
 
@@ -73,14 +74,16 @@ export class NeynarNotificationService {
   }
 
   /**
-   * Get user cast history to validate user exists
+   * Get user data to validate user exists
    */
   async getUserExists(fid: number): Promise<boolean> {
     try {
       if (!this.client) return false
 
-      const user = await this.client.fetchBulkUsers([fid])
-      return user.users.length > 0
+      // PERBAIKAN: SDK v3 mengharapkan objek { fids: [number] }
+      const response = await this.client.fetchBulkUsers({ fids: [fid] })
+      
+      return response.users && response.users.length > 0
     } catch (error) {
       console.error("[v0] Error fetching user:", error)
       return false
