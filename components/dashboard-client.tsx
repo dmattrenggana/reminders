@@ -18,10 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+// PERBAIKAN: Menggunakan lucide-react yang benar
 import { 
   Plus, Bell, Loader2, Wallet, RefreshCw, 
   CheckCircle2, Flame, Lock, Calendar 
-} from "lucide-material";
+} from "lucide-react";
 import Image from "next/image";
 import sdk from "@farcaster/frame-sdk";
 
@@ -43,6 +44,7 @@ export default function DashboardClient() {
         try {
           await new Promise(resolve => setTimeout(resolve, 500));
           await sdk.actions.ready();
+          console.log("Farcaster SDK Ready");
         } catch (e) {
           console.error("SDK error:", e);
         } finally {
@@ -52,7 +54,11 @@ export default function DashboardClient() {
       init();
       isFirstMount.current = false;
     }
-    const timeout = setTimeout(() => setIsSDKReady(true), 4000);
+
+    const timeout = setTimeout(() => {
+      setIsSDKReady(true);
+    }, 4000);
+
     return () => clearTimeout(timeout);
   }, []);
 
@@ -106,7 +112,7 @@ export default function DashboardClient() {
             <div className="space-y-1">
               <h1 className="text-3xl font-black tracking-tighter text-slate-900">ReminderBase</h1>
               <div className="flex items-center gap-2">
-                {/* SLOGAN TETAP STATIS */}
+                {/* 1. SLOGAN TETAP STATIS */}
                 <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>
                   Never Miss What Matters
                 </p>
@@ -118,7 +124,7 @@ export default function DashboardClient() {
           <div className="flex items-center gap-3">
             {isConnected ? (
               <div className="flex items-center gap-3 bg-slate-50 pl-5 pr-1 py-1 rounded-full border border-slate-100 shadow-sm">
-                {/* BALANCE DENGAN FORMAT DESIMAL RAPI */}
+                {/* 2. FORMAT BALANCE RAPI */}
                 <p className={`text-[10px] font-mono font-black ${brandText} border-r border-slate-200 pr-3`}>
                   {balance ? Number(balance).toLocaleString(undefined, {
                     minimumFractionDigits: 0,
@@ -126,7 +132,7 @@ export default function DashboardClient() {
                   }) : "0"} TOKENS
                 </p>
                 
-                {/* TOMBOL MENAMPILKAN USERNAME, BUKAN WALLET */}
+                {/* 3. USERNAME DI TOMBOL (MENGGANTIKAN ADDRESS) */}
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -147,7 +153,6 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        {/* STATS SECTION */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             { label: "Token Locked", val: stats.locked, icon: Lock, color: "text-amber-500" },
@@ -175,7 +180,6 @@ export default function DashboardClient() {
           </Card>
         </div>
 
-        {/* CREATE BUTTON */}
         <div className="flex justify-center py-4">
             <Button 
               disabled={!isConnected}
@@ -187,7 +191,6 @@ export default function DashboardClient() {
             </Button>
         </div>
 
-        {/* ACTIVITY FEED */}
         <main className="space-y-8 bg-white/50 p-6 rounded-3xl border border-slate-100 shadow-inner">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Activity Feed</h2>
@@ -235,7 +238,6 @@ export default function DashboardClient() {
         </main>
       </div>
 
-      {/* DIALOG MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] p-8">
           <DialogHeader>
