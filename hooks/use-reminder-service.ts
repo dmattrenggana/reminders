@@ -1,29 +1,28 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAuth } from "@/lib/auth/auth-context"
 import { ReminderService } from "@/lib/contracts/reminder-service"
+import { useAccount, usePublicClient, useWalletClient } from "wagmi"
 
 export function useReminderService() {
-  const { signer, isConnected, address, ensureSigner } = useAuth()
+  const { address, isConnected } = useAccount()
+  const publicClient = usePublicClient()
+  const { data: walletClient } = useWalletClient()
   const [service, setService] = useState<ReminderService | null>(null)
 
   useEffect(() => {
-    if (!isConnected && !address) {
-      console.log("[v0] Not connected, clearing service")
+    // Service hanya diinisialisasi jika sudah konek wallet dan client tersedia
+    if (isConnected && address && publicClient && walletClient) {
+      const reminderService = new ReminderService(
+        publicClient as any,
+        walletClient as any,
+        address
+      )
+      setService(reminderService)
+    } else {
       setService(null)
-      return
     }
-
-    if (service) {
-      console.log("[v0] Service already exists")
-      return
-    }
-
-    console.log("[v0] Creating ReminderService with signer:", !!signer)
-    const newService = new ReminderService(signer || { getAddress: async () => address })
-    setService(newService)
-  }, [isConnected, address, signer])
+  }, [isConnected, address, publicClient, walletClient])
 
   return service
 }
