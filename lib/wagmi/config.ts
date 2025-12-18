@@ -7,6 +7,8 @@ export const wagmiConfig = createConfig({
   transports: {
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL || undefined),
   },
-  connectors: [miniAppConnector()],
+  // Gunakan 'as any' untuk memaksa TypeScript menerima connector 
+  // meskipun ada konflik versi library internal.
+  connectors: [miniAppConnector() as any],
   ssr: false,
 })
