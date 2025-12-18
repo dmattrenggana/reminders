@@ -41,19 +41,19 @@ const frameEmbed = {
   },
 }
 
+// app/layout.tsx
+
 export const metadata: Metadata = {
-  title: "Base Reminders - Never Miss What Matters",
-  description: "Commitment-based reminders with token stakes on Farcaster. Lock tokens to stay accountable.",
-  icons: {
-    icon: "/logo.jpg",
-    apple: "/logo.jpg",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-    viewportFit: "cover",
+  other: {
+    "fc:frame": JSON.stringify({
+      version: "next",
+      imageUrl: "https://remindersbase.vercel.app/icon.png"
+      button: {
+        title: "Remind Me",
+        action: {
+          type: "launch_frame",
+          name: "Reminders",
+          url: "https://remindersbase.vercel.app"
   },
   openGraph: {
     title: "Base Reminders - Never Miss What Matters",
@@ -99,7 +99,9 @@ export default function RootLayout({
       </head>
       <body className={`font-sans antialiased ${_geist.className}`}>
         <Providers>{children}</Providers>
-      </body>
+      </body>,
+    generator: 'v0.app'
+
     </html>
   )
 }
