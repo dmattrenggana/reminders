@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <Providers>
-          <FrameSDKInitializer /> 
+          <FrameSDKInitializer /> {/* <--- Tambahkan ini */}
           {children}
         </Providers>
       </body>
