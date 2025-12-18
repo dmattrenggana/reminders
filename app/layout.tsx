@@ -7,19 +7,20 @@ import { Providers } from "./providers"
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
+// Gunakan appUrl agar konsisten
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app"
 
 // Miniapp embed object for Farcaster sharing
 const miniappEmbed = {
   version: "1",
-  imageUrl: `remindersbase.vercel.app/logo.jpg`,
+  imageUrl: `${appUrl}/logo.jpg`,
   button: {
     title: "Open Base Reminders",
     action: {
       type: "launch_frame",
-      url: remindersbase.vercel.app,
+      url: appUrl,
       name: "Base Reminders",
-      splashImageUrl: `${remindersbase.vercel.app}/logo.jpg`,
+      splashImageUrl: `${appUrl}/logo.jpg`,
       splashBackgroundColor: "#667eea",
     },
   },
@@ -28,37 +29,26 @@ const miniappEmbed = {
 // Backward compatible frame embed
 const frameEmbed = {
   version: "1",
-  imageUrl: `${remindersbase.vercel.app}/logo.jpg`,
+  imageUrl: `${appUrl}/logo.jpg`,
   button: {
     title: "Remind Me!",
     action: {
       type: "launch_frame",
       url: appUrl,
       name: "Base Reminders",
-      splashImageUrl: `${remindersbase.vercel.app}/logo.jpg`,
+      splashImageUrl: `${appUrl}/logo.jpg`,
       splashBackgroundColor: "#4A90E2",
     },
   },
 }
 
-// app/layout.tsx
-
 export const metadata: Metadata = {
-  other: {
-    "fc:frame": JSON.stringify({
-      version: "next",
-      imageUrl: "https://remindersbase.vercel.app/icon.png"
-      button: {
-        title: "Remind Me",
-        action: {
-          type: "launch_frame",
-          name: "Reminders",
-          url: "https://remindersbase.vercel.app"
-  },
+  title: "Base Reminders - Never Miss What Matters",
+  description: "Commitment-based reminders with token stakes on Farcaster. Lock tokens to stay accountable.",
   openGraph: {
     title: "Base Reminders - Never Miss What Matters",
     description: "Commitment-based reminders with token stakes on Farcaster. Lock tokens to stay accountable.",
-    url: remindersbase.vercel.app,
+    url: appUrl,
     siteName: "Base Reminders",
     images: [
       {
@@ -81,7 +71,7 @@ export const metadata: Metadata = {
     "fc:miniapp": JSON.stringify(miniappEmbed),
     "fc:frame": JSON.stringify(frameEmbed),
   },
-    generator: 'v0.app'
+  generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -96,12 +86,12 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {/* Tambahkan Frame SDK script di sini jika diperlukan oleh frame v2 */}
+        <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk/dist/index.min.js" defer></script>
       </head>
       <body className={`font-sans antialiased ${_geist.className}`}>
         <Providers>{children}</Providers>
-      </body>,
-    generator: 'v0.app'
-
+      </body>
     </html>
   )
 }
