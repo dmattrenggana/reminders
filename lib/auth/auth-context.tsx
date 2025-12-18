@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
 
 interface FarcasterUser {
@@ -13,7 +13,7 @@ interface FarcasterUser {
 
 interface AuthContextType {
   isAuthenticated: boolean
-  walletAddress: string | undefined
+  address: string | undefined
   farcasterUser: FarcasterUser | null
   isInMiniApp: boolean
   disconnect: () => void
@@ -27,29 +27,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null)
   const [isInMiniApp, setIsInMiniApp] = useState(false)
 
+  // Detect Farcaster miniapp
   useEffect(() => {
-    // Check if running in Farcaster miniapp
     const hasFrameProvider = typeof window !== 'undefined' && '__frameEthProvider' in window
     setIsInMiniApp(hasFrameProvider)
+  }, [])
 
-    // Check for Farcaster OAuth callback params
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const fid = params.get('fid')
-      const username = params.get('username')
-      const displayName = params.get('displayName')
-      const pfpUrl = params.get('pfpUrl')
-      const verifiedAddress = params.get('verifiedAddress')
+  // Parse Farcaster OAuth callback
+  useEffect(() => {
+    if (typeof window === 'undefined') return
 
-      if (fid && username) {
-        setFarcasterUser({
-          fid,
-          username,
-          displayName: displayName || username,
-          pfpUrl: pfpUrl || '',
-          verifiedAddress: verifiedAddress || ''
-        })
-      }
+    const params = new URLSearchParams(window.location.search)
+    const fid = params.get('fid')
+    const username = params.get('username')
+    const displayName = params.get('displayName')
+    const pfpUrl = params.get('pfpUrl')
+    const verifiedAddress = params.get('verifiedAddress')
+
+    if (fid && username) {
+      setFarcasterUser({
+        fid,
+        username,
+        displayName: displayName || username,
+        pfpUrl: pfpUrl || '',
+        verifiedAddress: verifiedAddress || '',
+      })
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
 
@@ -58,16 +62,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setFarcasterUser(null)
   }
 
-  const isAuthenticated = isConnected || !!farcasterUser
+  const isAuthenticated = isConnected || farcasterUser !== null
 
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated,
-        walletAddress: address,
+        address,
         farcasterUser,
         isInMiniApp,
-        disconnect
+        disconnect,
       }}
     >
       {children}
