@@ -21,7 +21,12 @@ export function useTokenBalance() {
     try {
       setIsLoading(true)
       const rawBalance = await service.getTokenBalance(address)
-      setBalance(formatUnits(rawBalance, 18))
+      
+      // Memastikan rawBalance dikonversi ke BigInt sebelum diformat
+      // Kita gunakan BigInt(rawBalance.toString()) agar aman jika rawBalance berupa string/hex
+      const formattedBalance = formatUnits(BigInt(rawBalance.toString()), 18)
+      
+      setBalance(formattedBalance)
     } catch (error) {
       console.error("Error fetching token balance:", error)
       setBalance("0")
