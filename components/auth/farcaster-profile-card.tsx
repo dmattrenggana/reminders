@@ -1,55 +1,68 @@
-"use client"
+"use client";
 
-import { useAuth } from "@/lib/auth/auth-context"
-import { Card } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { User } from "lucide-react"
+import { useFarcaster } from "@/components/providers/farcaster-provider";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { User, ShieldCheck } from "lucide-react";
 
 export function FarcasterProfileCard() {
-  const { farcasterUser, isFarcasterConnected } = useAuth()
+  const { user, isLoaded } = useFarcaster();
 
-  if (!isFarcasterConnected || !farcasterUser) {
-    return null
+  if (!isLoaded) {
+    return (
+      <Card className="w-full animate-pulse bg-slate-50">
+        <CardContent className="p-6 h-24" />
+      </Card>
+    );
   }
 
-  const avatarSrc =
-    typeof farcasterUser.pfpUrl === "string" && farcasterUser.pfpUrl.length > 0
-      ? farcasterUser.pfpUrl
-      : "/abstract-profile.png"
-
-  const displayName =
-    typeof farcasterUser.displayName === "string" && farcasterUser.displayName.length > 0
-      ? farcasterUser.displayName
-      : typeof farcasterUser.username === "string" && farcasterUser.username.length > 0
-        ? farcasterUser.username
-        : "User"
-
-  const username =
-    typeof farcasterUser.username === "string" && farcasterUser.username.length > 0 ? farcasterUser.username : "user"
-
-  const fid = typeof farcasterUser.fid === "number" && farcasterUser.fid > 0 ? farcasterUser.fid : 0
+  if (!user) {
+    return (
+      <Card className="w-full border-dashed">
+        <CardContent className="p-6 text-center">
+          <p className="text-sm text-muted-foreground">Open in Warpcast to see your profile</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/20">
-      <div className="flex items-center gap-4">
-        <Avatar className="h-16 w-16 border-2 border-purple-500/50">
-          <AvatarImage src={avatarSrc || "/placeholder.svg"} alt={displayName} />
-          <AvatarFallback>
-            <User className="h-8 w-8" />
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-lg font-bold truncate">{displayName}</h3>
-            <Badge variant="secondary" className="bg-purple-500/20 text-purple-700 dark:text-purple-300">
-              Farcaster
-            </Badge>
+    <Card className="w-full overflow-hidden border-purple-100 shadow-sm bg-white">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            {user.pfpUrl ? (
+              <img 
+                src={user.pfpUrl} 
+                alt={user.username} 
+                className="h-16 w-16 rounded-full border-2 border-purple-100 shadow-sm object-cover"
+              />
+            ) : (
+              <div className="h-16 w-16 rounded-full bg-purple-100 flex items-center justify-center">
+                <User className="h-8 w-8 text-purple-600" />
+              </div>
+            )}
+            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-sm">
+              <ShieldCheck className="h-4 w-4 text-purple-600" />
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">@{username}</p>
-          <p className="text-xs text-muted-foreground mt-1">FID: {fid}</p>
+          
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-lg leading-none">{user.displayName}</h3>
+              <Badge variant="secondary" className="text-[10px] bg-purple-50 text-purple-700 border-purple-100">
+                FID: {user.fid}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">@{user.username}</p>
+            {user.bio && (
+              <p className="text-xs text-muted-foreground line-clamp-1 italic">
+                {user.bio}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      </CardContent>
     </Card>
-  )
+  );
 }
