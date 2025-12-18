@@ -1,33 +1,24 @@
-"use client"
+"use client";
 
-import { useAuth } from "@/lib/auth/auth-context"
-import { Button } from "@/components/ui/button"
-import { Wallet } from "lucide-react"
+import { useFarcaster } from "@/components/providers/farcaster-provider";
+import { Button } from "@/components/ui/button";
 
 export function ConnectWalletButton() {
-  const { isConnected, address, connectWallet, disconnectWallet } = useAuth()
+  const { user, isLoaded } = useFarcaster();
 
-  if (isConnected && address) {
+  if (!isLoaded) return <Button disabled size="sm" variant="outline">Loading...</Button>;
+
+  if (user) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={disconnectWallet}
-        className="h-7 md:h-10 px-2 md:px-4 text-xs md:text-sm bg-transparent"
-      >
-        {address.slice(0, 6)}...{address.slice(-4)}
+      <Button variant="outline" size="sm" className="rounded-full pointer-events-none">
+        {user.username ? `@${user.username}` : "Connected"}
       </Button>
-    )
+    );
   }
 
   return (
-    <Button
-      size="sm"
-      onClick={connectWallet}
-      className="h-6 md:h-10 px-2 md:px-4 text-[10px] md:text-sm gap-1 md:gap-2"
-    >
-      <Wallet className="h-2.5 w-2.5 md:h-4 md:w-4" />
-      Connect Wallet
+    <Button size="sm" variant="outline" onClick={() => window.open("https://warpcast.com", "_blank")}>
+      Use Warpcast
     </Button>
-  )
+  );
 }
