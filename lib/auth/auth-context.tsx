@@ -1,47 +1,29 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import sdk from "@farcaster/frame-sdk";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, createConfig, http } from "wagmi";
-import { base } from "wagmi/chains";
-import { AuthProvider } from "@/lib/auth/auth-context";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
-const config = createConfig({
-  chains: [base],
-  transports: {
-    [base.id]: http(),
-  },
-});
+interface AuthContextType {
+  user: any;
+  loading: boolean;
+}
 
-const queryClient = new QueryClient();
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const isInitialized = useRef(false);
-
-  useEffect(() => {
-    if (!isInitialized.current) {
-      isInitialized.current = true;
-      
-      const init = async () => {
-        try {
-          await sdk.actions.ready();
-        } catch (error) {
-          console.error("SDK initialization failed:", error);
-        }
-      };
-      
-      init();
-    }
-  }, []);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user] = useState<any>(null);
+  const [loading] = useState(false);
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <AuthContext.Provider value={{ user, loading }}>
+      {children}
+    </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
