@@ -1,30 +1,44 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { NeynarAPIClient } from "@neynar/nodejs-sdk"
+import { NextRequest, NextResponse } from "next/server";
+import { NeynarAPIClient } from "@neynar/nodejs-sdk";
 
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const fid = searchParams.get("fid");
+
+  if (!fid) {
+    return NextResponse.json({ error: "FID is required" }, { status: 400 });
+  }
+
+  const apiKey = process.env.NEYNAR_API_KEY || "";
+  const client = new NeynarAPIClient({ apiKey });
+
   try {
-    const { searchParams } = new URL(request.url)
-    const fid = searchParams.get("fid")
+    // Perbaikan: Gunakan objek { fids: [...] } sesuai ekspektasi SDK terbaru
+    const response = await client.fetchBulkUsers({ 
+      fids: [parseInt(fid)] 
+    });
 
-    if (!fid) {
-      return NextResponse.json({ error: "FID required" }, { status: 400 })
+    const user = response.users[0];
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const apiKey = process.env.NEYNAR_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: "Neynar API key not configured" }, { status: 500 })
-    }
+    // Logika perhitungan skor (contoh sederhana berdasarkan followers)
+    const score = (user.follower_count || 0) * 10;
 
-    const neynarClient = new NeynarAPIClient({ apiKey })
-    const userdata = await neynarClient.fetchBulkUsers([Number(fid)])
-    const user = userdata.users[0]
-
-    // Calculate score based on follower count
-    const score = Math.max(1, Math.floor(user.follower_count / 10))
-
-    return NextResponse.json({ score, followerCount: user.follower_count })
+    return NextResponse.json({ 
+      score,
+      user: {
+        username: user.username,
+        pfp: user.pfp_url
+      }
+    });
   } catch (error) {
-    console.error("Error fetching Neynar score:", error)
-    return NextResponse.json({ error: "Failed to fetch score" }, { status: 500 })
+    console.error("Neynar Score Error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch score" },
+      { status: 500 }
+    );
   }
 }
