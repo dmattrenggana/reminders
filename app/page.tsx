@@ -1,4 +1,7 @@
 "use client"
+
+import { useEffect } from "react" // Tambahkan ini
+import sdk from "@farcaster/frame-sdk" // Tambahkan ini
 import { UnifiedConnectButton } from "@/components/auth/unified-connect-button"
 import { ReminderDashboard } from "@/components/reminders/reminder-dashboard"
 import { useAuth } from "@/lib/auth/auth-context"
@@ -6,10 +9,23 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Clock, Shield, Coins, Users } from "lucide-react"
+import { Clock, Shield, Coins, Users } from "lucide-material" // Pastikan lucide-react jika typo
 
 export default function HomePage() {
   const { isConnected, isFarcasterConnected } = useAuth()
+
+  // --- TAMBAHKAN BLOK INI ---
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await sdk.actions.ready();
+      } catch (error) {
+        console.error("Farcaster SDK Error:", error);
+      }
+    };
+    init();
+  }, []);
+  // --------------------------
 
   const isAuthenticated = isConnected || isFarcasterConnected
 
