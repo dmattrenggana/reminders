@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useReminders } from "@/hooks/use-reminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
@@ -34,16 +34,35 @@ export default function DashboardClient() {
   const { reminders = [], isLoading: loadingReminders, refresh } = useReminders();
   const { balance } = useTokenBalance();
 
-  // Memanggil SDK Ready hanya di Client Side
+  const [isSDKReady, setIsSDKReady] = useState(false);
+  const isFirstMount = useRef(true);
+
+  // --- SAFETY TRIGGER UNTUK SPLASH SCREEN ---
   useEffect(() => {
-    const init = async () => {
-      try {
-        await sdk.actions.ready();
-      } catch (e) {
-        console.error("SDK error:", e);
-      }
-    };
-    init();
+    if (isFirstMount.current) {
+      const init = async () => {
+        try {
+          // Memberi sedikit jeda agar DOM siap
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await sdk.actions.ready();
+          console.log("Farcaster SDK Ready Called");
+        } catch (e) {
+          console.error("SDK error:", e);
+        } finally {
+          setIsSDKReady(true);
+        }
+      };
+      init();
+      isFirstMount.current = false;
+    }
+
+    // Safety Net: Paksa Dashboard muncul setelah 4 detik 
+    // meskipun blockchain sedang error/loading
+    const timeout = setTimeout(() => {
+      setIsSDKReady(true);
+    }, 4000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,7 +84,6 @@ export default function DashboardClient() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Simulasi submit ke blockchain
       await new Promise(resolve => setTimeout(resolve, 2000));
       setIsModalOpen(false);
       setFormData({ description: "", amount: "", deadline: "" });
@@ -73,6 +91,18 @@ export default function DashboardClient() {
       alert("Success! Reminder created");
     } finally { setIsSubmitting(false); }
   };
+
+  // Jika SDK belum siap, tampilkan loading screen internal
+  if (!isSDKReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" />
+          <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">Initializing SDK...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans">
@@ -85,9 +115,12 @@ export default function DashboardClient() {
             </div>
             <div className="space-y-1">
               <h1 className="text-3xl font-black tracking-tighter text-slate-900">ReminderBase</h1>
-              <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>
-                {user ? `@${user.username}` : "Never Miss What Matters"}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>
+                  {user ? `@${user.username}` : "Never Miss What Matters"}
+                </p>
+                {loadingReminders && <Loader2 className="h-3 w-3 animate-spin text-slate-300" />}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -152,7 +185,7 @@ export default function DashboardClient() {
             </Button>
           </div>
 
-          {loadingReminders ? (
+          {loadingReminders && reminders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-32">
               <Loader2 className={`h-12 w-12 animate-spin ${brandText} mb-4`} />
               <p className="text-slate-400 text-xs font-black uppercase tracking-[0.3em]">Scanning Base Chain</p>
