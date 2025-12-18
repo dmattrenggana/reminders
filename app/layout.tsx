@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { FarcasterProvider } from "@/components/providers/farcaster-provider";
+import { Providers } from "./providers"; // Impor pembungkus utama
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,10 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {/* Provider ini yang mengelola login otomatis */}
-        <FarcasterProvider>
+        {/* Providers di sini sudah mencakup Farcaster, Wagmi, dan QueryClient */}
+        <Providers>
           {children}
-        </FarcasterProvider>
+        </Providers>
       </body>
     </html>
   );
