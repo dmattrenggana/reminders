@@ -112,9 +112,10 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
 
       {/* Action Area */}
       <div className="flex flex-col gap-2 pt-2">
-        {reminder.canConfirm && (
+        {/* Tombol Confirm */}
+        {reminder.canConfirm && service && (
           <button
-            onClick={() => handleAction("confirm", () => service.confirmReminder(reminder.id), "Success! Stake reclaimed.")}
+            onClick={() => handleAction("confirm", () => service!.confirmReminder(reminder.id), "Success! Stake reclaimed.")}
             disabled={!!loadingAction}
             className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
           >
@@ -122,9 +123,10 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
           </button>
         )}
 
-        {reminder.canBurn && (
+        {/* Tombol Burn */}
+        {reminder.canBurn && service && (
           <button
-            onClick={() => handleAction("burn", () => service.burnMissedReminder(reminder.id), "Reminder burned successfully.")}
+            onClick={() => handleAction("burn", () => service!.burnMissedReminder(reminder.id), "Reminder burned successfully.")}
             disabled={!!loadingAction}
             className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-all disabled:opacity-50"
           >
@@ -132,9 +134,10 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
           </button>
         )}
 
-        {reminder.canWithdrawUnclaimed && (
+        {/* Tombol Withdraw Unclaimed */}
+        {reminder.canWithdrawUnclaimed && service && (
           <button
-            onClick={() => handleAction("withdraw", () => service.withdrawUnclaimedRewards(reminder.id), "Rewards withdrawn.")}
+            onClick={() => handleAction("withdraw", () => service!.withdrawUnclaimedRewards(reminder.id), "Rewards withdrawn.")}
             disabled={!!loadingAction}
             className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-all disabled:opacity-50"
           >
@@ -142,9 +145,18 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
           </button>
         )}
 
+        {/* Status Menunggu */}
         {reminder.status === "pending" && (
           <div className="w-full py-3 bg-slate-50 text-slate-400 rounded-xl font-bold text-center border border-slate-100 text-sm italic">
             Waiting for reminder time...
+          </div>
+        )}
+
+        {/* Fallback jika dompet belum konek */}
+        {!service && reminder.status !== "pending" && (
+          <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-center">
+             <p className="text-[10px] text-amber-700 font-bold uppercase">Wallet Not Connected</p>
+             <p className="text-[9px] text-amber-600">Please connect to interact with this reminder</p>
           </div>
         )}
       </div>
