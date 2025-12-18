@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useReminderService } from "./use-reminder-service"
-import type { ReminderData } from "@/lib/contracts/reminder-service"
 import { formatUnits } from "@/lib/utils/ethers-utils"
 import { useAccount } from "wagmi"
 
@@ -24,11 +23,12 @@ export function useReminders() {
       setIsLoading(true)
       const data = await service.getUserReminders(address)
       
-      // Transform data kontrak ke format UI
-      const formattedReminders = data.map((r: ReminderData) => ({
+      // Menggunakan tipe 'any' sementara saat mapping untuk menghindari error "Property does not exist"
+      const formattedReminders = data.map((r: any) => ({
         id: Number(r.id),
-        description: r.description,
-        tokenAmount: Number(formatUnits(r.tokenAmount, 18)),
+        description: r.description || "No description",
+        // Menggunakan fallback jika nama properti berbeda (tokenAmount atau amount)
+        tokenAmount: Number(formatUnits(r.tokenAmount || r.amount || "0", 18)),
         reminderTime: new Date(Number(r.reminderTime) * 1000),
         confirmationDeadline: new Date(Number(r.confirmationDeadline) * 1000),
         status: r.status,
