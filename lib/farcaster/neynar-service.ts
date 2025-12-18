@@ -12,7 +12,10 @@ export class NeynarNotificationService {
   constructor() {
     this.apiKey = process.env.FARCASTER_API_KEY
     if (this.apiKey) {
-      this.client = new NeynarAPIClient(this.apiKey) // Perbaikan cara inisialisasi SDK v3
+      // Perbaikan: SDK v3 mengharapkan objek config, bukan string langsung
+      this.client = new NeynarAPIClient({
+        apiKey: this.apiKey
+      })
     }
   }
 
@@ -33,15 +36,12 @@ export class NeynarNotificationService {
 
       const frameUrl = `${baseUrl}/api/frame?id=${reminderId}&desc=${encodeURIComponent(description.substring(0, 100))}`
 
-      console.log("[v0] Sending Neynar notification to FID:", fid)
-      
       const signerUuid = process.env.FARCASTER_SIGNER_UUID
       if (!signerUuid) {
         console.error("[v0] FARCASTER_SIGNER_UUID is missing")
         return false
       }
 
-      // Send cast notification menggunakan fetch API
       const response = await fetch("https://api.neynar.com/v2/farcaster/cast", {
         method: "POST",
         headers: {
@@ -56,7 +56,6 @@ export class NeynarNotificationService {
               url: frameUrl,
             },
           ],
-          // Menggunakan channel atau parent yang sesuai jika diperlukan
         }),
       })
 
@@ -83,7 +82,7 @@ export class NeynarNotificationService {
       // PERBAIKAN: SDK v3 mengharapkan objek { fids: [number] }
       const response = await this.client.fetchBulkUsers({ fids: [fid] })
       
-      return response.users && response.users.length > 0
+      return !!(response.users && response.users.length > 0)
     } catch (error) {
       console.error("[v0] Error fetching user:", error)
       return false
