@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect } from "react" // Tambahkan ini
-import sdk from "@farcaster/frame-sdk" // Tambahkan ini
+import { useEffect } from "react"
+import sdk from "@farcaster/frame-sdk"
 import { UnifiedConnectButton } from "@/components/auth/unified-connect-button"
 import { ReminderDashboard } from "@/components/reminders/reminder-dashboard"
 import { useAuth } from "@/lib/auth/auth-context"
@@ -9,12 +9,11 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Clock, Shield, Coins, Users } from "lucide-material" // Pastikan lucide-react jika typo
+import { Clock, Shield, Coins, Users } from "-react"
 
 export default function HomePage() {
   const { isConnected, isFarcasterConnected } = useAuth()
 
-  // --- TAMBAHKAN BLOK INI ---
   useEffect(() => {
     const init = async () => {
       try {
@@ -25,7 +24,6 @@ export default function HomePage() {
     };
     init();
   }, []);
-  // --------------------------
 
   const isAuthenticated = isConnected || isFarcasterConnected
 
@@ -70,7 +68,6 @@ export default function HomePage() {
         ) : (
           <div className="container mx-auto px-4 py-8 max-w-7xl">
             <div className="space-y-8">
-              {/* Hero Section */}
               <div className="text-center space-y-4 py-12">
                 <h2 className="text-4xl font-bold tracking-tight">Commitment-Based Reminders on Base</h2>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -81,7 +78,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Dashboard Preview */}
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -90,7 +86,6 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Stats Preview */}
                 <div className="grid gap-4 md:grid-cols-3">
                   <Card className="p-6 border-2 border-dashed">
                     <div className="flex items-center gap-4">
@@ -129,7 +124,6 @@ export default function HomePage() {
                   </Card>
                 </div>
 
-                {/* Reminders Preview */}
                 <Card className="p-8 border-2 border-dashed">
                   <div className="text-center space-y-4">
                     <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">

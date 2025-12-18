@@ -6,6 +6,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "-react": "latest",
     "@farcaster/frame-sdk": "latest",
     "@farcaster/miniapp-sdk": "latest",
     "@farcaster/miniapp-wagmi-connector": "latest",
@@ -22,7 +23,6 @@
     "clsx": "^2.1.1",
     "date-fns": "latest",
     "ethers": "latest",
-    "lucide-material": "latest",
     "lucide-react": "^0.454.0",
     "next": "15.0.7",
     "next-themes": "latest",
