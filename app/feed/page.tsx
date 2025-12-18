@@ -17,9 +17,9 @@ export default function FeedPage() {
       {/* Area Konten Feed */}
       <div className="mt-6 border-t pt-4">
         {fid ? (
-          <p>Selamat datang di feed Anda!</p>
+          <p>Welcome!</p>
         ) : (
-           <p className="text-red-500">Please login</p>
+          <p className="text-red-500">Please login.</p>
         )}
       </div>
     </main>
