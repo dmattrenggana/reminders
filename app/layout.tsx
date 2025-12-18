@@ -10,14 +10,14 @@ export const metadata: Metadata = {
   other: {
     "fc:frame": JSON.stringify({
       version: "next",
-      imageUrl: `${appUrl}/og-image.png`,
+      imageUrl: `${appUrl}/logo.jpg`,
       button: {
-        title: "Launch App",
+        title: "Remind Me!",
         action: {
           type: "launch_frame",
           name: "Base Reminders",
           url: appUrl,
-          splashImageUrl: `${appUrl}/splash.png`,
+          splashImageUrl: `${appUrl}/logo.jpg`,
           splashBackgroundColor: "#ffffff",
         },
       },
