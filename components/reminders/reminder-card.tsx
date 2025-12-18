@@ -1,15 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Clock, CheckCircle2, Flame, Lock, AlertCircle, Info } from "lucide-react"
+import { Clock, CheckCircle2, Flame, Lock, AlertCircle, Info, Coins } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
-import { cn } from "@/lib/utils"
 import { useReminderService } from "@/hooks/use-reminder-service"
-import { useToast } from "@/hooks/use-toast"
 import { TOKEN_SYMBOL } from "@/lib/contracts/config"
 
 interface Reminder {
@@ -24,8 +18,8 @@ interface Reminder {
   claimableReward?: number
   totalHelpers?: number
   unclaimedRewardPool?: number
-  canWithdrawUnclaimed?: boolean // Added for V3 withdraw feature
-  canBurn?: boolean // Added canBurn flag
+  canWithdrawUnclaimed?: boolean
+  canBurn?: boolean
 }
 
 interface ReminderCardProps {
@@ -33,301 +27,127 @@ interface ReminderCardProps {
 }
 
 export function ReminderCard({ reminder }: ReminderCardProps) {
-  const [isConfirming, setIsConfirming] = useState(false)
-  const [isClaiming, setIsClaiming] = useState(false)
-  const [isWithdrawing, setIsWithdrawing] = useState(false) // Added for V3 withdraw
-  const [isBurning, setIsBurning] = useState(false) // Added burning state
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const service = useReminderService()
-  const { toast } = useToast()
 
-  const handleConfirm = async () => {
+  const handleAction = async (actionType: string, actionFn: () => Promise<void>, successMsg: string) => {
     if (!service) {
-      toast({
-        title: "Not Connected",
-        description: "Please connect your wallet",
-        variant: "destructive",
-      })
+      alert("Please connect your wallet first")
       return
     }
-
-    setIsConfirming(true)
-
+    setLoadingAction(actionType)
     try {
-      console.log("[v0] Confirming reminder on blockchain:", reminder.id)
-      await service.confirmReminder(reminder.id)
-
-      toast({
-        title: "Reminder Confirmed",
-        description: `Successfully reclaimed ${reminder.tokenAmount} ${TOKEN_SYMBOL} tokens`,
-      })
-
-      // Trigger refresh (parent component should handle this)
+      await actionFn()
+      alert(successMsg)
       window.location.reload()
     } catch (error: any) {
-      console.error("[v0] Error confirming reminder:", error)
-      toast({
-        title: "Confirmation Failed",
-        description: error.message || "Failed to confirm reminder",
-        variant: "destructive",
-      })
+      console.error(`Error during ${actionType}:`, error)
+      alert(error.message || `Failed to ${actionType}`)
     } finally {
-      setIsConfirming(false)
-    }
-  }
-
-  const handleClaimReward = async () => {
-    if (!service) {
-      toast({
-        title: "Not Connected",
-        description: "Please connect your wallet",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsClaiming(true)
-
-    try {
-      console.log("[v0] Claiming reward for reminder:", reminder.id)
-      await service.claimReward(reminder.id)
-
-      toast({
-        title: "Reward Claimed",
-        description: `Successfully claimed ${reminder.claimableReward || 0} ${TOKEN_SYMBOL} tokens`,
-      })
-
-      window.location.reload()
-    } catch (error: any) {
-      console.error("[v0] Error claiming reward:", error)
-      toast({
-        title: "Claim Failed",
-        description: error.message || "Failed to claim reward",
-        variant: "destructive",
-      })
-    } finally {
-      setIsClaiming(false)
-    }
-  }
-
-  const handleWithdrawUnclaimed = async () => {
-    if (!service) {
-      toast({
-        title: "Not Connected",
-        description: "Please connect your wallet",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsWithdrawing(true)
-
-    try {
-      console.log("[v0] Withdrawing unclaimed rewards for reminder:", reminder.id)
-      await service.withdrawUnclaimedRewards(reminder.id)
-
-      toast({
-        title: "Unclaimed Rewards Withdrawn",
-        description: `Successfully withdrawn ${reminder.unclaimedRewardPool || 0} ${TOKEN_SYMBOL} tokens`,
-      })
-
-      window.location.reload()
-    } catch (error: any) {
-      console.error("[v0] Error withdrawing unclaimed rewards:", error)
-      toast({
-        title: "Withdrawal Failed",
-        description: error.message || "Failed to withdraw unclaimed rewards",
-        variant: "destructive",
-      })
-    } finally {
-      setIsWithdrawing(false)
-    }
-  }
-
-  const handleBurn = async () => {
-    if (!service) {
-      toast({
-        title: "Not Connected",
-        description: "Please connect your wallet",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsBurning(true)
-
-    try {
-      console.log("[v0] Burning missed reminder:", reminder.id)
-      await service.burnMissedReminder(reminder.id)
-
-      toast({
-        title: "Reminder Burned",
-        description: `Commitment tokens burned. Reward pool of ${Math.floor(reminder.tokenAmount / 2)} ${TOKEN_SYMBOL} returned to you.`,
-      })
-
-      window.location.reload()
-    } catch (error: any) {
-      console.error("[v0] Error burning reminder:", error)
-      toast({
-        title: "Burn Failed",
-        description: error.message || "Failed to burn reminder",
-        variant: "destructive",
-      })
-    } finally {
-      setIsBurning(false)
+      setLoadingAction(null)
     }
   }
 
   const getStatusConfig = () => {
     switch (reminder.status) {
       case "active":
-        return {
-          icon: AlertCircle,
-          label: "Active",
-          color: "text-primary bg-primary/10",
-          urgent: Date.now() > reminder.reminderTime.getTime(),
-        }
+        return { icon: AlertCircle, label: "Active", color: "bg-purple-100 text-purple-700", border: "border-purple-200" }
       case "pending":
-        return {
-          icon: Clock,
-          label: "Pending",
-          color: "text-muted-foreground bg-muted",
-          urgent: false,
-        }
+        return { icon: Clock, label: "Waiting", color: "bg-slate-100 text-slate-600", border: "border-slate-200" }
       case "completed":
-        return {
-          icon: CheckCircle2,
-          label: "Completed",
-          color: "text-accent bg-accent/10",
-          urgent: false,
-        }
+        return { icon: CheckCircle2, label: "Done", color: "bg-green-100 text-green-700", border: "border-green-200" }
       case "burned":
-        return {
-          icon: Flame,
-          label: "Burned",
-          color: "text-destructive bg-destructive/10",
-          urgent: false,
-        }
+        return { icon: Flame, label: "Burned", color: "bg-red-100 text-red-700", border: "border-red-200" }
+      default:
+        return { icon: Info, label: "Unknown", color: "bg-slate-100 text-slate-600", border: "border-slate-200" }
     }
   }
 
-  const statusConfig = getStatusConfig()
-  const StatusIcon = statusConfig.icon
+  const config = getStatusConfig()
+  const StatusIcon = config.icon
 
   return (
-    <Card className={cn("transition-all hover:shadow-md", statusConfig.urgent && "border-primary")}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={statusConfig.color}>
-                <StatusIcon className="h-3 w-3 mr-1" />
-                {statusConfig.label}
-              </Badge>
-              {statusConfig.urgent && (
-                <Badge variant="destructive" className="animate-pulse">
-                  Confirmation Needed
-                </Badge>
-              )}
-            </div>
-
-            <div>
-              <p className="font-medium text-lg leading-tight text-balance">{reminder.description}</p>
-              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  {formatDistanceToNow(reminder.reminderTime, { addSuffix: true })}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Lock className="h-3.5 w-3.5" />
-                  {Math.floor(reminder.tokenAmount)} {TOKEN_SYMBOL}
-                </span>
-              </div>
-            </div>
-
-            {reminder.status === "active" && (
-              <div className="text-xs text-muted-foreground">
-                Deadline: {formatDistanceToNow(reminder.confirmationDeadline, { addSuffix: true })}
-              </div>
-            )}
-
-            {reminder.canConfirm && reminder.totalHelpers === 0 && (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Important: No Helpers Yet</AlertTitle>
-                <AlertDescription className="text-xs">
-                  No one has reminded you yet. If you confirm now, you will get back{" "}
-                  {Math.floor(reminder.tokenAmount / 2)} {TOKEN_SYMBOL} (50% commitment), but the other{" "}
-                  {Math.floor(reminder.tokenAmount / 2)} {TOKEN_SYMBOL} (50% reward pool) will remain locked in the
-                  contract.
-                  <br />
-                  <strong>
-                    Consider waiting for helpers to remind you before confirming to maximize your recovery.
-                  </strong>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {reminder.status === "completed" && reminder.unclaimedRewardPool && reminder.unclaimedRewardPool > 0 && (
-              <Alert variant={reminder.canWithdrawUnclaimed ? "default" : "destructive"}>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Unclaimed Rewards</AlertTitle>
-                <AlertDescription className="text-xs">
-                  {Math.floor(reminder.unclaimedRewardPool)} {TOKEN_SYMBOL} from the reward pool remains unclaimed.
-                  {reminder.canWithdrawUnclaimed ? (
-                    <>
-                      <br />
-                      <strong>Good news!</strong> The 24-hour claim window has expired. You can now withdraw these
-                      unclaimed tokens.
-                    </>
-                  ) : (
-                    <>
-                      <br />
-                      Helpers have 24 hours from confirmation to claim their rewards. After that, you can withdraw the
-                      unclaimed amount.
-                    </>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
+    <div className={`bg-white rounded-2xl border ${config.border} p-5 shadow-sm space-y-4 transition-all`}>
+      <div className="flex justify-between items-start">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.color}`}>
+              <StatusIcon className="h-3 w-3" />
+              {config.label}
+            </span>
             {reminder.canConfirm && (
-              <Button onClick={handleConfirm} size="lg" disabled={isConfirming}>
-                {isConfirming ? "Confirming..." : "Confirm & Reclaim"}
-              </Button>
-            )}
-            {reminder.canClaim && reminder.claimableReward && reminder.claimableReward > 0 && (
-              <Button onClick={handleClaimReward} variant="secondary" size="lg" disabled={isClaiming}>
-                {isClaiming ? "Claiming..." : `Claim ${reminder.claimableReward} ${TOKEN_SYMBOL}`}
-              </Button>
-            )}
-            {reminder.status === "burned" && (
-              <Button variant="outline" size="sm" disabled>
-                <Flame className="h-4 w-4 mr-2" />
-                Burned
-              </Button>
-            )}
-            {reminder.canBurn && reminder.status !== "burned" && (
-              <Button onClick={handleBurn} variant="destructive" size="lg" disabled={isBurning}>
-                {isBurning ? "Burning..." : "Burn Missed Reminder"}
-              </Button>
-            )}
-            {reminder.status === "pending" && (
-              <Button variant="outline" size="sm" disabled>
-                Not Yet Available
-              </Button>
-            )}
-            {reminder.canWithdrawUnclaimed && reminder.unclaimedRewardPool && reminder.unclaimedRewardPool > 0 && (
-              <Button onClick={handleWithdrawUnclaimed} variant="default" size="lg" disabled={isWithdrawing}>
-                {isWithdrawing
-                  ? "Withdrawing..."
-                  : `Withdraw ${Math.floor(reminder.unclaimedRewardPool)} ${TOKEN_SYMBOL}`}
-              </Button>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 animate-pulse uppercase tracking-wider">
+                Action Required
+              </span>
             )}
           </div>
+          <h3 className="font-bold text-slate-800 leading-tight">{reminder.description}</h3>
         </div>
-      </CardContent>
-    </Card>
+        <div className="text-right">
+          <div className="flex items-center justify-end gap-1 text-purple-600 font-bold">
+            <Coins className="h-4 w-4" />
+            <span>{Math.floor(reminder.tokenAmount)}</span>
+          </div>
+          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">{TOKEN_SYMBOL} STAKED</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 py-3 border-y border-slate-50">
+        <div className="space-y-0.5">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Target Time</p>
+          <p className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {formatDistanceToNow(new Date(reminder.reminderTime), { addSuffix: true })}
+          </p>
+        </div>
+        {reminder.status === "active" && (
+          <div className="space-y-0.5 text-right">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Deadline</p>
+            <p className="text-xs font-semibold text-red-500">
+              {formatDistanceToNow(new Date(reminder.confirmationDeadline), { addSuffix: true })}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Action Area */}
+      <div className="flex flex-col gap-2 pt-2">
+        {reminder.canConfirm && (
+          <button
+            onClick={() => handleAction("confirm", () => service.confirmReminder(reminder.id), "Success! Stake reclaimed.")}
+            disabled={!!loadingAction}
+            className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+          >
+            {loadingAction === "confirm" ? "Processing..." : "Confirm & Reclaim Stake"}
+          </button>
+        )}
+
+        {reminder.canBurn && (
+          <button
+            onClick={() => handleAction("burn", () => service.burnMissedReminder(reminder.id), "Reminder burned successfully.")}
+            disabled={!!loadingAction}
+            className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-all disabled:opacity-50"
+          >
+            {loadingAction === "burn" ? "Burning..." : "Burn Missed Reminder"}
+          </button>
+        )}
+
+        {reminder.canWithdrawUnclaimed && (
+          <button
+            onClick={() => handleAction("withdraw", () => service.withdrawUnclaimedRewards(reminder.id), "Rewards withdrawn.")}
+            disabled={!!loadingAction}
+            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-all disabled:opacity-50"
+          >
+            {loadingAction === "withdraw" ? "Withdrawing..." : `Withdraw Unclaimed ${TOKEN_SYMBOL}`}
+          </button>
+        )}
+
+        {reminder.status === "pending" && (
+          <div className="w-full py-3 bg-slate-50 text-slate-400 rounded-xl font-bold text-center border border-slate-100 text-sm italic">
+            Waiting for reminder time...
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
