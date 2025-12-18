@@ -2,20 +2,22 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 
+const appUrl = "https://remindersbase.vercel.app";
+
 export const metadata: Metadata = {
   title: "Base Reminders",
-  description: "Farcaster Frame v2 App",
+  description: "Farcaster Frame v2",
   other: {
     "fc:frame": JSON.stringify({
       version: "next",
-      imageUrl: "https://remindersbase.vercel.app/logo.jpg",
+      imageUrl: `${appUrl}/og-image.png`,
       button: {
-        title: "Remind Me!",
+        title: "Launch App",
         action: {
           type: "launch_frame",
           name: "Base Reminders",
-          url: "https://remindersbase.vercel.app",
-          splashImageUrl: "https://remindersbase.vercel.app/logo.jpg",
+          url: appUrl,
+          splashImageUrl: `${appUrl}/splash.png`,
           splashBackgroundColor: "#ffffff",
         },
       },
