@@ -12,7 +12,16 @@ export default function FeedPage() {
   return (
     <main className="p-4">
       <h1 className="text-2xl font-bold">Feed</h1>
-      <p>FID: {fid || "Not Connected"}</p>
+      <p className="mt-2 text-gray-600">Status: {fid ? `Connected as FID ${fid}` : "Not Connected"}</p>
+      
+      {/* Area Konten Feed */}
+      <div className="mt-6 border-t pt-4">
+        {fid ? (
+          <p>Selamat datang di feed Anda!</p>
+        ) : (
+           <p className="text-red-500">Please login</p>
+        )}
+      </div>
     </main>
   );
 }
