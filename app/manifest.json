@@ -27,9 +27,9 @@
     "ogDescription": "Never Miss What Matters",
     "ogImageUrl": "https://remindersbase.vercel.app/logo.jpg"
   },
-  "accountAssociation": {
+   "accountAssociation": {
     "header": "eyJmaWQiOjUwOTU3OCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDI2NzdDMjNmMkViYjY3NjBFZTkzMjRCNmExZDNkRTIyNTg4NWU5N0QifQ",
-    "payload": "eyJkb21haW4iOiJmYXJjYXN0ZXIueHl6In0",
-    "signature": "Nc7c7LX1RUFrsAPRhujQBDjaPGTXVJTMuUPZ9Hb40bAP6CR4JV2m5dxfDwwZ5ulmGXitFIPX8WIwSkklmYeIFBw="
+    "payload": "eyJkb21haW4iOiJodHRwczovL3JlbWluZGVyc2Jhc2UudmVyY2VsLmFwcC8ifQ",
+    "signature": "LrrqsMt+SkBcyLKgUB6qgc6degXStI90COxtYy2/qUljRz242+/netA78kfUhU/Hteig4ofAeM5qzkBY2xvVyRs="
   }
 }
