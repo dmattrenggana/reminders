@@ -12,14 +12,14 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.
 // Miniapp embed object for Farcaster sharing
 const miniappEmbed = {
   version: "1",
-  imageUrl: `${appUrl}/api/og-image`,
+  imageUrl: `remindersbase.vercel.app/logo.jpg`,
   button: {
     title: "Open Base Reminders",
     action: {
       type: "launch_frame",
-      url: appUrl,
+      url: remindersbase.vercel.app,
       name: "Base Reminders",
-      splashImageUrl: `${appUrl}/icon.png`,
+      splashImageUrl: `${remindersbase.vercel.app}/logo.jpg`,
       splashBackgroundColor: "#667eea",
     },
   },
@@ -28,14 +28,14 @@ const miniappEmbed = {
 // Backward compatible frame embed
 const frameEmbed = {
   version: "1",
-  imageUrl: `${appUrl}/og-image.png`,
+  imageUrl: `${remindersbase.vercel.app}/logo.jpg`,
   button: {
-    title: "Open Base Reminders",
+    title: "Remind Me!",
     action: {
       type: "launch_frame",
       url: appUrl,
       name: "Base Reminders",
-      splashImageUrl: `${appUrl}/splash.png`,
+      splashImageUrl: `${remindersbase.vercel.app}/logo.jpg`,
       splashBackgroundColor: "#4A90E2",
     },
   },
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Base Reminders - Never Miss What Matters",
     description: "Commitment-based reminders with token stakes on Farcaster. Lock tokens to stay accountable.",
-    url: appUrl,
+    url: remindersbase.vercel.app,
     siteName: "Base Reminders",
     images: [
       {
