@@ -18,11 +18,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// PERBAIKAN: Nama library adalah lucide-react
 import { 
   Plus, Bell, Loader2, Wallet, RefreshCw, 
   CheckCircle2, Flame, Lock, Calendar 
-} from "lucide-react"; 
+} from "lucide-react";
 import Image from "next/image";
 import sdk from "@farcaster/frame-sdk";
 
@@ -35,6 +34,7 @@ export default function DashboardClient() {
   const { reminders = [], isLoading: loadingReminders, refresh } = useReminders();
   const { balance } = useTokenBalance();
 
+  // Memanggil SDK Ready hanya di Client Side
   useEffect(() => {
     const init = async () => {
       try {
@@ -65,10 +65,12 @@ export default function DashboardClient() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // Simulasi submit ke blockchain
       await new Promise(resolve => setTimeout(resolve, 2000));
       setIsModalOpen(false);
       setFormData({ description: "", amount: "", deadline: "" });
       refresh();
+      alert("Success! Reminder created");
     } finally { setIsSubmitting(false); }
   };
 
@@ -76,7 +78,6 @@ export default function DashboardClient() {
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans">
       <div className="max-w-5xl mx-auto w-full space-y-10">
         
-        {/* Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-6">
             <div className="relative w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden shadow-md border border-slate-100">
@@ -105,7 +106,6 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             { label: "Token Locked", val: stats.locked, icon: Lock, color: "text-amber-500" },
@@ -133,7 +133,6 @@ export default function DashboardClient() {
           </Card>
         </div>
 
-        {/* Action Button */}
         <div className="flex justify-center py-4">
             <Button 
               disabled={!isConnected}
@@ -145,7 +144,6 @@ export default function DashboardClient() {
             </Button>
         </div>
 
-        {/* List Reminders */}
         <main className="space-y-8 bg-white/50 p-6 rounded-3xl border border-slate-100 shadow-inner">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Activity Feed</h2>
@@ -162,7 +160,7 @@ export default function DashboardClient() {
           ) : reminders?.length > 0 ? (
             <div className="grid gap-5">
               {reminders.map((r: any) => (
-                <Card key={r.id} className={`bg-white hover:border-indigo-200 transition-all border-slate-100 shadow-sm border-l-[6px] ${brandBorder.replace('border-', 'border-l-')}`}>
+                <Card key={r.id} className={`bg-white border-slate-100 shadow-sm border-l-[6px] ${brandBorder.replace('border-', 'border-l-')}`}>
                   <CardContent className="p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8">
                     <div className="space-y-2">
                       <h3 className="text-xl font-black text-slate-800 tracking-tight">{r.description}</h3>
@@ -193,7 +191,6 @@ export default function DashboardClient() {
         </main>
       </div>
 
-      {/* Modal Dialog */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] p-8">
           <DialogHeader>
