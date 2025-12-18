@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useReminders } from "@/hooks/use-reminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
@@ -8,11 +8,29 @@ import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter 
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Bell, Loader2, Wallet, RefreshCw, CheckCircle2, Flame, Lock, Calendar } from "lucide-react";
+import { 
+  Plus, 
+  Bell, 
+  Loader2, 
+  Wallet, 
+  RefreshCw, 
+  CheckCircle2, 
+  Flame, 
+  Lock, 
+  Calendar 
+} from "lucide-react";
 import Image from "next/image";
+import sdk from "@farcaster/frame-sdk";
 
 export default function FeedPage() {
   const { user } = useFarcaster();
@@ -20,18 +38,19 @@ export default function FeedPage() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   
-  // Hapus 'createReminder' dari sini untuk sementara agar build tidak error
+  // Mengambil data dari hook (Pastikan hook sudah ada, meski createReminder belum diimplementasikan di sana)
   const { reminders, isLoading: loadingReminders, refresh } = useReminders();
   const { balance } = useTokenBalance();
 
-  // Logic Dummy untuk Create Reminder agar build sukses
-  const createReminderDummy = async (description: string, amount: string, deadline: string) => {
-    console.log("Menyimpan data:", { description, amount, deadline });
-    // Di sini nanti kita masukkan logic contract
-    return new Promise((resolve) => setTimeout(resolve, 2000));
-  };
+  // 1. Farcaster SDK Handshake (Menghilangkan Splash Screen)
+  useEffect(() => {
+    const init = async () => {
+      sdk.actions.ready();
+    };
+    init();
+  }, []);
 
-  // State untuk Modal & Form
+  // 2. Logic Form & Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -40,6 +59,7 @@ export default function FeedPage() {
     deadline: ""
   });
 
+  // Branding Styles
   const brandPurple = "bg-[#4f46e5]";
   const brandText = "text-[#4f46e5]";
   const brandBorder = "border-[#4f46e5]";
@@ -51,17 +71,22 @@ export default function FeedPage() {
     burned: reminders?.filter(r => r.status === 'Burned' || r.status === 'Failed').length || 0
   };
 
+  // 3. Handle Submit (Simulasi Blockchain)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
     try {
-      // Gunakan fungsi dummy
-      await createReminderDummy(formData.description, formData.amount, formData.deadline);
+      // Simulasi delay transaksi blockchain
+      console.log("Submitting Reminder:", formData);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       setIsModalOpen(false);
       setFormData({ description: "", amount: "", deadline: "" });
       refresh();
+      alert("Success! Reminder created (Simulated)");
     } catch (error) {
-      console.error("Failed to create reminder", error);
+      console.error("Error:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -75,7 +100,7 @@ export default function FeedPage() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-6">
             <div className="relative w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden shadow-md border border-slate-100">
-               <Image src="/logo.jpg" alt="ReminderBase Logo" fill className="object-cover" priority />
+               <Image src="/logo.jpg" alt="Logo" fill className="object-cover" priority />
             </div>
             <div className="space-y-1">
               <h1 className="text-3xl font-black tracking-tighter text-slate-900">ReminderBase</h1>
@@ -89,43 +114,48 @@ export default function FeedPage() {
             {isConnected ? (
               <div className="flex items-center gap-4 bg-slate-50 pl-5 pr-1 py-1 rounded-full border border-slate-100">
                 <p className={`text-sm font-mono font-bold ${brandText}`}>{balance} TOKENS</p>
-                <Button variant="ghost" size="sm" onClick={() => disconnect()} className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-bold px-4">
+                <Button variant="ghost" size="sm" onClick={() => disconnect()} className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-bold px-4 text-slate-500">
                   {address?.slice(0, 6)}...
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => connect({ connector: connectors[0] })} className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all`}>
+              <Button onClick={() => connect({ connector: connectors[0] })} className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}>
                 <Wallet className="mr-2 h-5 w-5" /> Connect Wallet
               </Button>
             )}
           </div>
         </header>
 
-        {/* Dashboard Stats */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             { label: "Token Locked", val: stats.locked, icon: Lock, color: "text-amber-500" },
             { label: "Completed", val: stats.completed, icon: CheckCircle2, color: "text-emerald-500" },
             { label: "Burned", val: stats.burned, icon: Flame, color: "text-orange-500" },
           ].map((s, i) => (
-            <Card key={i} className="bg-white border-slate-100 shadow-sm">
+            <Card key={i} className="bg-white border-slate-100 shadow-sm overflow-hidden group">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-slate-400">
                 <CardTitle className="text-[10px] font-bold uppercase tracking-widest">{s.label}</CardTitle>
                 <s.icon className={`h-4 w-4 ${s.color}`} />
               </CardHeader>
-              <CardContent><div className="text-2xl font-black text-slate-900">{s.val}</div></CardContent>
+              <CardContent>
+                <div className="text-2xl font-black text-slate-900 tracking-tight">{s.val}</div>
+              </CardContent>
             </Card>
           ))}
+
           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-white/80">
-              <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-white">Active Tasks</CardTitle>
+              <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-white">Active Reminders</CardTitle>
               <Bell className="h-4 w-4 text-white" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-black text-white">{reminders?.length || 0}</div></CardContent>
+            <CardContent>
+              <div className="text-2xl font-black text-white tracking-tight">{reminders?.length || 0}</div>
+            </CardContent>
           </Card>
         </div>
 
-        {/* Main Action Button */}
+        {/* Big Action Button */}
         <div className="flex justify-center py-4">
             <Button 
               disabled={!isConnected}
@@ -137,7 +167,7 @@ export default function FeedPage() {
             </Button>
         </div>
 
-        {/* List Content */}
+        {/* Content Area */}
         <main className="space-y-8 bg-white/50 p-6 rounded-3xl border border-slate-100 shadow-inner">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Activity Feed</h2>
@@ -147,14 +177,14 @@ export default function FeedPage() {
           </div>
 
           {loadingReminders ? (
-            <div className="flex flex-col items-center justify-center py-32 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-32">
               <Loader2 className={`h-12 w-12 animate-spin ${brandText} mb-4`} />
-              <p className="text-xs font-black uppercase tracking-[0.3em] animate-pulse">Scanning Base Chain</p>
+              <p className="text-slate-400 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Scanning Base Chain</p>
             </div>
           ) : reminders?.length > 0 ? (
             <div className="grid gap-5">
               {reminders.map((r: any) => (
-                <Card key={r.id} className={`bg-white hover:border-indigo-200 transition-all border-slate-100 shadow-sm border-l-[6px] ${brandBorder.replace('border-', 'border-l-')}`}>
+                <Card key={r.id} className={`bg-white hover:border-indigo-200 transition-all border-slate-100 shadow-sm group border-l-[6px] ${brandBorder.replace('border-', 'border-l-')}`}>
                   <CardContent className="p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8">
                     <div className="space-y-2">
                       <h3 className="text-xl font-black text-slate-800 tracking-tight">{r.description}</h3>
@@ -163,7 +193,7 @@ export default function FeedPage() {
                         Deadline: {new Date(r.reminderTime).toLocaleDateString()}
                       </div>
                     </div>
-                    <div className="flex items-center gap-10 w-full sm:w-auto justify-between border-t sm:border-t-0 pt-6 sm:pt-0">
+                    <div className="flex items-center gap-10 w-full sm:w-auto justify-between border-t sm:border-t-0 pt-6 sm:pt-0 border-slate-50">
                       <div className="text-right">
                         <p className={`text-3xl font-black ${brandText} leading-none tracking-tighter`}>{r.tokenAmount}</p>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">TOKENS</p>
@@ -178,72 +208,89 @@ export default function FeedPage() {
             </div>
           ) : (
             <div className="text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
-               <Bell className="h-10 w-10 text-slate-200 mx-auto mb-6" />
+               <div className="bg-slate-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Bell className="h-10 w-10 text-slate-200" />
+               </div>
                <p className="text-slate-400 text-lg font-black uppercase tracking-widest">No Active Reminders</p>
+               <p className="text-sm text-slate-300 mt-2 font-medium italic">Your blockchain activity will appear here.</p>
             </div>
           )}
         </main>
 
-        {/* MODAL FORM */}
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-[425px] rounded-[2rem] border-none shadow-2xl p-8">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">New Reminder</DialogTitle>
-              <DialogDescription className="text-slate-500 font-medium">Set your commitment and stake your tokens.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+        <footer className="text-center py-20 opacity-30">
+            <p className="text-[11px] text-slate-900 uppercase tracking-[0.6em] font-black">
+              Built on Base
+            </p>
+        </footer>
+      </div>
+
+      {/* POP-UP FORM DIALOG */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] p-8 border-none shadow-2xl overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-black tracking-tighter text-slate-900">New Reminder</DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium">Set your goal and stake tokens to stay committed.</DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-6 pt-6">
+            <div className="space-y-2">
+              <Label htmlFor="desc" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">What is your goal?</Label>
+              <Input 
+                id="desc" 
+                placeholder="e.g. Finish 5km run" 
+                className="h-14 rounded-2xl border-slate-100 focus:border-[#4f46e5] focus:ring-4 focus:ring-[#4f46e5]/10 font-bold px-5"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="desc" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Description</Label>
+                <Label htmlFor="amount" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Stake (Tokens)</Label>
                 <Input 
-                  id="desc" 
-                  placeholder="e.g. Go to the gym" 
-                  className="rounded-xl h-12"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  id="amount" 
+                  type="number" 
+                  placeholder="10" 
+                  className="h-14 rounded-2xl border-slate-100 focus:border-[#4f46e5] font-black px-5"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stake Amount</Label>
-                  <Input 
-                    id="amount" 
-                    type="number" 
-                    className="rounded-xl h-12"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Deadline</Label>
-                  <Input 
-                    id="date" 
-                    type="date" 
-                    className="rounded-xl h-12"
-                    value={formData.deadline}
-                    onChange={(e) => setFormData({...formData, deadline: e.target.value})}
-                    required
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="date" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Deadline</Label>
+                <Input 
+                  id="date" 
+                  type="date" 
+                  className="h-14 rounded-2xl border-slate-100 focus:border-[#4f46e5] font-bold px-5"
+                  value={formData.deadline}
+                  onChange={(e) => setFormData({...formData, deadline: e.target.value})}
+                  required
+                />
               </div>
-              <DialogFooter className="pt-4">
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className={`w-full h-14 rounded-2xl ${brandPurple} font-black text-lg shadow-xl ${brandShadow}`}
-                >
-                  {isSubmitting ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirm Commitment"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </div>
 
-        <footer className="text-center py-20">
-           <p className="text-[11px] text-slate-300 uppercase tracking-[0.6em] font-black">Built on Base</p>
-        </footer>
-      </div>
+            <DialogFooter className="pt-4 flex flex-col gap-3">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className={`w-full h-16 rounded-2xl ${brandPurple} text-white font-black text-xl shadow-xl ${brandShadow} hover:opacity-90 active:scale-95 transition-all`}
+              >
+                {isSubmitting ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirm Commitment"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 font-bold text-xs uppercase tracking-widest"
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
