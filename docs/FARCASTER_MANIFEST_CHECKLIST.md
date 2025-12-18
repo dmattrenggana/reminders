@@ -15,10 +15,10 @@
 1. Go to: https://warpcast.com/~/developers/miniapps
 2. Register your miniapp with domain: `remindersbase.vercel.app`
 3. Copy the `accountAssociation` object (header, payload, signature)
-4. Replace the placeholder in `public/.well-known/farcaster.json`
+4. Replace the placeholder in `public/json`
 
 ### 3. Verify Manifest
-- Visit: `https://remindersbase.vercel.app/.well-known/farcaster.json`
+- Visit: `https://remindersbase.vercel.app/json`
 - Should return valid JSON with no errors
 - All URLs should be HTTPS and publicly accessible
 

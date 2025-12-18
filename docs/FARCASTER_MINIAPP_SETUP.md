@@ -21,7 +21,7 @@ Create these image assets in your `public` folder:
 
 ## Step 2: Update Manifest
 
-The manifest is located at `public/.well-known/farcaster.json`
+The manifest is located at `public/json`
 
 **Important: Update these values:**
 
@@ -48,7 +48,7 @@ Or use Warpcast Developer Portal:
 ## Step 3: Verify Manifest
 
 1. Deploy your app
-2. Navigate to: `https://yourdomain.com/.well-known/farcaster.json`
+2. Navigate to: `https://yourdomain.com/json`
 3. Verify the JSON loads correctly
 4. All URLs must be HTTPS and publicly accessible
 
