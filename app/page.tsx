@@ -1,31 +1,26 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import sdk from "@farcaster/frame-sdk"
-import { UnifiedConnectButton } from "@/components/auth/unified-connect-button"
-import { ReminderDashboard } from "@/components/reminders/reminder-dashboard"
-import { useAuth } from "@/lib/auth/auth-context"
-import Image from "next/image"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Clock, Shield, Coins, Users } from "-react"
+import { UnifiedConnectButton } from "@/components/auth/unified-connect-button";
+import { ReminderDashboard } from "@/components/reminders/reminder-dashboard";
+import { useAuth } from "@/lib/auth/auth-context";
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Clock, Shield, Coins, Users } from "lucide-react";
 
 export default function HomePage() {
-  const { isConnected, isFarcasterConnected } = useAuth()
+  const { isConnected, isFarcasterConnected, loading } = useAuth();
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        await sdk.actions.ready();
-      } catch (error) {
-        console.error("Farcaster SDK Error:", error);
-      }
-    };
-    init();
-  }, []);
+  const isAuthenticated = isConnected || isFarcasterConnected;
 
-  const isAuthenticated = isConnected || isFarcasterConnected
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,8 +38,12 @@ export default function HomePage() {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight">Base Reminders</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">Never Miss What Matters</p>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight">
+                  Base Reminders
+                </h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Never Miss What Matters
+                </p>
               </div>
             </div>
 
@@ -69,7 +68,9 @@ export default function HomePage() {
           <div className="container mx-auto px-4 py-8 max-w-7xl">
             <div className="space-y-8">
               <div className="text-center space-y-4 py-12">
-                <h2 className="text-4xl font-bold tracking-tight">Commitment-Based Reminders on Base</h2>
+                <h2 className="text-4xl font-bold tracking-tight text-foreground">
+                  Commitment-Based Reminders on Base
+                </h2>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                   Set reminders with token stakes. Complete them on time or lose your tokens to reward pool.
                 </p>
@@ -82,12 +83,12 @@ export default function HomePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-2xl font-bold tracking-tight">Dashboard Preview</h3>
-                    <p className="text-sm text-muted-foreground mt-1">See what you'll get when you connect</p>
+                    <p className="text-sm text-muted-foreground mt-1">See what you&apos;ll get when you connect</p>
                   </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Card className="p-6 border-2 border-dashed">
+                  <Card className="p-6 border-2 border-dashed opacity-70">
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
                         <Clock className="h-6 w-6 text-blue-500" />
@@ -99,7 +100,7 @@ export default function HomePage() {
                     </div>
                   </Card>
 
-                  <Card className="p-6 border-2 border-dashed">
+                  <Card className="p-6 border-2 border-dashed opacity-70">
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
                         <Shield className="h-6 w-6 text-green-500" />
@@ -111,7 +112,7 @@ export default function HomePage() {
                     </div>
                   </Card>
 
-                  <Card className="p-6 border-2 border-dashed">
+                  <Card className="p-6 border-2 border-dashed opacity-70">
                     <div className="flex items-center gap-4">
                       <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center">
                         <Coins className="h-6 w-6 text-purple-500" />
@@ -124,7 +125,7 @@ export default function HomePage() {
                   </Card>
                 </div>
 
-                <Card className="p-8 border-2 border-dashed">
+                <Card className="p-8 border-2 border-dashed opacity-70">
                   <div className="text-center space-y-4">
                     <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
                       <Users className="h-8 w-8 text-muted-foreground" />
@@ -143,5 +144,5 @@ export default function HomePage() {
         )}
       </main>
     </div>
-  )
+  );
 }
