@@ -1,53 +1,42 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useAuth } from "@/lib/auth/auth-context"
 import { useReminderService } from "./use-reminder-service"
+import { useAccount } from "wagmi"
+import { formatUnits } from "@/lib/utils/ethers-utils"
 
 export function useTokenBalance() {
-  const { address, isConnected, farcasterUser } = useAuth()
+  const { address, isConnected } = useAccount()
   const service = useReminderService()
   const [balance, setBalance] = useState<string>("0")
   const [isLoading, setIsLoading] = useState(true)
 
-  const loadBalance = useCallback(async () => {
-    if (!service) {
-      setIsLoading(false)
-      return
-    }
-
-    if (!address) {
+  const fetchBalance = useCallback(async () => {
+    if (!service || !address || !isConnected) {
+      setBalance("0")
       setIsLoading(false)
       return
     }
 
     try {
       setIsLoading(true)
-      const bal = await service.getTokenBalance(address)
-      setBalance(bal)
+      const rawBalance = await service.getTokenBalance(address)
+      setBalance(formatUnits(rawBalance, 18))
     } catch (error) {
-      console.error("[v0] Error loading token balance:", error)
+      console.error("Error fetching token balance:", error)
       setBalance("0")
     } finally {
       setIsLoading(false)
     }
-  }, [service, address, isConnected, farcasterUser])
+  }, [service, address, isConnected])
 
   useEffect(() => {
-    if (address) {
-      loadBalance()
-    } else {
-      setIsLoading(false)
-    }
-  }, [address, loadBalance])
-
-  const refresh = useCallback(() => {
-    loadBalance()
-  }, [loadBalance])
+    fetchBalance()
+  }, [fetchBalance])
 
   return {
     balance,
     isLoading,
-    refresh,
+    refresh: fetchBalance
   }
 }
