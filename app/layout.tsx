@@ -1,42 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const appUrl = "https://remindersbase.vercel.app";
-
 export const metadata: Metadata = {
   title: "Base Reminders",
-  description: "Never miss what matters on Farcaster",
-  openGraph: {
-    title: "Base Reminders",
-    description: "Never miss what matters on Farcaster",
-    url: appUrl,
-    siteName: "Base Reminders",
-    images: [`${appUrl}/og-image.png`],
-    type: "website",
-  },
+  description: "Farcaster Frame v2 App",
   other: {
     "fc:frame": JSON.stringify({
       version: "next",
-      imageUrl: `${appUrl}/og-image.png`,
+      imageUrl: "https://remindersbase.vercel.app/logo.jpg",
       button: {
-        title: "Launch Reminders",
+        title: "Remind Me!",
         action: {
           type: "launch_frame",
           name: "Base Reminders",
-          url: appUrl,
-          splashImageUrl: `${appUrl}/splash.png`,
+          url: "https://remindersbase.vercel.app",
+          splashImageUrl: "https://remindersbase.vercel.app/logo.jpg",
           splashBackgroundColor: "#ffffff",
         },
       },
@@ -47,13 +26,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {/* SEMUA provider (Wagmi, Auth, Farcaster) ada di dalam komponen ini */}
+      <body>
         <Providers>{children}</Providers>
       </body>
     </html>
