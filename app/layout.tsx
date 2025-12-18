@@ -1,28 +1,13 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./providers";
+import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 
-const appUrl = "https://remindersbase.vercel.app";
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Base Reminders",
-  description: "Farcaster Frame v2",
-  other: {
-    "fc:frame": JSON.stringify({
-      version: "next",
-      imageUrl: `${appUrl}/og-image.png`,
-      button: {
-        title: "Launch App",
-        action: {
-          type: "launch_frame",
-          name: "Base Reminders",
-          url: appUrl,
-          splashImageUrl: `${appUrl}/splash.png`,
-          splashBackgroundColor: "#ffffff",
-        },
-      },
-    }),
-  },
+  description: "Farcaster Frame for Reminders",
     generator: 'v0.app'
 };
 
@@ -33,8 +18,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
+      <body className={inter.className}>
+        {/* Provider ini yang mengelola login otomatis */}
+        <FarcasterProvider>
+          {children}
+        </FarcasterProvider>
       </body>
     </html>
   );
