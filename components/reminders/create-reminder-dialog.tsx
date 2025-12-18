@@ -1,352 +1,65 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-import { CalendarIcon, Clock } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useReminderService } from "@/hooks/use-reminder-service"
-import { useTokenBalance } from "@/hooks/use-token-balance"
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/lib/auth/auth-context"
-import { TOKEN_SYMBOL } from "@/lib/contracts/config"
-import { addHours, startOfDay, startOfToday } from "date-fns"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useAccount } from "wagmi";
+import { X } from "lucide-react";
 
 interface CreateReminderDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
 
 export function CreateReminderDialog({ open, onOpenChange, onSuccess }: CreateReminderDialogProps) {
-  const [description, setDescription] = useState("")
-  const [tokenAmount, setTokenAmount] = useState("")
-  const [date, setDate] = useState<Date>()
-  const [time, setTime] = useState("")
-  const [isCreating, setIsCreating] = useState(false)
-  const [showManualTime, setShowManualTime] = useState(false)
-  const [hours, setHours] = useState("")
-  const [minutes, setMinutes] = useState("")
-  const [txStatus, setTxStatus] = useState<string>("")
+  const { address } = useAccount();
+  const [loading, setLoading] = useState(false);
 
-  const service = useReminderService()
-  const { balance } = useTokenBalance()
-  const { toast } = useToast()
-  const { farcasterUser } = useAuth()
-
-  const setQuickReminder = (hoursFromNow: number) => {
-    const now = new Date()
-    const reminderTime = addHours(now, hoursFromNow)
-
-    setDate(new Date(reminderTime.getFullYear(), reminderTime.getMonth(), reminderTime.getDate()))
-    const hrs = String(reminderTime.getHours()).padStart(2, "0")
-    const mins = String(reminderTime.getMinutes()).padStart(2, "0")
-    setTime(`${hrs}:${mins}`)
-    setHours(hrs)
-    setMinutes(mins)
-  }
-
-  const handleManualTimeChange = (newHours: string, newMinutes: string) => {
-    setHours(newHours)
-    setMinutes(newMinutes)
-    if (newHours && newMinutes) {
-      setTime(`${newHours.padStart(2, "0")}:${newMinutes.padStart(2, "0")}`)
-    }
-  }
-
-  const handleCreate = async () => {
-    console.log("[v0] ========== CREATE REMINDER BUTTON CLICKED ==========")
-    console.log("[v0] Service available:", !!service)
-    console.log("[v0] Description:", description)
-    console.log("[v0] Token amount:", tokenAmount)
-    console.log("[v0] Date:", date)
-    console.log("[v0] Time:", time)
-    console.log("[v0] Farcaster user:", farcasterUser)
-
-    setTxStatus("Checking fields...")
-
-    if (!description || !tokenAmount || !date || !time) {
-      console.log("[v0] Missing fields validation failed")
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      })
-      setTxStatus("")
-      return
-    }
-
-    if (!service) {
-      console.error("[v0] No service available!")
-      toast({
-        title: "Not Connected",
-        description: "Please connect your wallet first",
-        variant: "destructive",
-      })
-      setTxStatus("")
-      return
-    }
-
-    if (Number.parseInt(balance) < Number.parseInt(tokenAmount)) {
-      console.log("[v0] Insufficient balance")
-      toast({
-        title: "Insufficient Balance",
-        description: `You need ${tokenAmount} ${TOKEN_SYMBOL} tokens. Current balance: ${balance} ${TOKEN_SYMBOL}`,
-        variant: "destructive",
-      })
-      setTxStatus("")
-      return
-    }
-
-    setIsCreating(true)
-    setTxStatus("Preparing transaction...")
-
-    try {
-      console.log("[v0] All validations passed, preparing to call service.createReminder")
-      const reminderDate = new Date(date)
-      reminderDate.setHours(Number.parseInt(hours), Number.parseInt(minutes), 0, 0)
-
-      console.log("[v0] Reminder date set to:", reminderDate)
-      console.log("[v0] About to call service.createReminder with:")
-      console.log("[v0] - tokenAmount:", tokenAmount)
-      console.log("[v0] - reminderDate:", reminderDate)
-      console.log("[v0] - description:", description)
-      console.log("[v0] - farcasterUsername:", farcasterUser?.username)
-
-      const reminderId = await service.createReminder(
-        tokenAmount,
-        reminderDate,
-        description,
-        farcasterUser?.username,
-        (status) => {
-          console.log("[v0] Progress update:", status)
-          setTxStatus(status)
-        },
-      )
-
-      console.log("[v0] createReminder returned ID:", reminderId)
-      setTxStatus("✅ Reminder created!")
-
-      toast({
-        title: "Reminder Created",
-        description: `Your reminder has been created with ${tokenAmount} ${TOKEN_SYMBOL} locked`,
-      })
-
-      onSuccess()
-
-      // Reset form
-      setDescription("")
-      setTokenAmount("")
-      setDate(undefined)
-      setTime("")
-      setHours("")
-      setMinutes("")
-
-      setTimeout(() => {
-        setTxStatus("")
-        onOpenChange(false)
-      }, 2000)
-    } catch (error: any) {
-      console.error("[v0] ❌❌❌ Error in handleCreate:", error)
-      console.error("[v0] Error type:", typeof error)
-      console.error("[v0] Error message:", error?.message)
-      console.error("[v0] Error stack:", error?.stack)
-      setTxStatus("")
-      toast({
-        title: "Creation Failed",
-        description: error.message || "Failed to create reminder. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsCreating(false)
-      console.log("[v0] ========== CREATE REMINDER FLOW COMPLETED ==========")
-    }
-  }
+  if (!open) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Reminder</DialogTitle>
-          <DialogDescription>
-            Lock tokens as commitment. You can reclaim them by confirming the reminder on time.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden relative">
+        <button 
+          onClick={() => onOpenChange(false)}
+          className="absolute right-4 top-4 text-slate-400 hover:text-slate-600"
+        >
+          <X className="h-4 w-4" />
+        </button>
 
-        <div className="space-y-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="description">What do you want to remember?</Label>
-            <Textarea
-              id="description"
-              placeholder="e.g., Submit project proposal, Call dentist..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
+        <div className="p-6">
+          <h2 className="text-xl font-bold mb-1">Create New Reminder</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Set a commitment with Base tokens.
+          </p>
 
-          <div className="space-y-2">
-            <Label htmlFor="tokenAmount">Token Commitment ({TOKEN_SYMBOL})</Label>
-            <Input
-              id="tokenAmount"
-              type="number"
-              placeholder="0"
-              value={tokenAmount}
-              onChange={(e) => setTokenAmount(e.target.value)}
-              min="0"
-              step="1"
-            />
-            <p className="text-xs text-muted-foreground">
-              Your balance: {balance} {TOKEN_SYMBOL}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs">Quick Set</Label>
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={() => setQuickReminder(1)} className="text-xs">
-                +1 Hour
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickReminder(2)} className="text-xs">
-                +2 Hours
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickReminder(3)} className="text-xs">
-                +3 Hours
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setQuickReminder(4)} className="text-xs">
-                +4 Hours
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Reminder Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    disabled={(date) => startOfDay(date) < startOfToday()}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label htmlFor="description">What is your commitment?</Label>
+              <Textarea id="description" placeholder="e.g. Gym for 1 hour" />
             </div>
-
+            
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="time">Reminder Time</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-xs"
-                  onClick={() => setShowManualTime(!showManualTime)}
-                >
-                  {showManualTime ? "Use Picker" : "Manual Entry"}
-                </Button>
-              </div>
-
-              {showManualTime ? (
-                <div className="flex gap-2 items-center">
-                  <div className="flex-1">
-                    <Input
-                      type="number"
-                      placeholder="HH"
-                      value={hours}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        if (val === "" || (Number(val) >= 0 && Number(val) <= 23)) {
-                          handleManualTimeChange(val, minutes)
-                        }
-                      }}
-                      min="0"
-                      max="23"
-                      className="text-center"
-                    />
-                  </div>
-                  <span className="text-muted-foreground">:</span>
-                  <div className="flex-1">
-                    <Input
-                      type="number"
-                      placeholder="MM"
-                      value={minutes}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        if (val === "" || (Number(val) >= 0 && Number(val) <= 59)) {
-                          handleManualTimeChange(hours, val)
-                        }
-                      }}
-                      min="0"
-                      max="59"
-                      className="text-center"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-                  <Input
-                    id="time"
-                    type="time"
-                    value={time}
-                    onChange={(e) => {
-                      setTime(e.target.value)
-                      const [h, m] = e.target.value.split(":")
-                      setHours(h)
-                      setMinutes(m)
-                    }}
-                    className="pl-10 h-10 cursor-pointer"
-                    style={{ WebkitAppearance: "none" }}
-                  />
-                </div>
-              )}
+              <Label htmlFor="amount">Stake Amount (Tokens)</Label>
+              <Input id="amount" type="number" placeholder="100" />
             </div>
-          </div>
 
-          <div className="rounded-lg bg-muted p-4 space-y-2">
-            <h4 className="text-sm font-medium">Confirmation Window</h4>
-            <p className="text-xs text-muted-foreground">
-              Notifications start 1 hour before your reminder time and repeat every 10 minutes. You have until 1 hour
-              after the reminder time to confirm, or your tokens will be burned.
-            </p>
+            <Button 
+              className="w-full bg-purple-600 hover:bg-purple-700 mt-2"
+              disabled={!address || loading}
+              onClick={() => {
+                // Logika transaksi Anda di sini
+                onSuccess();
+              }}
+            >
+              {address ? "Confirm Stake" : "Connect Wallet First"}
+            </Button>
           </div>
         </div>
-
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={isCreating}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleCreate}
-            disabled={isCreating || !description || !tokenAmount || !date || !time}
-            className="flex-1"
-          >
-            {isCreating ? "Creating..." : "Create Reminder"}
-          </Button>
-        </div>
-
-        {txStatus && (
-          <div className="rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 text-center">
-            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">{txStatus}</p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  )
+      </div>
+    </div>
+  );
 }
