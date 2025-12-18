@@ -1,8 +1,30 @@
-"use client"
+"use client";
 
-import { AuthProvider } from "@/lib/auth/auth-context"
-import type { ReactNode } from "react"
+import { useEffect } from "react";
+import sdk from "@farcaster/frame-sdk";
 
-export function Providers({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>
+export function FrameSDKInitializer() {
+  useEffect(() => {
+    const initialize = async () => {
+      sdk.actions.ready();
+    };
+
+    initialize();
+  }, []);
+
+  return null;
+}
+import { FrameSDKInitializer } from "@/components/FrameSDKInitializer"; 
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <Providers>
+          <FrameSDKInitializer /> 
+          {children}
+        </Providers>
+      </body>
+    </html>
+  );
 }
