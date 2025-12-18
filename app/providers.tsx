@@ -14,17 +14,6 @@ export function FrameSDKInitializer() {
 
   return null;
 }
-import { FrameSDKInitializer } from "@/components/FrameSDKInitializer"; 
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        <Providers>
-          <FrameSDKInitializer /> {/* <--- Tambahkan ini */}
-          {children}
-        </Providers>
-      </body>
-    </html>
-  );
-}
+useEffect(() => {
+  sdk.actions.ready();
+}, []);
