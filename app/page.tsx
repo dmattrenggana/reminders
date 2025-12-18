@@ -33,19 +33,28 @@ import Image from "next/image";
 import sdk from "@farcaster/frame-sdk";
 
 export default function FeedPage() {
+  // --- STATE UNTUK MENCEGAH HYDRATION ERROR (#418) ---
+  const [isClient, setIsClient] = useState(false);
+
   const { user } = useFarcaster();
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   
-  // Mengambil data dari hook (Pastikan hook sudah ada, meski createReminder belum diimplementasikan di sana)
-  const { reminders, isLoading: loadingReminders, refresh } = useReminders();
+  const { reminders = [], isLoading: loadingReminders, refresh } = useReminders();
   const { balance } = useTokenBalance();
 
-  // 1. Farcaster SDK Handshake (Menghilangkan Splash Screen)
+  // 1. Farcaster SDK Handshake & Hydration Fix
   useEffect(() => {
+    setIsClient(true); // Menandai bahwa kita sudah di browser
+    
     const init = async () => {
-      sdk.actions.ready();
+      try {
+        await sdk.actions.ready();
+        console.log("Farcaster SDK Ready");
+      } catch (error) {
+        console.error("SDK Initialization failed", error);
+      }
     };
     init();
   }, []);
@@ -71,16 +80,11 @@ export default function FeedPage() {
     burned: reminders?.filter(r => r.status === 'Burned' || r.status === 'Failed').length || 0
   };
 
-  // 3. Handle Submit (Simulasi Blockchain)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
     try {
-      // Simulasi delay transaksi blockchain
-      console.log("Submitting Reminder:", formData);
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
       setIsModalOpen(false);
       setFormData({ description: "", amount: "", deadline: "" });
       refresh();
@@ -91,6 +95,15 @@ export default function FeedPage() {
       setIsSubmitting(false);
     }
   };
+
+  // --- JIKA BELUM DI BROWSER, TAMPILKAN LOADING (PENTING!) ---
+  if (!isClient) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans">
