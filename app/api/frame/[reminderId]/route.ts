@@ -1,46 +1,43 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest, { params }: { params: { reminderId: string } }) {
-  const reminderId = params.reminderId
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://remindersbase.vercel.app"
-
-  // Fetch reminder data
-  let reminderData = null
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ reminderId: string }> }
+) {
   try {
-    const response = await fetch(`${baseUrl}/api/reminders/public`)
-    const data = await response.json()
-    reminderData = data.reminders?.find((r: any) => r.id.toString() === reminderId)
+    const { reminderId } = await params;
+
+    // Logika dasar untuk Frame v2 Redirect/Response
+    // Anda bisa menyesuaikan payload ini sesuai kebutuhan metadata Frame Anda
+    return NextResponse.json({
+      id: reminderId,
+      message: "Frame metadata for reminder",
+      // Tambahkan property lain yang dibutuhkan frame Anda di sini
+    });
   } catch (error) {
-    console.error("Error fetching reminder:", error)
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
+}
 
-  const html = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta property="fc:frame" content="vNext" />
-    <meta property="fc:frame:image" content="${baseUrl}/feed/${reminderId}/opengraph-image" />
-    <meta property="fc:frame:button:1" content="View & Help Remind" />
-    <meta property="fc:frame:button:1:action" content="link" />
-    <meta property="fc:frame:button:1:target" content="${baseUrl}/feed?reminder=${reminderId}" />
-    <meta property="og:image" content="${baseUrl}/feed/${reminderId}/opengraph-image" />
-    <meta property="og:title" content="${reminderData?.description || "Base Reminders"}" />
-    <meta property="og:description" content="Help ${reminderData?.farcasterUsername || "this user"} stay committed and earn rewards!" />
-    <title>${reminderData?.description || "Base Reminders"}</title>
-  </head>
-  <body>
-    <h1>${reminderData?.description || "Base Reminders"}</h1>
-    <p>Redirecting to app...</p>
-    <script>
-      window.location.href = "${baseUrl}/feed?reminder=${reminderId}";
-    </script>
-  </body>
-</html>
-  `
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ reminderId: string }> }
+) {
+  try {
+    const { reminderId } = await params;
+    const body = await request.json();
 
-  return new NextResponse(html, {
-    headers: {
-      "Content-Type": "text/html",
-    },
-  })
+    return NextResponse.json({
+      message: `Action processed for reminder ${reminderId}`,
+      received: body,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to process post request" },
+      { status: 400 }
+    );
+  }
 }
