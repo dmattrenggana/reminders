@@ -1,0 +1,24 @@
+{
+  "solidity": {
+    "version": "0.8.20",
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      }
+    }
+  },
+  "networks": {
+    "base": {
+      "url": "https://mainnet.base.org",
+      "chainId": 8453,
+      "accounts": "PRIVATE_KEY_FROM_ENV"
+    }
+  },
+  "paths": {
+    "sources": "./contracts",
+    "tests": "./test",
+    "cache": "./cache",
+    "artifacts": "./artifacts"
+  }
+}
