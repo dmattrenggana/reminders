@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { 
   Plus, Bell, Loader2, Wallet, RefreshCw, 
   CheckCircle2, Flame, Lock, Calendar 
-} from "lucide-react";
+} from "lucide-material";
 import Image from "next/image";
 import sdk from "@farcaster/frame-sdk";
 
@@ -37,15 +37,12 @@ export default function DashboardClient() {
   const [isSDKReady, setIsSDKReady] = useState(false);
   const isFirstMount = useRef(true);
 
-  // --- SAFETY TRIGGER UNTUK SPLASH SCREEN ---
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
         try {
-          // Memberi sedikit jeda agar DOM siap
           await new Promise(resolve => setTimeout(resolve, 500));
           await sdk.actions.ready();
-          console.log("Farcaster SDK Ready Called");
         } catch (e) {
           console.error("SDK error:", e);
         } finally {
@@ -55,13 +52,7 @@ export default function DashboardClient() {
       init();
       isFirstMount.current = false;
     }
-
-    // Safety Net: Paksa Dashboard muncul setelah 4 detik 
-    // meskipun blockchain sedang error/loading
-    const timeout = setTimeout(() => {
-      setIsSDKReady(true);
-    }, 4000);
-
+    const timeout = setTimeout(() => setIsSDKReady(true), 4000);
     return () => clearTimeout(timeout);
   }, []);
 
@@ -92,7 +83,6 @@ export default function DashboardClient() {
     } finally { setIsSubmitting(false); }
   };
 
-  // Jika SDK belum siap, tampilkan loading screen internal
   if (!isSDKReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
@@ -116,29 +106,48 @@ export default function DashboardClient() {
             <div className="space-y-1">
               <h1 className="text-3xl font-black tracking-tighter text-slate-900">ReminderBase</h1>
               <div className="flex items-center gap-2">
+                {/* SLOGAN TETAP STATIS */}
                 <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>
-                  {user ? `@${user.username}` : "Never Miss What Matters"}
+                  Never Miss What Matters
                 </p>
                 {loadingReminders && <Loader2 className="h-3 w-3 animate-spin text-slate-300" />}
               </div>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
             {isConnected ? (
-              <div className="flex items-center gap-4 bg-slate-50 pl-5 pr-1 py-1 rounded-full border border-slate-100">
-                <p className={`text-sm font-mono font-bold ${brandText}`}>{balance} TOKENS</p>
-                <Button variant="ghost" size="sm" onClick={() => disconnect()} className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-bold px-4 text-slate-500">
-                  {address?.slice(0, 6)}...
+              <div className="flex items-center gap-3 bg-slate-50 pl-5 pr-1 py-1 rounded-full border border-slate-100 shadow-sm">
+                {/* BALANCE DENGAN FORMAT DESIMAL RAPI */}
+                <p className={`text-[10px] font-mono font-black ${brandText} border-r border-slate-200 pr-3`}>
+                  {balance ? Number(balance).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                  }) : "0"} TOKENS
+                </p>
+                
+                {/* TOMBOL MENAMPILKAN USERNAME, BUKAN WALLET */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => disconnect()} 
+                  className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-5 text-slate-700 hover:text-red-500 transition-colors"
+                >
+                  {user?.username ? `@${user.username}` : "Connected"}
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => connect({ connector: connectors[0] })} className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}>
+              <Button 
+                onClick={() => connect({ connector: connectors[0] })} 
+                className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}
+              >
                 <Wallet className="mr-2 h-5 w-5" /> Connect Wallet
               </Button>
             )}
           </div>
         </header>
 
+        {/* STATS SECTION */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             { label: "Token Locked", val: stats.locked, icon: Lock, color: "text-amber-500" },
@@ -166,6 +175,7 @@ export default function DashboardClient() {
           </Card>
         </div>
 
+        {/* CREATE BUTTON */}
         <div className="flex justify-center py-4">
             <Button 
               disabled={!isConnected}
@@ -177,6 +187,7 @@ export default function DashboardClient() {
             </Button>
         </div>
 
+        {/* ACTIVITY FEED */}
         <main className="space-y-8 bg-white/50 p-6 rounded-3xl border border-slate-100 shadow-inner">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Activity Feed</h2>
@@ -224,6 +235,7 @@ export default function DashboardClient() {
         </main>
       </div>
 
+      {/* DIALOG MODAL */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] p-8">
           <DialogHeader>
