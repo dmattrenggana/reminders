@@ -8,7 +8,6 @@ export function FrameSDKInitializer() {
   sdk.actions.ready();
 }, []);
     };
-
     initialize();
   }, []);
 
