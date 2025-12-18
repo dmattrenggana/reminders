@@ -9,10 +9,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "FID is required" }, { status: 400 });
   }
 
-  const apiKey = process.env.NEYNAR_API_KEY || "NEYNAR_FROZEN_KEY";
+  // Gunakan API Key dari env atau string kosong sebagai fallback
+  const apiKey = process.env.NEYNAR_API_KEY || "";
   const client = new NeynarAPIClient(apiKey);
 
   try {
+    // Perbaikan: Bungkus FID ke dalam objek dengan properti 'fids'
     const response = await client.fetchBulkUsers({
       fids: [Number.parseInt(fid)]
     });
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
       followerCount: user.follower_count,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Neynar API Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
