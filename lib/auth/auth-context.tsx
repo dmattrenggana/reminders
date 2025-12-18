@@ -1,20 +1,20 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
 
 interface FarcasterUser {
   fid: string
   username: string
   displayName: string
-  pfpUrl: string
-  verifiedAddress: string
+  pfpUrl?: string
+  verifiedAddress?: string
 }
 
 interface AuthContextType {
   isAuthenticated: boolean
-  address: string | undefined
-  farcasterUser: FarcasterUser | null
+  address?: string
+  farcasterUser?: FarcasterUser
   isInMiniApp: boolean
   disconnect: () => void
 }
@@ -23,20 +23,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { address, isConnected } = useAccount()
-  const { disconnect: disconnectWallet } = useDisconnect()
-  const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null)
+  const { disconnect: wagmiDisconnect } = useDisconnect()
+  const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | undefined>()
   const [isInMiniApp, setIsInMiniApp] = useState(false)
 
-  // Detect Farcaster miniapp
   useEffect(() => {
-    const hasFrameProvider = typeof window !== 'undefined' && '__frameEthProvider' in window
-    setIsInMiniApp(hasFrameProvider)
-  }, [])
+    // Check if running in Farcaster miniapp
+    if (typeof window !== 'undefined' && (window as any).__frameEthProvider) {
+      setIsInMiniApp(true)
+    }
 
-  // Parse Farcaster OAuth callback
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
+    // Check URL parameters for Farcaster OAuth callback
     const params = new URLSearchParams(window.location.search)
     const fid = params.get('fid')
     const username = params.get('username')
@@ -49,20 +46,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fid,
         username,
         displayName: displayName || username,
-        pfpUrl: pfpUrl || '',
-        verifiedAddress: verifiedAddress || '',
+        pfpUrl: pfpUrl || undefined,
+        verifiedAddress: verifiedAddress || undefined,
       })
-      // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
 
   const disconnect = () => {
-    disconnectWallet()
-    setFarcasterUser(null)
+    wagmiDisconnect()
+    setFarcasterUser(undefined)
   }
 
-  const isAuthenticated = isConnected || farcasterUser !== null
+  const isAuthenticated = isConnected || !!farcasterUser
 
   return (
     <AuthContext.Provider
@@ -81,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
