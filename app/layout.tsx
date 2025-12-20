@@ -5,13 +5,17 @@ import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// URL aplikasi Anda (pastikan tidak ada / di ujung untuk bagian domain)
+// URL aplikasi Anda
 const appUrl = "https://remindersbase.vercel.app";
 
 export const metadata: Metadata = {
   title: "Reminders",
-  description: "Farcaster Frame for Reminders",
+  description: "Never Miss What Matters",
   other: {
+    // Verifikasi Base App
+    "base:app_id": "69459f9dd77c069a945be194",
+    
+    // Metadata Farcaster Frame
     "fc:frame": JSON.stringify({
       version: "next",
       imageUrl: `${appUrl}/logo.jpg`,
@@ -22,7 +26,7 @@ export const metadata: Metadata = {
           name: "Reminders",
           url: `${appUrl}/`,
           splashImageUrl: `${appUrl}/logo.jpg`,
-          splashBackgroundColor: "#1e90ff",
+          splashBackgroundColor: "#4f46e5", // Disesuaikan dengan warna brand indigo Anda
         },
       },
     }),
