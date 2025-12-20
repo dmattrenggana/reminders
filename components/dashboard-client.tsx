@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useAccount, useConnect, useDisconnect, useWriteContract } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useWriteContract, usePublicClient } from "wagmi";
 import { useReminders } from "@/hooks/useReminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
@@ -18,14 +18,38 @@ import sdk from "@farcaster/frame-sdk";
 import { formatUnits, parseUnits } from "viem";
 import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
+// Minimal ABI untuk fungsi ERC20 yang umum
+const ERC20_ABI = [
+  {
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" },
+      { "internalType": "address", "name": "spender", "type": "address" }
+    ],
+    "name": "allowance",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "spender", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "approve",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+];
+
 export default function DashboardClient() {
-  // 1. User State & Context
   const { user: providerUser, isLoaded: isFarcasterLoaded } = useFarcaster();
   const [contextUser, setContextUser] = useState<any>(null);
 
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   
   const { 
@@ -40,12 +64,10 @@ export default function DashboardClient() {
   const isFirstMount = useRef(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Styling Constants
   const brandPurple = "bg-[#4f46e5]";
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
-  // Gabungkan data user: Utamakan provider, fallback ke local context
   const displayUser = providerUser || contextUser;
 
   const stats = {
@@ -54,16 +76,12 @@ export default function DashboardClient() {
     burned: reminders?.filter((r: any) => r.isResolved && !r.isCompleted).length || 0
   };
 
-  // 2. SDK Initialization
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
         try {
           const context = (await sdk.actions.ready()) as any;
-          
-          if (context?.user) {
-            setContextUser(context.user);
-          }
+          if (context?.user) setContextUser(context.user);
         } catch (e) {
           console.error("SDK Ready Error:", e);
         } finally {
@@ -75,74 +93,111 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // 3. Wallet Connection Logic
   const handleConnect = () => {
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
     const injectedConnector = connectors.find((c) => c.id === "injected");
+    connect({ connector: fcConnector || injectedConnector || connectors[0] });
+  };
 
-    if (fcConnector) {
-      connect({ connector: fcConnector });
-    } else if (injectedConnector) {
-      connect({ connector: injectedConnector });
-    } else {
-      connect({ connector: connectors[0] });
+  // --- LOGIC: CEK ALLOWANCE ---
+  const checkAllowance = async (amount: bigint) => {
+    if (!publicClient || !address) return false;
+    try {
+      const currentAllowance = await publicClient.readContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [address, VAULT_ADDRESS as `0x${string}`],
+      }) as bigint;
+      
+      return currentAllowance >= amount;
+    } catch (e) {
+      console.error("Allowance check failed", e);
+      return false;
     }
   };
 
-  // 4. Contract Interactions
+  // --- LOGIC: CREATE REMINDER DENGAN SMART APPROVAL ---
   const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
-    if (!isConnected) return alert("Please connect your wallet first.");
+    if (!isConnected || !publicClient || !address) return alert("Please connect your wallet.");
     if (!desc || !amt || !dl) return alert("Please fill all fields.");
     
     setIsSubmitting(true);
     try {
       const amountInWei = parseUnits(amt, 18);
-      const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
+      const deadlineTimestamp = BigInt(Math.floor(new Date(dl).getTime() / 1000));
 
-      // STEP 1: APPROVE
-      await writeContractAsync({
-        address: TOKEN_ADDRESS as `0x${string}`,
-        abi: [{
-          "inputs": [
-            { "internalType": "address", "name": "spender", "type": "address" },
-            { "internalType": "uint256", "name": "amount", "type": "uint256" }
-          ],
-          "name": "approve",
-          "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        }],
-        functionName: 'approve',
-        args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
+      // 1. CEK APAKAH PERLU APPROVE?
+      const isApproved = await checkAllowance(amountInWei);
+      
+      if (!isApproved) {
+        console.log("Allowance insufficient. Requesting approval...");
+        const approveGas = await publicClient.estimateContractGas({
+          address: TOKEN_ADDRESS as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
+          account: address,
+        });
+
+        await writeContractAsync({
+          address: TOKEN_ADDRESS as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
+          gas: (approveGas * 120n) / 100n,
+        });
+        console.log("Approval granted.");
+      } else {
+        console.log("Already approved. Skipping approval step.");
+      }
+
+      // 2. LOCK TOKENS
+      const lockGas = await publicClient.estimateContractGas({
+        address: VAULT_ADDRESS as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: 'lockTokens',
+        args: [amountInWei, deadlineTimestamp],
+        account: address,
       });
 
-      // STEP 2: LOCK
       await writeContractAsync({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
         functionName: 'lockTokens',
-        args: [amountInWei, BigInt(deadlineTimestamp)],
+        args: [amountInWei, deadlineTimestamp],
+        gas: (lockGas * 130n) / 100n,
       });
       
       alert("Success! Your commitment has been locked on-chain.");
       refreshReminders(); 
       refreshBalance();
     } catch (error: any) {
-      console.error(error);
+      console.error("Contract Error:", error);
       const msg = error.shortMessage || error.message || "Transaction failed";
-      alert("Error: " + msg);
+      alert(msg.includes("User rejected") ? "Transaction cancelled." : "Error: " + msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleConfirmCompleted = async (id: number) => {
+    if (!publicClient || !address) return;
     try {
+      const gas = await publicClient.estimateContractGas({
+        address: VAULT_ADDRESS as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: 'claimSuccess',
+        args: [BigInt(id)],
+        account: address,
+      });
+
       await writeContractAsync({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
         functionName: 'claimSuccess',
         args: [BigInt(id)],
+        gas: (gas * 120n) / 100n,
       });
       alert("Goal Accomplished!");
       refreshReminders();
@@ -235,7 +290,6 @@ export default function DashboardClient() {
            </Card>
         </div>
 
-        {/* Activity List */}
         <main className="space-y-8 bg-white/50 p-6 rounded-[2rem] border border-slate-100">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
