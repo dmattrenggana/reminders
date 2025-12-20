@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useWriteContract } from "wagmi";
 import { useReminders } from "@/hooks/useReminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
@@ -15,15 +15,15 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import sdk from "@farcaster/frame-sdk";
-import { formatUnits } from "viem";
-import { ethers } from "ethers";
-import { VAULT_ABI, VAULT_ADDRESS } from "@/constants";
+import { formatUnits, parseUnits } from "viem";
+import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
 export default function DashboardClient() {
   const { user } = useFarcaster();
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { writeContractAsync } = useWriteContract();
   
   const { 
     activeReminders: reminders = [], 
@@ -41,7 +41,6 @@ export default function DashboardClient() {
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
-  // Hitung stats berdasarkan field rewardPool dari ABI Anda
   const stats = {
     locked: reminders?.filter((r: any) => !r.isResolved).reduce((acc: number, curr: any) => acc + (Number(curr.rewardPool) || 0), 0) || 0,
     completed: reminders?.filter((r: any) => r.isResolved && r.isCompleted).length || 0,
@@ -68,59 +67,46 @@ export default function DashboardClient() {
     const injected = connectors.find(c => c.id === 'injected');
     const farcaster = connectors.find(c => c.id === 'farcaster-frame');
     
-    // Gunakan connector yang sesuai dengan lingkungan (Miniapp vs Browser)
     if (farcaster && typeof window !== 'undefined' && (window as any).ethereum?.isFarcaster) {
       connect({ connector: farcaster });
     } else if (injected) {
       connect({ connector: injected });
     } else {
-      alert("Wallet not found. Please install MetaMask extension.");
+      alert("No wallet found. Please install MetaMask.");
     }
-  };
-
-  const getUniversalSigner = async () => {
-    if (typeof window === "undefined") throw new Error("Window not found");
-    // Jika di dalam Farcaster Frame
-    if (sdk?.wallet?.ethProvider) {
-      const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
-      return await provider.getSigner();
-    }
-    // Jika di Web Browser biasa
-    if (window.ethereum) {
-      const provider = new ethers.BrowserProvider(window.ethereum as any);
-      return await provider.getSigner();
-    }
-    throw new Error("No wallet provider detected.");
   };
 
   const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
+    if (!isConnected) return alert("Please connect your wallet first.");
     if (!desc || !amt || !dl) return alert("Please fill all fields.");
+    
     setIsSubmitting(true);
     try {
-      const signer = await getUniversalSigner();
-      const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
-      
-      // Ambil alamat token RMND dari contract
-      const tokenAddress = await vaultContract.rmndToken();
-      const tokenContract = new ethers.Contract(tokenAddress, [
-        "function approve(address spender, uint256 amount) public returns (bool)"
-      ], signer);
-      
-      const amountInWei = ethers.parseUnits(amt, 18);
+      const amountInWei = parseUnits(amt, 18);
       const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
+
+      // Step 1: Approve via Wagmi (Lebih stabil di browser)
+      await writeContractAsync({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ["function approve(address spender, uint256 amount) public returns (bool)"],
+        functionName: 'approve',
+        args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
+      });
+
+      // Step 2: Lock via Wagmi
+      await writeContractAsync({
+        address: VAULT_ADDRESS as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: 'lockTokens',
+        args: [amountInWei, deadlineTimestamp],
+      });
       
-      // Step 1: Approve
-      const approveTx = await tokenContract.approve(VAULT_ADDRESS, amountInWei);
-      await approveTx.wait();
-      
-      // Step 2: Lock
-      const lockTx = await vaultContract.lockTokens(amountInWei, deadlineTimestamp);
-      await lockTx.wait();
-      
-      alert("Tokens Locked Successfully!");
-      refreshReminders(); refreshBalance();
+      alert("Success! Your commitment is locked.");
+      refreshReminders(); 
+      refreshBalance();
     } catch (error: any) {
-      alert("Error: " + (error.reason || error.message));
+      const msg = error.shortMessage || error.message || "User rejected";
+      alert("Error: " + msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -128,14 +114,16 @@ export default function DashboardClient() {
 
   const handleConfirmCompleted = async (id: number) => {
     try {
-      const signer = await getUniversalSigner();
-      const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
-      const tx = await contract.claimSuccess(id);
-      await tx.wait();
+      await writeContractAsync({
+        address: VAULT_ADDRESS as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: 'claimSuccess',
+        args: [BigInt(id)],
+      });
       alert("Goal Accomplished!");
       refreshReminders();
     } catch (error: any) {
-      alert("Failed: " + (error.reason || error.message));
+      alert("Failed: " + (error.shortMessage || error.message));
     }
   };
 
@@ -146,13 +134,7 @@ export default function DashboardClient() {
     } catch (e) { return "0"; }
   };
 
-  const truncateAddr = (addr: string | undefined) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Connected";
-
-  if (!isSDKReady) return (
-    <div className="flex min-h-screen items-center justify-center bg-white">
-      <Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" />
-    </div>
-  );
+  if (!isSDKReady) return <div className="flex min-h-screen items-center justify-center bg-white"><Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" /></div>;
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans pb-32">
@@ -175,15 +157,12 @@ export default function DashboardClient() {
                 </p>
                 <Button variant="ghost" size="sm" onClick={() => disconnect()} className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-3 text-slate-700 hover:text-red-500 transition-all flex items-center gap-2">
                   {user?.pfpUrl && <img src={user.pfpUrl} alt="PFP" className="w-6 h-6 rounded-full border border-slate-100" />}
-                  <span>{user?.username ? `@${user.username}` : truncateAddr(address)}</span>
+                  <span>{user?.username ? `@${user.username}` : `${address?.slice(0,6)}...${address?.slice(-4)}`}</span>
                   <LogOut className="h-3 w-3 opacity-30" />
                 </Button>
               </div>
             ) : (
-              <Button 
-                onClick={handleConnect} 
-                className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}
-              >
+              <Button onClick={handleConnect} className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}>
                 <Wallet className="mr-2 h-5 w-5" /> Connect Wallet
               </Button>
             )}
@@ -216,6 +195,7 @@ export default function DashboardClient() {
               <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync Data
             </Button>
           </div>
+          
           {reminders?.length > 0 ? (
             <div className="grid gap-5">
               {reminders.map((r: any) => (
@@ -228,15 +208,10 @@ export default function DashboardClient() {
                       <h3 className="text-xl font-black text-slate-800">Task #{r.id}</h3>
                       <div className="flex items-center gap-2 text-slate-400">
                         <Bell className="w-3 h-3" />
-                        <p className="text-[11px] font-bold uppercase">
-                          Deadline: {new Date(Number(r.deadline) * 1000).toLocaleString()}
-                        </p>
+                        <p className="text-[11px] font-bold uppercase">Deadline: {new Date(Number(r.deadline) * 1000).toLocaleString()}</p>
                       </div>
                       {!r.isResolved && (
-                        <Button 
-                          onClick={() => handleConfirmCompleted(r.id)} 
-                          className="mt-4 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] h-10 px-6 rounded-xl uppercase transition-all flex items-center gap-2 shadow-lg shadow-green-100"
-                        >
+                        <Button onClick={() => handleConfirmCompleted(r.id)} className="mt-4 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] h-10 px-6 rounded-xl uppercase transition-all flex items-center gap-2 shadow-lg shadow-green-100">
                           <CheckCircle2 className="w-4 h-4" /> Mark as Done
                         </Button>
                       )}
@@ -257,11 +232,7 @@ export default function DashboardClient() {
           )}
         </main>
       </div>
-      <FloatingCreate 
-        symbol={symbol} 
-        isSubmitting={isSubmitting} 
-        onConfirm={handleCreateReminder} 
-      />
+      <FloatingCreate symbol={symbol} isSubmitting={isSubmitting} onConfirm={handleCreateReminder} />
     </div>
   );
 }
