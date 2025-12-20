@@ -71,8 +71,10 @@ export default function DashboardClient() {
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
-  // Farcaster User Priority
-  const displayUser = providerUser || contextUser;
+  // FIX: Farcaster User Priority Logic
+  const displayUser = contextUser || providerUser;
+  const username = displayUser?.username;
+  const pfpUrl = displayUser?.pfpUrl || displayUser?.pfp;
 
   // FIX: Safe Balance Formatting untuk Vercel Build
   const formattedBalance = (typeof balance === 'bigint') 
@@ -86,13 +88,18 @@ export default function DashboardClient() {
     burned: reminders?.filter((r: any) => r.isResolved && !r.isCompleted).length || 0
   };
 
-  // Inisialisasi SDK
+  // FIX: Perbaikan Inisialisasi SDK agar Context User Terambil
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
         try {
-          const context = (await sdk.actions.ready()) as any;
-          if (context?.user) setContextUser(context.user);
+          // Ambil context terlebih dahulu
+          const context = await sdk.context;
+          if (context?.user) {
+            setContextUser(context.user);
+          }
+          // Beritahu Frame siap
+          await sdk.actions.ready();
         } catch (e) {
           console.error("SDK Ready Error:", e);
         } finally {
@@ -212,11 +219,13 @@ export default function DashboardClient() {
                   onClick={() => disconnect()} 
                   className="flex items-center gap-2 h-10 rounded-full bg-white hover:bg-red-50 hover:text-red-600 transition-all px-2 pr-4 shadow-sm border border-slate-100"
                 >
-                  {displayUser?.pfpUrl ? (
+                  {/* FIX: ReferrerPolicy agar PFP muncul */}
+                  {pfpUrl ? (
                     <img 
-                      src={displayUser.pfpUrl} 
+                      src={pfpUrl} 
                       alt="PFP" 
                       className="w-7 h-7 rounded-full object-cover ring-2 ring-indigo-50" 
+                      referrerPolicy="no-referrer"
                     />
                   ) : (
                     <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -225,7 +234,7 @@ export default function DashboardClient() {
                   )}
                   
                   <span className="text-xs font-black">
-                    {displayUser?.username ? `@${displayUser.username}` : `${address?.slice(0,4)}...${address?.slice(-4)}`}
+                    {username ? `@${username}` : `${address?.slice(0,4)}...${address?.slice(-4)}`}
                   </span>
                   <LogOut className="h-3 w-3 opacity-30" />
                 </Button>
