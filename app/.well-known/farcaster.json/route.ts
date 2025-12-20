@@ -9,7 +9,7 @@ export async function GET() {
     },
     frame: {
       version: "1",
-      name: "ReminderBase",
+      name: "Reminders",
       iconUrl: "https://remindersbase.vercel.app/logo.jpg", 
       splashImageUrl: "https://remindersbase.vercel.app/logo.jpg",
       splashBackgroundColor: "#4f46e5",
