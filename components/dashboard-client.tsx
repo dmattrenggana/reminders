@@ -8,18 +8,9 @@ import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FloatingCreate } from "@/components/floating-create"; // Pastikan path benar
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogFooter 
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { 
-  Plus, Bell, Loader2, Wallet, RefreshCw, 
+  Bell, Loader2, Wallet, RefreshCw, 
   CheckCircle2, LogOut 
 } from "lucide-react";
 import Image from "next/image";
@@ -34,7 +25,6 @@ export default function DashboardClient() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   
-  // FIX: Destructuring dengan renaming agar sesuai dengan Hook
   const { 
     activeReminders: reminders = [], 
     loading: loadingReminders, 
@@ -45,19 +35,13 @@ export default function DashboardClient() {
 
   const [isSDKReady, setIsSDKReady] = useState(false);
   const isFirstMount = useRef(true);
-
-  // --- FORM STATE ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [deadline, setDeadline] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const brandPurple = "bg-[#4f46e5]";
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
-  // --- LOGIKA STATS REAL-TIME ---
+  // --- STATS ---
   const stats = {
     locked: reminders?.filter((r: any) => !r.isResolved).reduce((acc: number, curr: any) => acc + (Number(curr.rewardPool) || 0), 0) || 0,
     completed: reminders?.filter((r: any) => r.isResolved && r.isCompleted).length || 0,
@@ -80,10 +64,13 @@ export default function DashboardClient() {
     }
   }, []);
 
-  const handleCreateReminder = async () => {
-    if (!description || !amount || !deadline) return alert("Please fill all fields.");
+  // UPDATE: Menerima parameter dari FloatingCreate
+  const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
+    if (!desc || !amt || !dl) return alert("Please fill all fields.");
     setIsSubmitting(true);
     try {
+      if (!sdk.wallet.ethProvider) throw new Error("Provider not found");
+      
       const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
       const signer = await provider.getSigner();
       const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
@@ -93,20 +80,22 @@ export default function DashboardClient() {
         "function approve(address spender, uint256 amount) public returns (bool)"
       ], signer);
 
-      const amountInWei = ethers.parseUnits(amount, 18);
-      const deadlineTimestamp = Math.floor(new Date(deadline).getTime() / 1000);
+      const amountInWei = ethers.parseUnits(amt, 18);
+      const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
 
+      console.log("Approving...");
       const approveTx = await tokenContract.approve(VAULT_ADDRESS, amountInWei);
       await approveTx.wait();
 
+      console.log("Locking...");
+      // Pastikan nama function di kontrak Anda adalah lockTokens atau createReminder
       const lockTx = await vaultContract.lockTokens(amountInWei, deadlineTimestamp);
       await lockTx.wait();
 
       alert("Tokens Locked Successfully!");
-      setIsModalOpen(false);
-      setDescription(""); setAmount(""); setDeadline("");
       refreshReminders(); refreshBalance();
     } catch (error: any) {
+      console.error(error);
       alert("Error: " + (error.reason || error.message));
     } finally {
       setIsSubmitting(false);
@@ -142,9 +131,10 @@ export default function DashboardClient() {
   if (!isSDKReady) return <div className="flex min-h-screen items-center justify-center bg-white"><Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" /></div>;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans">
+    <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans pb-32">
       <div className="max-w-5xl mx-auto w-full space-y-10">
         
+        {/* HEADER */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-6">
             <div className="relative w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden shadow-md border border-slate-100">
@@ -176,96 +166,72 @@ export default function DashboardClient() {
           </div>
         </header>
 
+        {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase">Locked RMND</CardTitle></CardHeader>
+           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Locked RMND</CardTitle></CardHeader>
            <CardContent><div className="text-2xl font-black">{stats.locked}</div></CardContent></Card>
-           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase">Completed</CardTitle></CardHeader>
+           
+           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Completed</CardTitle></CardHeader>
            <CardContent><div className="text-2xl font-black">{stats.completed}</div></CardContent></Card>
-           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase">Burned</CardTitle></CardHeader>
+           
+           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Burned</CardTitle></CardHeader>
            <CardContent><div className="text-2xl font-black">{stats.burned}</div></CardContent></Card>
-           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-white">My Tasks</CardTitle></CardHeader>
+           
+           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-white tracking-wider">My Tasks</CardTitle></CardHeader>
            <CardContent><div className="text-2xl font-black text-white">{reminders?.length || 0}</div></CardContent></Card>
         </div>
 
-        <div className="flex justify-center">
-            <Button disabled={!isConnected} onClick={() => setIsModalOpen(true)} className={`px-20 py-10 text-2xl font-black rounded-3xl ${brandPurple} text-white shadow-2xl ${brandShadow} transition-all active:scale-95`}>
-                <Plus className="mr-4 h-8 w-8" /> Create Reminder
-            </Button>
-        </div>
-
+        {/* MAIN FEED */}
         <main className="space-y-8 bg-white/50 p-6 rounded-3xl border border-slate-100">
-           <div className="flex items-center justify-between px-2">
-             <h2 className="text-2xl font-black text-slate-800">Activity Feed</h2>
-             <Button variant="ghost" size="sm" onClick={() => {refreshReminders(); refreshBalance();}} className={`${brandText} font-black text-[10px] uppercase`}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync
-             </Button>
-           </div>
-           
-           {reminders?.length > 0 ? (
-             <div className="grid gap-5">
-               {reminders.map((r: any) => (
-                 <Card key={r.id} className="bg-white border-slate-100 shadow-sm overflow-hidden">
-                   <CardContent className="p-8 flex justify-between items-center">
-                     <div className="space-y-2">
-                        <Badge variant="outline" className={`text-[9px] font-black ${r.isResolved ? "bg-slate-100" : "bg-green-50 text-green-700"}`}>
-                          {r.isResolved ? "RESOLVED" : "ACTIVE"}
-                        </Badge>
-                        <h3 className="text-xl font-black text-slate-800">Task #{r.id}</h3>
-                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">
-                          Deadline: {new Date(Number(r.deadline) * 1000).toLocaleDateString()}
-                        </p>
-                        {!r.isResolved && (
-                          <Button onClick={() => handleConfirmCompleted(r.id)} className="mt-4 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] h-9 px-6 rounded-xl uppercase transition-all flex items-center gap-2">
-                             <CheckCircle2 className="w-4 h-4" /> Completed
-                          </Button>
-                        )}
-                     </div>
-                     <div className="text-right">
-                       <p className={`text-3xl font-black ${brandText}`}>{r.rewardPool}</p>
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{symbol}</p>
-                     </div>
-                   </CardContent>
-                 </Card>
-               ))}
-             </div>
-           ) : (
-             <div className="text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
-               <Bell className="h-10 w-10 text-slate-200 mx-auto mb-4" />
-               <p className="text-slate-400 text-lg font-black uppercase tracking-widest">No Active Reminders</p>
-             </div>
-           )}
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-2xl font-black text-slate-800">Activity Feed</h2>
+              <Button variant="ghost" size="sm" onClick={() => {refreshReminders(); refreshBalance();}} className={`${brandText} font-black text-[10px] uppercase`}>
+                 <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync
+              </Button>
+            </div>
+            
+            {reminders?.length > 0 ? (
+              <div className="grid gap-5">
+                {reminders.map((r: any) => (
+                  <Card key={r.id} className="bg-white border-slate-100 shadow-sm overflow-hidden rounded-2xl">
+                    <CardContent className="p-8 flex justify-between items-center">
+                      <div className="space-y-2">
+                         <Badge variant="outline" className={`text-[9px] font-black ${r.isResolved ? "bg-slate-100" : "bg-green-50 text-green-700"}`}>
+                           {r.isResolved ? "RESOLVED" : "ACTIVE"}
+                         </Badge>
+                         <h3 className="text-xl font-black text-slate-800">Task #{r.id}</h3>
+                         <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">
+                           Deadline: {new Date(Number(r.deadline) * 1000).toLocaleString()}
+                         </p>
+                         {!r.isResolved && (
+                           <Button onClick={() => handleConfirmCompleted(r.id)} className="mt-4 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] h-9 px-6 rounded-xl uppercase transition-all flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4" /> Mark Completed
+                           </Button>
+                         )}
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-3xl font-black ${brandText}`}>{r.rewardPool}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{symbol}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
+                <Bell className="h-10 w-10 text-slate-200 mx-auto mb-4" />
+                <p className="text-slate-400 text-lg font-black uppercase tracking-widest">No Active Reminders</p>
+              </div>
+            )}
         </main>
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] p-8 bg-white border-none shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-black text-slate-900">New Reminder</DialogTitle>
-            <DialogDescription className="text-slate-500 font-medium text-sm">Set your goal and stake {symbol}.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 pt-6">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400">Description</Label>
-              <Input placeholder="e.g. Daily Coding" value={description} onChange={(e) => setDescription(e.target.value)} className="h-14 rounded-2xl bg-slate-50 border-slate-100" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Stake</Label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-14 rounded-2xl bg-slate-50 border-slate-100" placeholder="100" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Deadline</Label>
-                <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="h-14 rounded-2xl bg-slate-50 border-slate-100" />
-              </div>
-            </div>
-            <DialogFooter className="pt-4">
-              <Button disabled={isSubmitting} onClick={handleCreateReminder} className={`w-full h-16 rounded-2xl ${brandPurple} text-white font-black text-xl`}>
-                {isSubmitting ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirm & Lock"}
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* FLOATING ACTION PANEL */}
+      <FloatingCreate 
+        symbol={symbol} 
+        isSubmitting={isSubmitting} 
+        onConfirm={handleCreateReminder} 
+      />
     </div>
   );
 }
