@@ -1,5 +1,12 @@
 import { ethers } from "ethers";
-import { VAULT_ABI, VAULT_ADDRESS } from "@/constants";
+import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
+
+// ABI Standar minimal untuk interaksi dengan Token RMND (ERC20)
+const ERC20_ABI = [
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function balanceOf(address account) view returns (uint256)"
+];
 
 export const useVault = (signer: ethers.Signer | null) => {
   if (!signer) {
@@ -10,35 +17,93 @@ export const useVault = (signer: ethers.Signer | null) => {
     };
   }
 
-  const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
+  // Inisialisasi kontrak
+  const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
+  const tokenContract = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
 
+  /**
+   * Mengunci token dengan pengecekan Approval otomatis
+   */
   const lockTokens = async (amount: string, deadline: number) => {
-    const parsedAmount = ethers.parseUnits(amount, 18);
-    const tx = await contract.lockTokens(parsedAmount, deadline);
-    return await tx.wait();
+    try {
+      const userAddress = await signer.getAddress();
+      const parsedAmount = ethers.parseUnits(amount, 18);
+
+      // 1. Cek Saldo User
+      const balance = await tokenContract.balanceOf(userAddress);
+      if (balance < parsedAmount) {
+        throw new Error("Saldo token tidak mencukupi.");
+      }
+
+      // 2. Cek & Jalankan Allowance (Approve)
+      const currentAllowance = await tokenContract.allowance(userAddress, VAULT_ADDRESS);
+      
+      if (currentAllowance < parsedAmount) {
+        console.log("Meminta persetujuan (Approve) token...");
+        // Meminta approve sebesar jumlah yang ingin di-lock
+        const approveTx = await tokenContract.approve(VAULT_ADDRESS, parsedAmount);
+        await approveTx.wait();
+        console.log("Approve berhasil.");
+      }
+
+      // 3. Jalankan Fungsi lockTokens pada Vault
+      // Menambahkan gasLimit manual krusial untuk kestabilan di dompet eksternal Base
+      const tx = await vaultContract.lockTokens(parsedAmount, deadline, {
+        gasLimit: 300000 
+      });
+
+      console.log("Transaksi Lock dikirim:", tx.hash);
+      const receipt = await tx.wait();
+      return receipt;
+    } catch (error: any) {
+      console.error("Kesalahan pada lockTokens:", error);
+      // Menangkap pesan error agar lebih mudah dibaca di UI
+      throw new Error(error.reason || error.message || "Transaksi gagal");
+    }
   };
 
+  /**
+   * Klaim reward untuk helper dengan signature dari backend
+   */
   const claimHelper = async (id: number, amount: string, address: string) => {
-    const res = await fetch("/api/signer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        id, 
-        helperAddress: address, 
-        rewardAmount: amount 
-      }),
-    });
-    
-    const { signature, error } = await res.json();
-    if (error) throw new Error(error);
+    try {
+      const res = await fetch("/api/signer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          id, 
+          helperAddress: address, 
+          rewardAmount: amount 
+        }),
+      });
+      
+      const { signature, error } = await res.json();
+      if (error) throw new Error(error);
 
-    const tx = await contract.claimHelperReward(id, amount, signature);
-    return await tx.wait();
+      // Menambahkan gasLimit untuk memastikan transaksi klaim tidak macet
+      const tx = await vaultContract.claimHelperReward(id, amount, signature, {
+        gasLimit: 400000
+      });
+      return await tx.wait();
+    } catch (error: any) {
+      console.error("Kesalahan pada claimHelper:", error);
+      throw error;
+    }
   };
 
+  /**
+   * Klaim sisa token jika tugas berhasil diselesaikan
+   */
   const claimSuccess = async (id: number) => {
-    const tx = await contract.claimSuccess(id);
-    return await tx.wait();
+    try {
+      const tx = await vaultContract.claimSuccess(id, {
+        gasLimit: 250000
+      });
+      return await tx.wait();
+    } catch (error: any) {
+      console.error("Kesalahan pada claimSuccess:", error);
+      throw error;
+    }
   };
 
   return { lockTokens, claimHelper, claimSuccess };
