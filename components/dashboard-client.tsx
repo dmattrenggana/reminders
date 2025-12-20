@@ -18,6 +18,7 @@ import sdk from "@farcaster/frame-sdk";
 import { formatUnits, parseUnits } from "viem";
 import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
+// Definisi Konstanta & ABI
 const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
 const ERC20_ABI = [
@@ -41,12 +42,12 @@ const ERC20_ABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   }
-];
+] as const;
 
 export default function DashboardClient() {
+  // Hooks
   const { user: providerUser, isLoaded: isFarcasterLoaded } = useFarcaster();
   const [contextUser, setContextUser] = useState<any>(null);
-
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -65,19 +66,27 @@ export default function DashboardClient() {
   const isFirstMount = useRef(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Styling Constants
   const brandPurple = "bg-[#4f46e5]";
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
-  // Prioritas data user dari Farcaster SDK
+  // Farcaster User Priority
   const displayUser = providerUser || contextUser;
 
+  // FIX: Safe Balance Formatting untuk Vercel Build
+  const formattedBalance = (typeof balance === 'bigint') 
+    ? Number(formatUnits(balance, 18)).toFixed(2) 
+    : "0.00";
+
+  // Perhitungan Statistik
   const stats = {
     locked: reminders?.filter((r: any) => !r.isResolved).reduce((acc: number, curr: any) => acc + (Number(curr.rewardPool) || 0), 0) || 0,
     completed: reminders?.filter((r: any) => r.isResolved && r.isCompleted).length || 0,
     burned: reminders?.filter((r: any) => r.isResolved && !r.isCompleted).length || 0
   };
 
+  // Inisialisasi SDK
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
@@ -95,6 +104,7 @@ export default function DashboardClient() {
     }
   }, []);
 
+  // Handlers
   const handleConnect = () => {
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
     const injectedConnector = connectors.find((c) => c.id === "injected");
@@ -109,8 +119,8 @@ export default function DashboardClient() {
         abi: ERC20_ABI,
         functionName: 'allowance',
         args: [address, VAULT_ADDRESS as `0x${string}`],
-      }) as bigint;
-      return currentAllowance >= neededAmount;
+      });
+      return (currentAllowance as bigint) >= neededAmount;
     } catch (e) {
       return false;
     }
@@ -125,37 +135,19 @@ export default function DashboardClient() {
 
       const isApproved = await checkAllowance(amountInWei);
       if (!isApproved) {
-        const approveGas = await publicClient.estimateContractGas({
-          address: TOKEN_ADDRESS as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [VAULT_ADDRESS as `0x${string}`, MAX_UINT256],
-          account: address,
-        });
-
         await writeContractAsync({
           address: TOKEN_ADDRESS as `0x${string}`,
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [VAULT_ADDRESS as `0x${string}`, MAX_UINT256],
-          gas: (approveGas * BigInt(120)) / BigInt(100),
         });
       }
-
-      const lockGas = await publicClient.estimateContractGas({
-        address: VAULT_ADDRESS as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: 'lockTokens',
-        args: [amountInWei, deadlineTimestamp],
-        account: address,
-      });
 
       await writeContractAsync({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
         functionName: 'lockTokens',
         args: [amountInWei, deadlineTimestamp],
-        gas: (lockGas * BigInt(130)) / BigInt(100),
       });
       
       alert("Success! Your commitment has been locked on-chain.");
@@ -171,20 +163,11 @@ export default function DashboardClient() {
   const handleConfirmCompleted = async (id: number) => {
     if (!publicClient || !address) return;
     try {
-      const gas = await publicClient.estimateContractGas({
-        address: VAULT_ADDRESS as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: 'claimSuccess',
-        args: [BigInt(id)],
-        account: address,
-      });
-
       await writeContractAsync({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
         functionName: 'claimSuccess',
         args: [BigInt(id)],
-        gas: (gas * BigInt(120)) / BigInt(100),
       });
       refreshReminders();
     } catch (e: any) {
@@ -192,6 +175,7 @@ export default function DashboardClient() {
     }
   };
 
+  // Loading State
   if (!isSDKReady || !isFarcasterLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
@@ -204,15 +188,15 @@ export default function DashboardClient() {
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans pb-32">
       <div className="max-w-5xl mx-auto w-full space-y-10">
         
-        {/* HEADER DENGAN USER PROFILE */}
+        {/* HEADER */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="relative w-12 h-12 flex-shrink-0 rounded-2xl overflow-hidden shadow-sm">
               <Image src="/logo.jpg" alt="Logo" fill className="object-cover" priority />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tighter">ReminderBase</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Base Network</p>
+              <h1 className="text-2xl font-black tracking-tighter">Reminders</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Never Miss What Matters</p>
             </div>
           </div>
           
@@ -220,7 +204,7 @@ export default function DashboardClient() {
             {isConnected ? (
               <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-full border border-slate-200 shadow-sm">
                 <div className="px-4 py-1 text-[11px] font-black font-mono border-r border-slate-200 text-indigo-600">
-                   {Number(formatUnits(balance || 0n, 18)).toFixed(2)} {symbol}
+                   {formattedBalance} {symbol}
                 </div>
                 
                 <Button 
@@ -254,17 +238,17 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        {/* Dashboard Stats */}
+        {/* STATS CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-           <Card className="bg-white border-slate-100 border-b-4 border-b-indigo-500 rounded-3xl overflow-hidden">
+           <Card className="bg-white border-slate-100 border-b-4 border-b-indigo-500 rounded-3xl overflow-hidden shadow-sm">
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Locked {symbol}</CardTitle></CardHeader>
              <CardContent><div className="text-2xl font-black">{stats.locked}</div></CardContent>
            </Card>
-           <Card className="bg-white border-slate-100 border-b-4 border-b-green-500 rounded-3xl overflow-hidden">
+           <Card className="bg-white border-slate-100 border-b-4 border-b-green-500 rounded-3xl overflow-hidden shadow-sm">
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Completed</CardTitle></CardHeader>
              <CardContent><div className="text-2xl font-black text-green-600">{stats.completed}</div></CardContent>
            </Card>
-           <Card className="bg-white border-slate-100 border-b-4 border-b-red-500 rounded-3xl overflow-hidden">
+           <Card className="bg-white border-slate-100 border-b-4 border-b-red-500 rounded-3xl overflow-hidden shadow-sm">
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Burned</CardTitle></CardHeader>
              <CardContent><div className="text-2xl font-black text-red-600">{stats.burned}</div></CardContent>
            </Card>
@@ -274,7 +258,8 @@ export default function DashboardClient() {
            </Card>
         </div>
 
-        <main className="space-y-8 bg-white/50 p-6 rounded-[2.5rem] border border-slate-100">
+        {/* MAIN LIST */}
+        <main className="space-y-8 bg-white/50 p-6 rounded-[2.5rem] border border-slate-100 shadow-inner">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
             <Button variant="ghost" size="sm" onClick={() => {refreshReminders(); refreshBalance();}} className={`${brandText} font-black text-[10px] uppercase`}>
