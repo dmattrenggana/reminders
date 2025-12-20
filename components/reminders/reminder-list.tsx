@@ -6,9 +6,17 @@ import { useReminders } from "@/hooks/useReminders"
 import { CONTRACTS, validateContractConfig } from "@/lib/contracts/config"
 
 export function ReminderList() {
-  const { reminders, isLoading, error } = useReminders()
+  // FIX: Destructuring disesuaikan dengan return value dari useReminders.ts
+  const { 
+    activeReminders: reminders = [], 
+    loading: isLoading 
+  } = useReminders()
 
-  // 1. Loading State (Tanpa dependensi Card UI)
+  // Karena hook baru tidak mengembalikan 'error' secara eksplisit (hanya log console),
+  // kita buat variabel error statis atau bisa ditambahkan ke hook nantinya.
+  const error = null 
+
+  // 1. Loading State
   if (isLoading) {
     return (
       <div className="w-full p-12 bg-white rounded-2xl border border-slate-100 shadow-sm">
@@ -20,7 +28,7 @@ export function ReminderList() {
     )
   }
 
-  // 2. Error State (Tanpa dependensi Alert UI)
+  // 2. Error State
   if (error) {
     const configCheck = validateContractConfig()
 
@@ -66,7 +74,7 @@ export function ReminderList() {
     )
   }
 
-  // 3. Empty State (Tanpa dependensi Card UI)
+  // 3. Empty State
   if (!reminders || reminders.length === 0) {
     return (
       <div className="w-full p-12 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
