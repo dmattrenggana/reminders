@@ -41,12 +41,12 @@ export function useTokenBalance() {
     ],
     query: {
       enabled: !!address && isConnected,
-      refetchInterval: 20000, // Update otomatis tiap 20 detik
+      refetchInterval: 20000, 
     }
   });
 
   return {
-    // Menggunakan BigInt(0) agar tidak error "BigInt literals" saat build
+    // Menggunakan BigInt(0) agar lolos build Vercel
     balance: data?.[0]?.result ?? BigInt(0), 
     symbol: (data?.[1]?.result as string) || "RMNDtest",
     isLoading,

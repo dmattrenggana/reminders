@@ -32,18 +32,17 @@ export default function DashboardClient() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   
-  // Mengambil data dari hooks
   const { reminders = [], isLoading: loadingReminders, refresh: refreshReminders } = useReminders();
   const { balance, symbol, refresh: refreshBalance } = useTokenBalance();
 
   const [isSDKReady, setIsSDKReady] = useState(false);
   const isFirstMount = useRef(true);
 
-  // --- LOGIKA FORMAT SALDO ---
+  // --- LOGIKA FORMAT SALDO (Safe for Build) ---
   const formatBalance = (val: any) => {
-    if (!val || val === 0n) return "0";
+    // Menggunakan BigInt(0) alih-alih 0n untuk menghindari error build
+    if (!val || val === BigInt(0)) return "0";
     try {
-      // Mengonversi BigInt ke format desimal manusia (18 desimal)
       const bigValue = typeof val === 'bigint' ? val : BigInt(val.toString());
       const formatted = formatUnits(bigValue, 18);
       
@@ -52,14 +51,12 @@ export default function DashboardClient() {
         maximumFractionDigits: 2,
       }).format(Number(formatted));
     } catch (e) {
-      console.error("Format error:", e);
       return "0";
     }
   };
 
   const truncateAddr = (addr: string | undefined) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Connected";
 
-  // --- INITIALIZE SDK ---
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
@@ -77,23 +74,14 @@ export default function DashboardClient() {
   }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ description: "", amount: "", deadline: "" });
-
   const brandPurple = "bg-[#4f46e5]";
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
-  const brandBorder = "border-[#4f46e5]";
 
-  // Kalkulasi Stats
   const stats = {
     locked: reminders?.reduce((acc, curr) => acc + (Number(curr.tokenAmount) || 0), 0) || 0,
-    completed: reminders?.filter(r => r.status === 'Completed' || r.status === 'Confirmed').length || 0,
-    burned: reminders?.filter(r => r.status === 'Burned' || r.status === 'Failed').length || 0
-  };
-
-  const handleSync = () => {
-    refreshReminders();
-    refreshBalance();
+    completed: reminders?.filter(r => r.status === 'Completed').length || 0,
+    burned: reminders?.filter(r => r.status === 'Burned').length || 0
   };
 
   if (!isSDKReady) {
@@ -108,7 +96,6 @@ export default function DashboardClient() {
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans">
       <div className="max-w-5xl mx-auto w-full space-y-10">
         
-        {/* HEADER SECTION */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-6">
             <div className="relative w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden shadow-md border border-slate-100">
@@ -123,8 +110,7 @@ export default function DashboardClient() {
           <div className="flex items-center gap-3">
             {isConnected ? (
               <div className="flex items-center gap-3 bg-slate-50 pl-5 pr-1 py-1 rounded-full border border-slate-100 shadow-sm">
-                {/* SALDO RMNDtest */}
-                <p className={`text-[10px] font-mono font-black ${brandText} border-r border-slate-200 pr-3 uppercase`}>
+                <p className={`text-[10px] font-mono font-black ${brandText} border-r border-slate-200 pr-3`}>
                   {formatBalance(balance)} {symbol}
                 </p>
                 
@@ -135,7 +121,7 @@ export default function DashboardClient() {
                   className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-3 text-slate-700 hover:text-red-500 transition-all flex items-center gap-2"
                 >
                   {user?.pfpUrl && (
-                    <img src={user.pfpUrl} alt="PFP" className="w-6 h-6 rounded-full border border-slate-100 shadow-sm" />
+                    <img src={user.pfpUrl} alt="PFP" className="w-6 h-6 rounded-full border border-slate-100" />
                   )}
                   <span>{user?.username ? `@${user.username}` : truncateAddr(address)}</span>
                   <LogOut className="h-3 w-3 opacity-30" />
@@ -152,77 +138,53 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        {/* STATS SECTION */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
            <Card className="bg-white border-slate-100 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-slate-400">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-widest">Locked</CardTitle>
-                <Lock className="h-4 w-4 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-black text-slate-900 tracking-tight">{stats.locked}</div>
-              </CardContent>
+              <CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase">Locked</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-black">{stats.locked}</div></CardContent>
            </Card>
            <Card className="bg-white border-slate-100 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-slate-400">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-widest">Completed</CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-black text-slate-900 tracking-tight">{stats.completed}</div>
-              </CardContent>
+              <CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase">Completed</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-black">{stats.completed}</div></CardContent>
            </Card>
            <Card className="bg-white border-slate-100 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-slate-400">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-widest">Burned</CardTitle>
-                <Flame className="h-4 w-4 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-black text-slate-900 tracking-tight">{stats.burned}</div>
-              </CardContent>
+              <CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase">Burned</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-black">{stats.burned}</div></CardContent>
            </Card>
            <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 text-white/80">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-white">Active</CardTitle>
-                <Bell className="h-4 w-4 text-white" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-black text-white tracking-tight">{reminders?.length || 0}</div>
-              </CardContent>
+              <CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-white">Active</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-black text-white">{reminders?.length || 0}</div></CardContent>
            </Card>
         </div>
 
-        {/* CREATE BUTTON */}
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center">
             <Button 
               disabled={!isConnected}
               onClick={() => setIsModalOpen(true)}
-              className={`w-full md:w-auto px-20 py-10 text-2xl font-black rounded-3xl ${brandPurple} text-white shadow-2xl ${brandShadow} transition-all hover:scale-[1.03] active:scale-95 border-b-4 border-black/20`}
+              className={`px-20 py-10 text-2xl font-black rounded-3xl ${brandPurple} text-white shadow-2xl ${brandShadow}`}
             >
-                <Plus className="mr-4 h-8 w-8 stroke-[4px]" /> Create Reminder
+                <Plus className="mr-4 h-8 w-8" /> Create Reminder
             </Button>
         </div>
 
-        {/* ACTIVITY FEED */}
-        <main className="space-y-8 bg-white/50 p-6 rounded-3xl border border-slate-100 shadow-inner">
+        <main className="space-y-8 bg-white/50 p-6 rounded-3xl border border-slate-100">
            <div className="flex items-center justify-between px-2">
-             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Activity Feed</h2>
-             <Button variant="ghost" size="sm" onClick={handleSync} className={`${brandText} font-black text-[10px] uppercase tracking-widest`}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync Data
+             <h2 className="text-2xl font-black text-slate-800">Activity Feed</h2>
+             <Button variant="ghost" size="sm" onClick={() => {refreshReminders(); refreshBalance();}} className={`${brandText} font-black text-[10px] uppercase`}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync
              </Button>
            </div>
            
            {reminders?.length > 0 ? (
              <div className="grid gap-5">
                {reminders.map((r: any) => (
-                 <Card key={r.id} className={`bg-white border-slate-100 shadow-sm border-l-[6px] ${brandBorder.replace('border-', 'border-l-')}`}>
+                 <Card key={r.id} className="bg-white border-slate-100 shadow-sm">
                    <CardContent className="p-8 flex justify-between items-center">
-                      <div className="space-y-2">
-                        <h3 className="text-xl font-black text-slate-800 tracking-tight">{r.description}</h3>
-                        <div className="flex items-center text-[11px] text-slate-400 font-bold uppercase tracking-widest">
-                          <Calendar className={`h-4 w-4 mr-2 ${brandText}`} />
+                      <div>
+                        <h3 className="text-xl font-black text-slate-800">{r.description}</h3>
+                        <p className="text-[11px] text-slate-400 font-bold uppercase mt-1">
                           Deadline: {new Date(r.reminderTime).toLocaleDateString()}
-                        </div>
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className={`text-3xl font-black ${brandText}`}>{r.tokenAmount}</p>
@@ -241,30 +203,30 @@ export default function DashboardClient() {
         </main>
       </div>
 
-      {/* MODAL CREATE */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] p-8">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-black tracking-tighter text-slate-900">New Reminder</DialogTitle>
+            <DialogTitle className="text-3xl font-black text-slate-900">New Reminder</DialogTitle>
+            <DialogDescription>Set your goal and stake {symbol}.</DialogDescription>
           </DialogHeader>
           <div className="space-y-6 pt-6">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Goal Description</Label>
-              <Input placeholder="e.g. Finish 5km run" className="h-14 rounded-2xl" />
+              <Label className="text-[10px] font-black uppercase text-slate-400">Description</Label>
+              <Input placeholder="e.g. Daily Coding" className="h-14 rounded-2xl" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stake ({symbol})</Label>
+                <Label className="text-[10px] font-black uppercase text-slate-400">Stake</Label>
                 <Input type="number" className="h-14 rounded-2xl" placeholder="100" />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Deadline</Label>
+                <Label className="text-[10px] font-black uppercase text-slate-400">Deadline</Label>
                 <Input type="date" className="h-14 rounded-2xl" />
               </div>
             </div>
             <DialogFooter className="pt-4">
-              <Button onClick={() => setIsModalOpen(false)} className={`w-full h-16 rounded-2xl ${brandPurple} text-white font-black text-xl shadow-xl ${brandShadow}`}>
-                Confirm Stake
+              <Button onClick={() => setIsModalOpen(false)} className={`w-full h-16 rounded-2xl ${brandPurple} text-white font-black text-xl`}>
+                Confirm
               </Button>
             </DialogFooter>
           </div>
