@@ -37,6 +37,7 @@ export default function DashboardClient() {
   const isFirstMount = useRef(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Styling Constants
   const brandPurple = "bg-[#4f46e5]";
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
@@ -47,13 +48,15 @@ export default function DashboardClient() {
     burned: reminders?.filter((r: any) => r.isResolved && !r.isCompleted).length || 0
   };
 
+  // 1. Inisialisasi SDK Farcaster
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
         try {
+          // Sangat Penting: Tanpa ini, Warpcast tidak akan mengizinkan koneksi wallet
           await sdk.actions.ready();
         } catch (e) {
-          console.error("SDK error:", e);
+          console.error("SDK Ready Error:", e);
         } finally {
           setIsSDKReady(true);
         }
@@ -63,20 +66,19 @@ export default function DashboardClient() {
     }
   }, []);
 
+  // 2. Fungsi Connect Wallet Hybrid (Farcaster + Web)
   const handleConnect = () => {
-    const farcaster = connectors.find(c => c.id === 'farcaster-frame');
-    const injected = connectors.find(c => c.id === 'injected');
-    
-    // Deteksi apakah sedang berjalan di dalam Warpcast/Frame
-    const isFrame = typeof window !== 'undefined' && 
-                    ((window as any).ethereum?.isFarcaster || (window as any).frame_sdk);
+    const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
+    const injectedConnector = connectors.find((c) => c.id === "injected");
 
-    if (isFrame && farcaster) {
-      connect({ connector: farcaster });
-    } else if (injected) {
-      connect({ connector: injected });
+    if (fcConnector) {
+      // Prioritas utama jika di dalam Warpcast
+      connect({ connector: fcConnector });
+    } else if (injectedConnector) {
+      // Gunakan MetaMask/Coinbase jika di browser biasa
+      connect({ connector: injectedConnector });
     } else {
-      // Fallback untuk semua lingkungan
+      // Fallback konektor pertama yang tersedia
       connect({ connector: connectors[0] });
     }
   };
@@ -90,7 +92,7 @@ export default function DashboardClient() {
       const amountInWei = parseUnits(amt, 18);
       const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
 
-      // STEP 1: APPROVE (Format ABI JSON Objek agar tidak error 'in' operator)
+      // STEP 1: APPROVE
       await writeContractAsync({
         address: TOKEN_ADDRESS as `0x${string}`,
         abi: [{
@@ -120,7 +122,7 @@ export default function DashboardClient() {
       refreshBalance();
     } catch (error: any) {
       console.error(error);
-      const msg = error.shortMessage || error.message || "Transaction failed or rejected";
+      const msg = error.shortMessage || error.message || "Transaction failed";
       alert("Error: " + msg);
     } finally {
       setIsSubmitting(false);
@@ -149,7 +151,13 @@ export default function DashboardClient() {
     } catch (e) { return "0"; }
   };
 
-  if (!isSDKReady) return <div className="flex min-h-screen items-center justify-center bg-white"><Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" /></div>;
+  if (!isSDKReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans pb-32">
@@ -164,6 +172,7 @@ export default function DashboardClient() {
               <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>On-Chain Accountability</p>
             </div>
           </div>
+          
           <div className="flex items-center gap-3">
             {isConnected ? (
               <div className="flex items-center gap-3 bg-slate-50 pl-5 pr-1 py-1 rounded-full border border-slate-100 shadow-sm">
@@ -184,6 +193,7 @@ export default function DashboardClient() {
           </div>
         </header>
 
+        {/* Dashboard Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-indigo-500">
             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Locked {symbol}</CardTitle></CardHeader>
@@ -203,6 +213,7 @@ export default function DashboardClient() {
           </Card>
         </div>
 
+        {/* Recent Activity List */}
         <main className="space-y-8 bg-white/50 p-6 rounded-[2rem] border border-slate-100">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
@@ -247,6 +258,7 @@ export default function DashboardClient() {
           )}
         </main>
       </div>
+
       <FloatingCreate symbol={symbol} isSubmitting={isSubmitting} onConfirm={handleCreateReminder} />
     </div>
   );
