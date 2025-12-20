@@ -64,15 +64,20 @@ export default function DashboardClient() {
   }, []);
 
   const handleConnect = () => {
-    const injected = connectors.find(c => c.id === 'injected');
     const farcaster = connectors.find(c => c.id === 'farcaster-frame');
+    const injected = connectors.find(c => c.id === 'injected');
     
-    if (farcaster && typeof window !== 'undefined' && (window as any).ethereum?.isFarcaster) {
+    // Deteksi apakah sedang berjalan di dalam Warpcast/Frame
+    const isFrame = typeof window !== 'undefined' && 
+                    ((window as any).ethereum?.isFarcaster || (window as any).frame_sdk);
+
+    if (isFrame && farcaster) {
       connect({ connector: farcaster });
     } else if (injected) {
       connect({ connector: injected });
     } else {
-      alert("No wallet found. Please install MetaMask.");
+      // Fallback untuk semua lingkungan
+      connect({ connector: connectors[0] });
     }
   };
 
@@ -85,27 +90,37 @@ export default function DashboardClient() {
       const amountInWei = parseUnits(amt, 18);
       const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
 
-      // Step 1: Approve via Wagmi (Lebih stabil di browser)
+      // STEP 1: APPROVE (Format ABI JSON Objek agar tidak error 'in' operator)
       await writeContractAsync({
         address: TOKEN_ADDRESS as `0x${string}`,
-        abi: ["function approve(address spender, uint256 amount) public returns (bool)"],
+        abi: [{
+          "inputs": [
+            { "internalType": "address", "name": "spender", "type": "address" },
+            { "internalType": "uint256", "name": "amount", "type": "uint256" }
+          ],
+          "name": "approve",
+          "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }],
         functionName: 'approve',
         args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
       });
 
-      // Step 2: Lock via Wagmi
+      // STEP 2: LOCK TOKENS
       await writeContractAsync({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
         functionName: 'lockTokens',
-        args: [amountInWei, deadlineTimestamp],
+        args: [amountInWei, BigInt(deadlineTimestamp)],
       });
       
-      alert("Success! Your commitment is locked.");
+      alert("Success! Your commitment has been locked on-chain.");
       refreshReminders(); 
       refreshBalance();
     } catch (error: any) {
-      const msg = error.shortMessage || error.message || "User rejected";
+      console.error(error);
+      const msg = error.shortMessage || error.message || "Transaction failed or rejected";
       alert("Error: " + msg);
     } finally {
       setIsSubmitting(false);

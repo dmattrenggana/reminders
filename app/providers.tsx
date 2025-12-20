@@ -8,11 +8,12 @@ import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { injected } from "wagmi/connectors";
 
+// Memastikan konfigurasi config mendukung SSR dan deteksi wallet yang tepat
 const config = createConfig({
   chains: [base],
   connectors: [
-    farcasterFrame() as any, 
-    injected(), // Mendukung MetaMask & Browser Wallets
+    farcasterFrame(), // Letakkan paling atas agar terdeteksi pertama di Warpcast
+    injected(),       // Fallback untuk MetaMask/Browser Extension
   ],
   transports: {
     [base.id]: http(),
@@ -20,6 +21,7 @@ const config = createConfig({
 });
 
 export function Providers({ children }: { children: ReactNode }) {
+  // Menggunakan state agar QueryClient tidak dibuat ulang saat re-render
   const [queryClient] = useState(() => new QueryClient());
 
   return (
