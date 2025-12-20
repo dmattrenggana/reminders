@@ -8,22 +8,29 @@ import { useMemo } from "react"
 import { TOKEN_SYMBOL } from "@/lib/contracts/config"
 
 export function ReminderStats() {
-  const { reminders, isLoading } = useReminders()
+  // FIX: Destructuring disesuaikan dengan return value hook (activeReminders -> reminders)
+  const { 
+    activeReminders: reminders = [], 
+    loading: isLoading 
+  } = useReminders()
+  
   const { balance } = useTokenBalance()
 
   const stats = useMemo(() => {
-    const active = reminders.filter((r) => r.status === "active").length
-    const completed = reminders.filter((r) => r.status === "completed").length
-    const burned = reminders.filter((r) => r.status === "burned").length
-    const tokensLocked = Math.floor(
-      reminders
-        .filter((r) => r.status === "active" || r.status === "pending")
-        .reduce((sum, r) => sum + r.tokenAmount, 0),
-    )
+    // Logika perhitungan berdasarkan data dari Smart Contract
+    const active = reminders.filter((r: any) => !r.isResolved).length
+    const completed = reminders.filter((r: any) => r.isResolved && r.isCompleted).length
+    const burned = reminders.filter((r: any) => r.isResolved && !r.isCompleted).length
+    
+    // Menghitung total token yang dikunci (dari rewardPool)
+    const tokensLocked = reminders
+      .filter((r: any) => !r.isResolved)
+      .reduce((sum: number, r: any) => sum + (Number(r.rewardPool) || 0), 0)
 
     return { active, completed, burned, tokensLocked }
   }, [reminders])
 
+  // 1. Loading State
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -38,6 +45,7 @@ export function ReminderStats() {
     )
   }
 
+  // 2. Main UI
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -54,10 +62,10 @@ export function ReminderStats() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Completed</CardTitle>
-          <CheckCircle2 className="h-4 w-4 text-accent" />
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-accent">{stats.completed}</div>
+          <div className="text-2xl font-bold text-emerald-500">{stats.completed}</div>
           <p className="text-xs text-muted-foreground mt-1">Successfully confirmed</p>
         </CardContent>
       </Card>
