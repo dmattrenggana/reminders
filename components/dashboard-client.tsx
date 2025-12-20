@@ -19,7 +19,11 @@ import { formatUnits, parseUnits } from "viem";
 import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
 export default function DashboardClient() {
-  const { user } = useFarcaster();
+  // Ambil data user dari provider (jika ada)
+  const { user: providerUser } = useFarcaster();
+  // State cadangan untuk menyimpan data user langsung dari context SDK
+  const [contextUser, setContextUser] = useState<any>(null);
+
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -42,19 +46,25 @@ export default function DashboardClient() {
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
+  // Gabungkan data user: Utamakan context SDK karena biasanya lebih cepat di dalam Frame
+  const displayUser = providerUser || contextUser;
+
   const stats = {
     locked: reminders?.filter((r: any) => !r.isResolved).reduce((acc: number, curr: any) => acc + (Number(curr.rewardPool) || 0), 0) || 0,
     completed: reminders?.filter((r: any) => r.isResolved && r.isCompleted).length || 0,
     burned: reminders?.filter((r: any) => r.isResolved && !r.isCompleted).length || 0
   };
 
-  // 1. Inisialisasi SDK Farcaster
+  // 1. Inisialisasi SDK Farcaster & Ambil Context
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
         try {
-          // Sangat Penting: Tanpa ini, Warpcast tidak akan mengizinkan koneksi wallet
-          await sdk.actions.ready();
+          const context = await sdk.actions.ready();
+          // Jika context mengandung data user, simpan ke state
+          if (context?.user) {
+            setContextUser(context.user);
+          }
         } catch (e) {
           console.error("SDK Ready Error:", e);
         } finally {
@@ -66,19 +76,16 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // 2. Fungsi Connect Wallet Hybrid (Farcaster + Web)
+  // 2. Fungsi Connect Wallet Hybrid
   const handleConnect = () => {
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
     const injectedConnector = connectors.find((c) => c.id === "injected");
 
     if (fcConnector) {
-      // Prioritas utama jika di dalam Warpcast
       connect({ connector: fcConnector });
     } else if (injectedConnector) {
-      // Gunakan MetaMask/Coinbase jika di browser biasa
       connect({ connector: injectedConnector });
     } else {
-      // Fallback konektor pertama yang tersedia
       connect({ connector: connectors[0] });
     }
   };
@@ -92,7 +99,6 @@ export default function DashboardClient() {
       const amountInWei = parseUnits(amt, 18);
       const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
 
-      // STEP 1: APPROVE
       await writeContractAsync({
         address: TOKEN_ADDRESS as `0x${string}`,
         abi: [{
@@ -109,7 +115,6 @@ export default function DashboardClient() {
         args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
       });
 
-      // STEP 2: LOCK TOKENS
       await writeContractAsync({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
@@ -179,9 +184,26 @@ export default function DashboardClient() {
                 <p className={`text-[10px] font-mono font-black ${brandText} border-r border-slate-200 pr-3`}>
                   {formatBalance(balance)} {symbol}
                 </p>
-                <Button variant="ghost" size="sm" onClick={() => disconnect()} className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-3 text-slate-700 hover:text-red-500 transition-all flex items-center gap-2">
-                  {user?.pfpUrl && <img src={user.pfpUrl} alt="PFP" className="w-6 h-6 rounded-full border border-slate-100" />}
-                  <span>{user?.username ? `@${user.username}` : `${address?.slice(0,6)}...${address?.slice(-4)}`}</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => disconnect()} 
+                  className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-3 text-slate-700 hover:text-red-500 transition-all flex items-center gap-2"
+                >
+                  {/* Perbaikan Tampilan PFP */}
+                  {displayUser?.pfpUrl && (
+                    <img 
+                      src={displayUser.pfpUrl} 
+                      alt="PFP" 
+                      className="w-6 h-6 rounded-full border border-slate-100" 
+                    />
+                  )}
+                  {/* Perbaikan Tampilan Username */}
+                  <span>
+                    {displayUser?.username 
+                      ? `@${displayUser.username}` 
+                      : `${address?.slice(0,6)}...${address?.slice(-4)}`}
+                  </span>
                   <LogOut className="h-3 w-3 opacity-30" />
                 </Button>
               </div>
@@ -193,27 +215,27 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        {/* Dashboard Stats */}
+        {/* Sisa konten dashboard tetap sama */}
+        {/* ... stats and activity ... */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-          <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-indigo-500">
-            <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Locked {symbol}</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-black">{stats.locked}</div></CardContent>
-          </Card>
-          <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-green-500">
-            <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Completed</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-black text-green-600">{stats.completed}</div></CardContent>
-          </Card>
-          <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-red-500">
-            <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Burned</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-black text-red-600">{stats.burned}</div></CardContent>
-          </Card>
-          <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}>
-            <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-white/70">Active Tasks</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-black text-white">{reminders?.filter((r: any) => !r.isResolved).length || 0}</div></CardContent>
-          </Card>
+           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-indigo-500">
+             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Locked {symbol}</CardTitle></CardHeader>
+             <CardContent><div className="text-2xl font-black">{stats.locked}</div></CardContent>
+           </Card>
+           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-green-500">
+             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Completed</CardTitle></CardHeader>
+             <CardContent><div className="text-2xl font-black text-green-600">{stats.completed}</div></CardContent>
+           </Card>
+           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-red-500">
+             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Burned</CardTitle></CardHeader>
+             <CardContent><div className="text-2xl font-black text-red-600">{stats.burned}</div></CardContent>
+           </Card>
+           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}>
+             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-white/70">Active Tasks</CardTitle></CardHeader>
+             <CardContent><div className="text-2xl font-black text-white">{reminders?.filter((r: any) => !r.isResolved).length || 0}</div></CardContent>
+           </Card>
         </div>
 
-        {/* Recent Activity List */}
         <main className="space-y-8 bg-white/50 p-6 rounded-[2rem] border border-slate-100">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
