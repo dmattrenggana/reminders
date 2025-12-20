@@ -2,7 +2,7 @@
 
 import { ReminderCard } from "./reminder-card"
 import { Clock, Loader2, AlertTriangle, ExternalLink } from "lucide-react"
-import { useReminders } from "@/hooks/use-reminders"
+import { useReminders } from "@/hooks/useReminders"
 import { CONTRACTS, validateContractConfig } from "@/lib/contracts/config"
 
 export function ReminderList() {

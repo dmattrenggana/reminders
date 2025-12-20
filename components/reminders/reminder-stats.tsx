@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, CheckCircle2, Flame, Lock, Loader2 } from "lucide-react"
-import { useReminders } from "@/hooks/use-reminders"
+import { useReminders } from "@/hooks/useReminders"
 import { useTokenBalance } from "@/hooks/use-token-balance"
 import { useMemo } from "react"
 import { TOKEN_SYMBOL } from "@/lib/contracts/config"
