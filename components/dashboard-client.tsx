@@ -8,7 +8,7 @@ import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FloatingCreate } from "@/components/floating-create"; // Pastikan path benar
+import { FloatingCreate } from "@/components/floating-create";
 import { 
   Bell, Loader2, Wallet, RefreshCw, 
   CheckCircle2, LogOut 
@@ -64,15 +64,33 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // UPDATE: Menerima parameter dari FloatingCreate
+  /**
+   * HELPER: Mendapatkan Signer secara Universal
+   * Mendukung Farcaster Frame SDK & Web3 Browser (MetaMask/Wagmi)
+   */
+  const getUniversalSigner = async () => {
+    if (typeof window === "undefined") throw new Error("Window not found");
+
+    // 1. Cek Farcaster Frame Provider
+    if (sdk?.wallet?.ethProvider) {
+      const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
+      return await provider.getSigner();
+    }
+    
+    // 2. Cek External Wallet Provider (MetaMask/Wagmi)
+    if (window.ethereum) {
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      return await provider.getSigner();
+    }
+
+    throw new Error("No wallet provider detected. Please connect a wallet.");
+  };
+
   const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
     if (!desc || !amt || !dl) return alert("Please fill all fields.");
     setIsSubmitting(true);
     try {
-      if (!sdk.wallet.ethProvider) throw new Error("Provider not found");
-      
-      const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
-      const signer = await provider.getSigner();
+      const signer = await getUniversalSigner();
       const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
       
       const tokenAddress = await vaultContract.rmndToken();
@@ -83,20 +101,20 @@ export default function DashboardClient() {
       const amountInWei = ethers.parseUnits(amt, 18);
       const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
 
-      console.log("Approving...");
+      // STEP 1: APPROVE
       const approveTx = await tokenContract.approve(VAULT_ADDRESS, amountInWei);
       await approveTx.wait();
 
-      console.log("Locking...");
-      // Pastikan nama function di kontrak Anda adalah lockTokens atau createReminder
+      // STEP 2: LOCK (Ganti nama fungsi sesuai kontrak Anda: lockTokens atau createReminder)
       const lockTx = await vaultContract.lockTokens(amountInWei, deadlineTimestamp);
       await lockTx.wait();
 
       alert("Tokens Locked Successfully!");
-      refreshReminders(); refreshBalance();
+      refreshReminders(); 
+      refreshBalance();
     } catch (error: any) {
-      console.error(error);
-      alert("Error: " + (error.reason || error.message));
+      console.error("Transaction Error:", error);
+      alert("Error: " + (error.reason || error.message || "User rejected transaction"));
     } finally {
       setIsSubmitting(false);
     }
@@ -104,17 +122,16 @@ export default function DashboardClient() {
 
   const handleConfirmCompleted = async (id: number) => {
     try {
-      const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
-      const signer = await provider.getSigner();
+      const signer = await getUniversalSigner();
       const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
 
       const tx = await contract.claimSuccess(id);
       await tx.wait();
 
-      alert("Completed! Funds returned.");
+      alert("Goal Accomplished! Tokens returned to your wallet.");
       refreshReminders();
     } catch (error: any) {
-      alert("Failed: " + (error.reason || error.message));
+      alert("Failed to claim: " + (error.reason || error.message));
     }
   };
 
@@ -128,7 +145,11 @@ export default function DashboardClient() {
 
   const truncateAddr = (addr: string | undefined) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Connected";
 
-  if (!isSDKReady) return <div className="flex min-h-screen items-center justify-center bg-white"><Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" /></div>;
+  if (!isSDKReady) return (
+    <div className="flex min-h-screen items-center justify-center bg-white">
+      <Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" />
+    </div>
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans pb-32">
@@ -142,7 +163,7 @@ export default function DashboardClient() {
             </div>
             <div className="space-y-1">
               <h1 className="text-3xl font-black tracking-tighter text-slate-900">ReminderBase</h1>
-              <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>Never Miss What Matters</p>
+              <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>On-Chain Accountability</p>
             </div>
           </div>
 
@@ -159,7 +180,10 @@ export default function DashboardClient() {
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => connect({ connector: connectors.find(c => c.id === 'farcasterFrame') || connectors[0] })} className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}>
+              <Button 
+                onClick={() => connect({ connector: connectors.find(c => c.id === 'farcasterFrame') || connectors[0] })} 
+                className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}
+              >
                 <Wallet className="mr-2 h-5 w-5" /> Connect Wallet
               </Button>
             )}
@@ -168,50 +192,61 @@ export default function DashboardClient() {
 
         {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Locked RMND</CardTitle></CardHeader>
-           <CardContent><div className="text-2xl font-black">{stats.locked}</div></CardContent></Card>
-           
-           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Completed</CardTitle></CardHeader>
-           <CardContent><div className="text-2xl font-black">{stats.completed}</div></CardContent></Card>
-           
-           <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Burned</CardTitle></CardHeader>
-           <CardContent><div className="text-2xl font-black">{stats.burned}</div></CardContent></Card>
-           
-           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-white tracking-wider">My Tasks</CardTitle></CardHeader>
-           <CardContent><div className="text-2xl font-black text-white">{reminders?.length || 0}</div></CardContent></Card>
+           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-indigo-500">
+             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Locked {symbol}</CardTitle></CardHeader>
+             <CardContent><div className="text-2xl font-black">{stats.locked}</div></CardContent>
+           </Card>
+           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-green-500">
+             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Completed</CardTitle></CardHeader>
+             <CardContent><div className="text-2xl font-black text-green-600">{stats.completed}</div></CardContent>
+           </Card>
+           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-red-500">
+             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Burned</CardTitle></CardHeader>
+             <CardContent><div className="text-2xl font-black text-red-600">{stats.burned}</div></CardContent>
+           </Card>
+           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}>
+             <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-white/70">Active Tasks</CardTitle></CardHeader>
+             <CardContent><div className="text-2xl font-black text-white">{reminders?.filter((r: any) => !r.isResolved).length || 0}</div></CardContent>
+           </Card>
         </div>
 
-        {/* MAIN FEED */}
-        <main className="space-y-8 bg-white/50 p-6 rounded-3xl border border-slate-100">
+        {/* ACTIVITY FEED */}
+        <main className="space-y-8 bg-white/50 p-6 rounded-[2rem] border border-slate-100">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-2xl font-black text-slate-800">Activity Feed</h2>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
               <Button variant="ghost" size="sm" onClick={() => {refreshReminders(); refreshBalance();}} className={`${brandText} font-black text-[10px] uppercase`}>
-                 <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync
+                 <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync Data
               </Button>
             </div>
             
             {reminders?.length > 0 ? (
               <div className="grid gap-5">
                 {reminders.map((r: any) => (
-                  <Card key={r.id} className="bg-white border-slate-100 shadow-sm overflow-hidden rounded-2xl">
-                    <CardContent className="p-8 flex justify-between items-center">
+                  <Card key={r.id} className="bg-white border-slate-100 shadow-sm overflow-hidden rounded-2xl group hover:shadow-md transition-shadow">
+                    <CardContent className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                       <div className="space-y-2">
-                         <Badge variant="outline" className={`text-[9px] font-black ${r.isResolved ? "bg-slate-100" : "bg-green-50 text-green-700"}`}>
-                           {r.isResolved ? "RESOLVED" : "ACTIVE"}
+                         <Badge variant="outline" className={`text-[9px] font-black px-3 py-1 ${r.isResolved ? "bg-slate-100 text-slate-400" : "bg-indigo-50 text-indigo-700 border-indigo-100"}`}>
+                           {r.isResolved ? "SETTLED" : "ACTIVE COMMITMENT"}
                          </Badge>
                          <h3 className="text-xl font-black text-slate-800">Task #{r.id}</h3>
-                         <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">
-                           Deadline: {new Date(Number(r.deadline) * 1000).toLocaleString()}
-                         </p>
+                         <div className="flex items-center gap-2 text-slate-400">
+                           <Bell className="w-3 h-3" />
+                           <p className="text-[11px] font-bold uppercase">
+                             Deadline: {new Date(Number(r.deadline) * 1000).toLocaleString()}
+                           </p>
+                         </div>
                          {!r.isResolved && (
-                           <Button onClick={() => handleConfirmCompleted(r.id)} className="mt-4 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] h-9 px-6 rounded-xl uppercase transition-all flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4" /> Mark Completed
+                           <Button 
+                             onClick={() => handleConfirmCompleted(r.id)} 
+                             className="mt-4 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] h-10 px-6 rounded-xl uppercase transition-all flex items-center gap-2 shadow-lg shadow-green-100"
+                           >
+                              <CheckCircle2 className="w-4 h-4" /> Mark as Done
                            </Button>
                          )}
                       </div>
-                      <div className="text-right">
+                      <div className="bg-slate-50 px-6 py-4 rounded-2xl text-right border border-slate-100 w-full md:w-auto">
                         <p className={`text-3xl font-black ${brandText}`}>{r.rewardPool}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{symbol}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Locked {symbol}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -219,14 +254,14 @@ export default function DashboardClient() {
               </div>
             ) : (
               <div className="text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
-                <Bell className="h-10 w-10 text-slate-200 mx-auto mb-4" />
-                <p className="text-slate-400 text-lg font-black uppercase tracking-widest">No Active Reminders</p>
+                <Bell className="h-12 w-12 text-slate-100 mx-auto mb-4" />
+                <p className="text-slate-300 text-sm font-black uppercase tracking-widest">Your commitments will appear here</p>
               </div>
             )}
         </main>
       </div>
 
-      {/* FLOATING ACTION PANEL */}
+      {/* FLOATING ACTION PANEL - UNIVERSAL READY */}
       <FloatingCreate 
         symbol={symbol} 
         isSubmitting={isSubmitting} 
