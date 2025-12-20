@@ -1,47 +1,56 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useReminderService } from "./use-reminder-service"
-import { useAccount } from "wagmi"
-import { formatUnits } from "@/lib/utils/ethers-utils"
+import { useAccount, useReadContracts } from "wagmi"
+
+// ABI minimal untuk token ERC-20 (RMNDtest)
+const erc20Abi = [
+  {
+    constant: true,
+    inputs: [{ name: "_owner", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "balance", type: "uint256" }],
+    type: "function",
+  },
+  {
+    constant: true,
+    name: "symbol",
+    outputs: [{ name: "", type: "string" }],
+    type: "function",
+  },
+] as const;
 
 export function useTokenBalance() {
-  const { address, isConnected } = useAccount()
-  const service = useReminderService()
-  const [balance, setBalance] = useState<string>("0")
-  const [isLoading, setIsLoading] = useState(true)
+  const { address, isConnected } = useAccount();
+  
+  // Alamat Kontrak RMNDtest kamu di Base
+  const TOKEN_CONTRACT = "0x6ee85c2cfab33678de10a5e1634d86abb5eebb07";
 
-  const fetchBalance = useCallback(async () => {
-    if (!service || !address || !isConnected) {
-      setBalance("0")
-      setIsLoading(false)
-      return
+  const { data, refetch, isLoading } = useReadContracts({
+    contracts: [
+      {
+        address: TOKEN_CONTRACT,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: address ? [address] : undefined,
+      },
+      {
+        address: TOKEN_CONTRACT,
+        abi: erc20Abi,
+        functionName: "symbol",
+      },
+    ],
+    query: {
+      enabled: !!address && isConnected,
+      // Refetch otomatis setiap 20 detik untuk update saldo terbaru
+      refetchInterval: 20000, 
     }
-
-    try {
-      setIsLoading(true)
-      const rawBalance = await service.getTokenBalance(address)
-      
-      // Memastikan rawBalance dikonversi ke BigInt sebelum diformat
-      // Kita gunakan BigInt(rawBalance.toString()) agar aman jika rawBalance berupa string/hex
-      const formattedBalance = formatUnits(BigInt(rawBalance.toString()), 18)
-      
-      setBalance(formattedBalance)
-    } catch (error) {
-      console.error("Error fetching token balance:", error)
-      setBalance("0")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [service, address, isConnected])
-
-  useEffect(() => {
-    fetchBalance()
-  }, [fetchBalance])
+  });
 
   return {
-    balance,
+    // data[0] adalah balanceOf, data[1] adalah symbol
+    balance: data?.[0]?.result ?? 0n, 
+    symbol: (data?.[1]?.result as string) || "RMNDtest",
     isLoading,
-    refresh: fetchBalance
+    refresh: refetch
   }
 }
