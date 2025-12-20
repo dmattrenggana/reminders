@@ -19,9 +19,8 @@ import { formatUnits, parseUnits } from "viem";
 import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
 export default function DashboardClient() {
-  // Ambil data user dari provider (jika ada)
+  // 1. User State & Context
   const { user: providerUser } = useFarcaster();
-  // State cadangan untuk menyimpan data user langsung dari context SDK
   const [contextUser, setContextUser] = useState<any>(null);
 
   const { address, isConnected } = useAccount();
@@ -46,7 +45,7 @@ export default function DashboardClient() {
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
-  // Gabungkan data user: Utamakan context SDK karena biasanya lebih cepat di dalam Frame
+  // Gabungkan data user untuk ditampilkan di UI
   const displayUser = providerUser || contextUser;
 
   const stats = {
@@ -55,13 +54,14 @@ export default function DashboardClient() {
     burned: reminders?.filter((r: any) => r.isResolved && !r.isCompleted).length || 0
   };
 
-  // 1. Inisialisasi SDK Farcaster & Ambil Context
+  // 2. SDK Initialization (FIXED FOR TYPESCRIPT NEVER ERROR)
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
         try {
-          const context = await sdk.actions.ready();
-          // Jika context mengandung data user, simpan ke state
+          // Casting 'as any' mencegah error build "Property user does not exist on type never"
+          const context = (await sdk.actions.ready()) as any;
+          
           if (context?.user) {
             setContextUser(context.user);
           }
@@ -76,7 +76,7 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // 2. Fungsi Connect Wallet Hybrid
+  // 3. Wallet Connection Logic
   const handleConnect = () => {
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
     const injectedConnector = connectors.find((c) => c.id === "injected");
@@ -90,6 +90,7 @@ export default function DashboardClient() {
     }
   };
 
+  // 4. Contract Interactions
   const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
     if (!isConnected) return alert("Please connect your wallet first.");
     if (!desc || !amt || !dl) return alert("Please fill all fields.");
@@ -99,6 +100,7 @@ export default function DashboardClient() {
       const amountInWei = parseUnits(amt, 18);
       const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
 
+      // STEP 1: APPROVE
       await writeContractAsync({
         address: TOKEN_ADDRESS as `0x${string}`,
         abi: [{
@@ -115,6 +117,7 @@ export default function DashboardClient() {
         args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
       });
 
+      // STEP 2: LOCK
       await writeContractAsync({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
@@ -190,7 +193,6 @@ export default function DashboardClient() {
                   onClick={() => disconnect()} 
                   className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-3 text-slate-700 hover:text-red-500 transition-all flex items-center gap-2"
                 >
-                  {/* Perbaikan Tampilan PFP */}
                   {displayUser?.pfpUrl && (
                     <img 
                       src={displayUser.pfpUrl} 
@@ -198,7 +200,6 @@ export default function DashboardClient() {
                       className="w-6 h-6 rounded-full border border-slate-100" 
                     />
                   )}
-                  {/* Perbaikan Tampilan Username */}
                   <span>
                     {displayUser?.username 
                       ? `@${displayUser.username}` 
@@ -215,8 +216,7 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        {/* Sisa konten dashboard tetap sama */}
-        {/* ... stats and activity ... */}
+        {/* Dashboard Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
            <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-indigo-500">
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Locked {symbol}</CardTitle></CardHeader>
@@ -236,6 +236,7 @@ export default function DashboardClient() {
            </Card>
         </div>
 
+        {/* Activity List */}
         <main className="space-y-8 bg-white/50 p-6 rounded-[2rem] border border-slate-100">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
