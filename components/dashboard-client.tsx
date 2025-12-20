@@ -64,7 +64,6 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // --- HANDLERS (FIXED: handleConnect added back) ---
   const handleConnect = () => {
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
     const injectedConnector = connectors.find((c) => c.id === "injected");
@@ -110,7 +109,7 @@ export default function DashboardClient() {
   };
 
   const handleHelpRemindMe = (reminder: any) => {
-    const text = encodeURIComponent(`🚨 Help remind @user for Task #${reminder.id}. One hour left before tokens are burned!`);
+    const text = encodeURIComponent(`🚨 Urgency! Help remind @user for Task #${reminder.id}. One hour left before tokens are burned!`);
     window.open(`https://warpcast.com/~/compose?text=${text}`, "_blank");
   };
 
@@ -138,14 +137,16 @@ export default function DashboardClient() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 pb-32">
       <div className="max-w-5xl mx-auto w-full space-y-8">
+        
+        {/* HEADER: Font Title & Sub-judul dikembalikan */}
         <header className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-sm">
               <Image src="/logo.jpg" alt="Logo" fill className="object-cover" priority />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tighter italic">REMINDERS</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">On-Chain Accountability</p>
+              <h1 className="text-2xl font-black tracking-tighter">Reminders</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Never Miss What Matters</p>
             </div>
           </div>
           
@@ -169,6 +170,7 @@ export default function DashboardClient() {
           </div>
         </header>
 
+        {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
            {[
              { label: `Locked ${symbol}`, val: stats.locked, color: "border-b-indigo-500" },
@@ -186,8 +188,8 @@ export default function DashboardClient() {
         <Tabs defaultValue="public" className="w-full">
           <div className="flex items-center justify-between mb-6 bg-white/60 backdrop-blur-sm p-2 rounded-3xl border border-slate-200 shadow-sm">
             <TabsList className="bg-transparent border-none gap-2">
-              <TabsTrigger value="public" className="rounded-2xl px-6 font-black text-xs uppercase data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">🌍 Public Feed</TabsTrigger>
-              <TabsTrigger value="my" className="rounded-2xl px-6 font-black text-xs uppercase data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">👤 My Feed</TabsTrigger>
+              <TabsTrigger value="public" className="rounded-2xl px-6 font-black text-xs uppercase transition-all data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">🌍 Public Feed</TabsTrigger>
+              <TabsTrigger value="my" className="rounded-2xl px-6 font-black text-xs uppercase transition-all data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">👤 My Feed</TabsTrigger>
             </TabsList>
             <Button variant="ghost" size="sm" onClick={() => {refreshReminders(); refreshBalance();}} className="text-[#4f46e5] font-black text-[10px] uppercase">
               <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync Network
@@ -202,6 +204,7 @@ export default function DashboardClient() {
           </TabsContent>
         </Tabs>
       </div>
+
       <FloatingCreate symbol={symbol} isSubmitting={isSubmitting} onConfirm={handleCreateReminder} />
     </div>
   );
@@ -229,29 +232,43 @@ function ReminderList({ items, onHelp, onConfirm, address }: any) {
                     r.isDangerZone ? "bg-red-500 text-white animate-pulse" : 
                     "bg-indigo-50 text-indigo-700"
                   }`}>
-                    {r.isResolved ? "SETTLED" : r.isDangerZone ? "DANGER ZONE" : "ACTIVE"}
+                    {/* ISTILAH DIUBAH: Danger Zone -> Deadline */}
+                    {r.isResolved ? "SETTLED" : r.isDangerZone ? "DEADLINE" : "ACTIVE"}
                   </Badge>
-                  {isOwner && <Badge variant="outline" className="text-[9px] font-black border-indigo-100 text-indigo-500">MY TASK</Badge>}
+                  {isOwner && <Badge variant="outline" className="text-[9px] font-black border-indigo-100 text-indigo-500 bg-indigo-50/30">MY TASK</Badge>}
                 </div>
-                <h3 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">Task #{r.id}</h3>
-                <div className="flex gap-3 pt-1">
+
+                <div>
+                  <h3 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">Task #{r.id}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Creator: {isOwner ? "You" : `${r.creator?.slice(0,6)}...${r.creator?.slice(-4)}`}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
                   {!r.isResolved && (
                     <Button 
                       disabled={!r.isDangerZone} 
                       onClick={() => onHelp(r)}
-                      className={`h-9 px-5 rounded-xl text-[10px] font-black uppercase ${r.isDangerZone ? "bg-orange-500 text-white shadow-lg" : "bg-slate-100 text-slate-400"}`}
+                      className={`h-9 px-5 rounded-xl text-[10px] font-black uppercase transition-all shadow-lg ${
+                        r.isDangerZone 
+                        ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-100" 
+                        : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                      }`}
                     >
                       <Megaphone className="w-3.5 h-3.5 mr-2" /> Help Remind Me
                     </Button>
                   )}
                   {isOwner && !r.isResolved && (
-                    <Button onClick={() => onConfirm(r.id)} className="h-9 px-5 bg-green-500 text-white font-black text-[10px] rounded-xl uppercase shadow-lg shadow-green-100">
+                    <Button 
+                      onClick={() => onConfirm(r.id)} 
+                      className="h-9 px-5 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] rounded-xl uppercase shadow-lg shadow-green-100"
+                    >
                       <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Claim Success
                     </Button>
                   )}
                 </div>
               </div>
-              <div className="bg-slate-50 px-8 py-6 rounded-[2rem] text-right border border-slate-100 min-w-[150px]">
+
+              <div className="bg-slate-50 px-8 py-6 rounded-[2rem] text-right border border-slate-100 w-full md:w-auto min-w-[150px]">
                 <p className="text-3xl font-black text-[#4f46e5] leading-none mb-1">{r.rewardPool}</p>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Locked Amount</p>
               </div>
