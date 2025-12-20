@@ -10,35 +10,58 @@ export function useReminders() {
     try {
       setLoading(true);
       
-      // Gunakan RPC Public Base agar data terbaca di web biasa
       const rpcUrl = "https://mainnet.base.org"; 
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider);
 
-      // Sesuai ABI Anda: menggunakan nextId
+      // Mengambil total ID yang ada
       const nextId = await contract.nextId();
       const count = Number(nextId);
       
-      const items = [];
+      const now = Math.floor(Date.now() / 1000);
 
+      // OPTIMASI: Membuat array promise untuk fetch data secara paralel
+      const promises = [];
       for (let i = 0; i < count; i++) {
-        try {
-          const r = await contract.reminders(i);
-          if (r.creator !== ethers.ZeroAddress) {
-            items.push({
-              id: i,
-              creator: r.creator,
-              rewardPool: ethers.formatUnits(r.rewardPool, 18),
-              deadline: Number(r.deadline),
-              isResolved: r.isResolved,
-              isCompleted: r.isCompleted,
-            });
-          }
-        } catch (e) {
-          console.error(`Error fetching ID ${i}:`, e);
-        }
+        promises.push(
+          contract.reminders(i).then((r) => ({
+            id: i,
+            creator: r.creator,
+            rewardPool: ethers.formatUnits(r.rewardPool, 18),
+            deadline: Number(r.deadline),
+            isResolved: r.isResolved,
+            isCompleted: r.isCompleted,
+          })).catch(e => {
+            console.error(`Error fetching ID ${i}:`, e);
+            return null;
+          })
+        );
       }
 
+      // Menjalankan semua request secara bersamaan
+      const results = await Promise.all(promises);
+
+      // Filter data valid dan tambahkan metadata workflow
+      const items = results
+        .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
+        .map((r: any) => {
+          const timeLeft = r.deadline - now;
+          
+          // Logika Workflow: Danger Zone adalah -1 jam (3600 detik) sebelum deadline
+          const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+          
+          // Logika Workflow: Expired jika deadline lewat tapi belum resolved
+          const isExpired = !r.isResolved && timeLeft <= 0;
+
+          return {
+            ...r,
+            timeLeft,
+            isDangerZone,
+            isExpired,
+          };
+        });
+
+      // Urutkan dari yang terbaru (ID terbesar di atas)
       setActiveReminders(items.reverse());
     } catch (error) {
       console.error("Error fetching reminders:", error);
@@ -49,6 +72,10 @@ export function useReminders() {
 
   useEffect(() => {
     fetchReminders();
+    
+    // Opsional: Refresh otomatis setiap 1 menit untuk mengupdate status Danger Zone
+    const interval = setInterval(fetchReminders, 60000);
+    return () => clearInterval(interval);
   }, [fetchReminders]);
 
   return { activeReminders, loading, refresh: fetchReminders };
