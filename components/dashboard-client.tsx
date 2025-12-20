@@ -18,7 +18,6 @@ import sdk from "@farcaster/frame-sdk";
 import { formatUnits, parseUnits } from "viem";
 import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
-// Nilai Max Uint256 untuk Infinite Approval
 const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
 const ERC20_ABI = [
@@ -70,6 +69,7 @@ export default function DashboardClient() {
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
+  // Prioritas data user dari Farcaster SDK
   const displayUser = providerUser || contextUser;
 
   const stats = {
@@ -110,30 +110,21 @@ export default function DashboardClient() {
         functionName: 'allowance',
         args: [address, VAULT_ADDRESS as `0x${string}`],
       }) as bigint;
-      
       return currentAllowance >= neededAmount;
     } catch (e) {
-      console.error("Allowance check failed", e);
       return false;
     }
   };
 
-  // --- LOGIC: CREATE REMINDER DENGAN INFINITE APPROVAL ---
   const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
     if (!isConnected || !publicClient || !address) return alert("Please connect your wallet.");
-    if (!desc || !amt || !dl) return alert("Please fill all fields.");
-    
     setIsSubmitting(true);
     try {
       const amountInWei = parseUnits(amt, 18);
       const deadlineTimestamp = BigInt(Math.floor(new Date(dl).getTime() / 1000));
 
-      // 1. CEK ALLOWANCE
       const isApproved = await checkAllowance(amountInWei);
-      
       if (!isApproved) {
-        console.log("Requesting Infinite Approval...");
-        // Estimasi gas untuk approve nilai maksimal
         const approveGas = await publicClient.estimateContractGas({
           address: TOKEN_ADDRESS as `0x${string}`,
           abi: ERC20_ABI,
@@ -142,7 +133,6 @@ export default function DashboardClient() {
           account: address,
         });
 
-        // Eksekusi transaksi Approve (User hanya perlu melakukan ini 1x seumur hidup)
         await writeContractAsync({
           address: TOKEN_ADDRESS as `0x${string}`,
           abi: ERC20_ABI,
@@ -150,10 +140,8 @@ export default function DashboardClient() {
           args: [VAULT_ADDRESS as `0x${string}`, MAX_UINT256],
           gas: (approveGas * BigInt(120)) / BigInt(100),
         });
-        console.log("Infinite Approval granted.");
       }
 
-      // 2. LOCK TOKENS (GAS DINAMIS)
       const lockGas = await publicClient.estimateContractGas({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
@@ -174,9 +162,7 @@ export default function DashboardClient() {
       refreshReminders(); 
       refreshBalance();
     } catch (error: any) {
-      console.error("Contract Error:", error);
-      const msg = error.shortMessage || error.message || "Transaction failed";
-      alert(msg.includes("User rejected") ? "Transaction cancelled." : "Error: " + msg);
+      alert("Error: " + (error.shortMessage || "Transaction failed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -200,18 +186,10 @@ export default function DashboardClient() {
         args: [BigInt(id)],
         gas: (gas * BigInt(120)) / BigInt(100),
       });
-      alert("Goal Accomplished!");
       refreshReminders();
-    } catch (error: any) {
-      alert("Failed: " + (error.shortMessage || error.message));
+    } catch (e: any) {
+      alert("Failed: " + e.message);
     }
-  };
-
-  const formatBalance = (val: any) => {
-    if (!val || val === BigInt(0)) return "0";
-    try {
-      return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(formatUnits(val, 18)));
-    } catch (e) { return "0"; }
   };
 
   if (!isSDKReady || !isFarcasterLoaded) {
@@ -225,75 +203,85 @@ export default function DashboardClient() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans pb-32">
       <div className="max-w-5xl mx-auto w-full space-y-10">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-6">
-            <div className="relative w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden shadow-md border border-slate-100">
+        
+        {/* HEADER AREA */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="relative w-12 h-12 flex-shrink-0 rounded-2xl overflow-hidden shadow-sm">
               <Image src="/logo.jpg" alt="Logo" fill className="object-cover" priority />
             </div>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-black tracking-tighter text-slate-900">ReminderBase</h1>
-              <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>On-Chain Accountability</p>
+            <div>
+              {/* UPDATE JUDUL & SLOGAN */}
+              <h1 className="text-2xl font-black tracking-tighter">Reminders</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Never Miss What Matters</p>
             </div>
           </div>
           
+          {/* WALLET BUTTON AREA */}
           <div className="flex items-center gap-3">
             {isConnected ? (
-              <div className="flex items-center gap-3 bg-slate-50 pl-5 pr-1 py-1 rounded-full border border-slate-100 shadow-sm">
-                <p className={`text-[10px] font-mono font-black ${brandText} border-r border-slate-200 pr-3`}>
-                  {formatBalance(balance)} {symbol}
-                </p>
+              <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-full border border-slate-200 shadow-sm">
+                <div className="px-4 py-1 text-[11px] font-black font-mono border-r border-slate-200 text-indigo-600">
+                   {Number(formatUnits(balance || 0n, 18)).toFixed(2)} {symbol}
+                </div>
+                
                 <Button 
                   variant="ghost" 
-                  size="sm" 
                   onClick={() => disconnect()} 
-                  className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-3 text-slate-700 hover:text-red-500 transition-all flex items-center gap-2"
+                  className="flex items-center gap-2 h-10 rounded-full bg-white hover:bg-red-50 hover:text-red-600 transition-all px-2 pr-4 shadow-sm border border-slate-100"
                 >
-                  {displayUser?.pfpUrl && (
+                  {/* Tampilan Foto Profil Farcaster */}
+                  {displayUser?.pfpUrl ? (
                     <img 
                       src={displayUser.pfpUrl} 
                       alt="PFP" 
-                      className="w-6 h-6 rounded-full border border-slate-200 shadow-sm" 
+                      className="w-7 h-7 rounded-full object-cover ring-2 ring-indigo-50" 
                     />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center">
+                      <Wallet className="w-3 h-3 text-indigo-500" />
+                    </div>
                   )}
-                  <span>
-                    {displayUser?.username 
-                      ? `@${displayUser.username}` 
-                      : `${address?.slice(0,6)}...${address?.slice(-4)}`}
+                  
+                  {/* Tampilan @Username Farcaster */}
+                  <span className="text-xs font-black">
+                    {displayUser?.username ? `@${displayUser.username}` : `${address?.slice(0,4)}...${address?.slice(-4)}`}
                   </span>
                   <LogOut className="h-3 w-3 opacity-30" />
                 </Button>
               </div>
             ) : (
-              <Button onClick={handleConnect} className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}>
-                <Wallet className="mr-2 h-5 w-5" /> Connect Wallet
+              <Button onClick={handleConnect} className={`rounded-full ${brandPurple} hover:opacity-90 h-11 px-8 font-bold text-white shadow-lg active:scale-95 transition-all`}>
+                <Wallet className="mr-2 h-4 w-4" /> Connect Wallet
               </Button>
             )}
           </div>
         </header>
 
-        {/* Dashboard Stats */}
+        {/* STATS AREA */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-indigo-500">
+           <Card className="bg-white border-slate-100 border-b-4 border-b-indigo-500 rounded-3xl overflow-hidden">
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Locked {symbol}</CardTitle></CardHeader>
              <CardContent><div className="text-2xl font-black">{stats.locked}</div></CardContent>
            </Card>
-           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-green-500">
+           <Card className="bg-white border-slate-100 border-b-4 border-b-green-500 rounded-3xl overflow-hidden">
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Completed</CardTitle></CardHeader>
              <CardContent><div className="text-2xl font-black text-green-600">{stats.completed}</div></CardContent>
            </Card>
-           <Card className="bg-white border-slate-100 shadow-sm border-b-4 border-b-red-500">
+           <Card className="bg-white border-slate-100 border-b-4 border-b-red-500 rounded-3xl overflow-hidden">
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Burned</CardTitle></CardHeader>
              <CardContent><div className="text-2xl font-black text-red-600">{stats.burned}</div></CardContent>
            </Card>
-           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}>
+           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow} rounded-3xl`}>
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-white/70">Active Tasks</CardTitle></CardHeader>
              <CardContent><div className="text-2xl font-black text-white">{reminders?.filter((r: any) => !r.isResolved).length || 0}</div></CardContent>
            </Card>
         </div>
 
-        <main className="space-y-8 bg-white/50 p-6 rounded-[2rem] border border-slate-100">
+        {/* MAIN LIST AREA */}
+        <main className="space-y-8 bg-white/50 p-6 rounded-[2.5rem] border border-slate-100">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
             <Button variant="ghost" size="sm" onClick={() => {refreshReminders(); refreshBalance();}} className={`${brandText} font-black text-[10px] uppercase`}>
               <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync Data
             </Button>
@@ -302,7 +290,7 @@ export default function DashboardClient() {
           {reminders?.length > 0 ? (
             <div className="grid gap-5">
               {reminders.map((r: any) => (
-                <Card key={r.id} className="bg-white border-slate-100 shadow-sm overflow-hidden rounded-2xl group hover:shadow-md transition-shadow">
+                <Card key={r.id} className="bg-white border-slate-100 shadow-sm overflow-hidden rounded-[2rem] hover:shadow-md transition-all">
                   <CardContent className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="space-y-2">
                       <Badge variant="outline" className={`text-[9px] font-black px-3 py-1 ${r.isResolved ? "bg-slate-100 text-slate-400" : "bg-indigo-50 text-indigo-700 border-indigo-100"}`}>
@@ -311,7 +299,7 @@ export default function DashboardClient() {
                       <h3 className="text-xl font-black text-slate-800">Task #{r.id}</h3>
                       <div className="flex items-center gap-2 text-slate-400">
                         <Bell className="w-3 h-3" />
-                        <p className="text-[11px] font-bold uppercase">Deadline: {new Date(Number(r.deadline) * 1000).toLocaleString()}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-tighter">Deadline: {new Date(Number(r.deadline) * 1000).toLocaleString()}</p>
                       </div>
                       {!r.isResolved && (
                         <Button onClick={() => handleConfirmCompleted(r.id)} className="mt-4 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] h-10 px-6 rounded-xl uppercase transition-all flex items-center gap-2 shadow-lg shadow-green-100">
@@ -328,9 +316,9 @@ export default function DashboardClient() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
-              <Bell className="h-12 w-12 text-slate-100 mx-auto mb-4" />
-              <p className="text-slate-300 text-sm font-black uppercase tracking-widest">Your commitments will appear here</p>
+            <div className="text-center py-24 bg-white rounded-[2rem] border-2 border-dashed border-slate-100">
+              <Bell className="h-10 w-10 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-300 text-[10px] font-black uppercase tracking-[0.2em]">No commitments found</p>
             </div>
           )}
         </main>
