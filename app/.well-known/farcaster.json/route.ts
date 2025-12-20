@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+
 export async function GET() {
   const config = {
     accountAssociation: {
@@ -7,7 +9,7 @@ export async function GET() {
     },
     frame: {
       version: "1",
-      name: "ReminderBase",
+      name: "Reminders",
       iconUrl: "https://remindersbase.vercel.app/logo.jpg", 
       splashImageUrl: "https://remindersbase.vercel.app/logo.jpg",
       splashBackgroundColor: "#4f46e5",
@@ -15,5 +17,10 @@ export async function GET() {
     },
   };
 
-  return Response.json(config);
+  return NextResponse.json(config, {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 }
