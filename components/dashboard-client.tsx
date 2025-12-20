@@ -204,20 +204,18 @@ export default function DashboardClient() {
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 text-slate-900 font-sans pb-32">
       <div className="max-w-5xl mx-auto w-full space-y-10">
         
-        {/* HEADER AREA */}
+        {/* HEADER DENGAN USER PROFILE */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="relative w-12 h-12 flex-shrink-0 rounded-2xl overflow-hidden shadow-sm">
               <Image src="/logo.jpg" alt="Logo" fill className="object-cover" priority />
             </div>
             <div>
-              {/* UPDATE JUDUL & SLOGAN */}
-              <h1 className="text-2xl font-black tracking-tighter">Reminders</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Never Miss What Matters</p>
+              <h1 className="text-2xl font-black tracking-tighter">ReminderBase</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Base Network</p>
             </div>
           </div>
           
-          {/* WALLET BUTTON AREA */}
           <div className="flex items-center gap-3">
             {isConnected ? (
               <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-full border border-slate-200 shadow-sm">
@@ -230,7 +228,6 @@ export default function DashboardClient() {
                   onClick={() => disconnect()} 
                   className="flex items-center gap-2 h-10 rounded-full bg-white hover:bg-red-50 hover:text-red-600 transition-all px-2 pr-4 shadow-sm border border-slate-100"
                 >
-                  {/* Tampilan Foto Profil Farcaster */}
                   {displayUser?.pfpUrl ? (
                     <img 
                       src={displayUser.pfpUrl} 
@@ -243,7 +240,6 @@ export default function DashboardClient() {
                     </div>
                   )}
                   
-                  {/* Tampilan @Username Farcaster */}
                   <span className="text-xs font-black">
                     {displayUser?.username ? `@${displayUser.username}` : `${address?.slice(0,4)}...${address?.slice(-4)}`}
                   </span>
@@ -258,7 +254,7 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        {/* STATS AREA */}
+        {/* Dashboard Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
            <Card className="bg-white border-slate-100 border-b-4 border-b-indigo-500 rounded-3xl overflow-hidden">
              <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Locked {symbol}</CardTitle></CardHeader>
@@ -278,7 +274,6 @@ export default function DashboardClient() {
            </Card>
         </div>
 
-        {/* MAIN LIST AREA */}
         <main className="space-y-8 bg-white/50 p-6 rounded-[2.5rem] border border-slate-100">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
