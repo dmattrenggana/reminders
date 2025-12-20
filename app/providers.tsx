@@ -40,16 +40,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <PrivyProvider
-      appId="clzshclp807eay6ofun669cl5" // App ID Anda tetap sama
+      appId="clzshclp807eay6ofun669cl5"
       config={{
         appearance: {
           theme: "light",
           accentColor: "#676FFF",
-          showWalletLoginFirst: false, // Penting agar tidak memicu fetch icon eksternal di Frame
+          showWalletLoginFirst: false, 
         },
-        // Konfigurasi agar tidak bentrok dengan Frame
+        // PERBAIKAN STRUKTUR DI SINI UNTUK BUILD VERCEL
         embeddedWallets: {
-          createOnLogin: "users-without-wallets",
+          ethereum: {
+            createOnLogin: "users-without-wallets",
+          },
         },
       }}
     >
