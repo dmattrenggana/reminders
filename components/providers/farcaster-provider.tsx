@@ -23,21 +23,24 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        // PERBAIKAN UTAMA: Ambil context dari hasil ready()
-        // Ini jauh lebih stabil daripada memanggil sdk.context langsung
+        // Ambil context dari ready()
         const context = (await sdk.actions.ready()) as any;
         
         if (context?.user) {
-          // Kita simpan objek user-nya
-          // Frame SDK v2 biasanya mengirim: { fid, username, displayName, pfpUrl }
-          setUser(context.user);
-          console.log("Farcaster User Loaded:", context.user);
-        } else {
-          console.warn("Farcaster context loaded but no user found");
+          // NORMALISASI: Memastikan UI selalu mendapatkan pfpUrl dan username 
+          // apa pun nama variabel asli dari SDK
+          const normalizedUser = {
+            ...context.user,
+            username: context.user.username || context.user.displayName || "Farcaster User",
+            pfpUrl: context.user.pfpUrl || context.user.pfp || "" 
+          };
+          
+          setUser(normalizedUser);
+          console.log("Farcaster User Verified:", normalizedUser);
         }
       } catch (e) {
         setError("Failed to connect to Farcaster");
-        console.error("Farcaster SDK Init Error:", e);
+        console.error("SDK Init Error:", e);
       } finally {
         setIsLoaded(true);
       }

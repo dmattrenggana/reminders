@@ -20,7 +20,7 @@ import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
 export default function DashboardClient() {
   // 1. User State & Context
-  const { user: providerUser } = useFarcaster();
+  const { user: providerUser, isLoaded: isFarcasterLoaded } = useFarcaster();
   const [contextUser, setContextUser] = useState<any>(null);
 
   const { address, isConnected } = useAccount();
@@ -45,7 +45,7 @@ export default function DashboardClient() {
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
-  // Gabungkan data user untuk ditampilkan di UI
+  // Gabungkan data user: Utamakan provider, fallback ke local context
   const displayUser = providerUser || contextUser;
 
   const stats = {
@@ -54,12 +54,11 @@ export default function DashboardClient() {
     burned: reminders?.filter((r: any) => r.isResolved && !r.isCompleted).length || 0
   };
 
-  // 2. SDK Initialization (FIXED FOR TYPESCRIPT NEVER ERROR)
+  // 2. SDK Initialization
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
         try {
-          // Casting 'as any' mencegah error build "Property user does not exist on type never"
           const context = (await sdk.actions.ready()) as any;
           
           if (context?.user) {
@@ -159,7 +158,7 @@ export default function DashboardClient() {
     } catch (e) { return "0"; }
   };
 
-  if (!isSDKReady) {
+  if (!isSDKReady || !isFarcasterLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <Loader2 className="h-10 w-10 animate-spin text-[#4f46e5]" />
@@ -197,7 +196,7 @@ export default function DashboardClient() {
                     <img 
                       src={displayUser.pfpUrl} 
                       alt="PFP" 
-                      className="w-6 h-6 rounded-full border border-slate-100" 
+                      className="w-6 h-6 rounded-full border border-slate-200 shadow-sm" 
                     />
                   )}
                   <span>

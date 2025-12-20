@@ -7,6 +7,8 @@ import { base } from "wagmi/chains";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { injected, coinbaseWallet } from "wagmi/connectors";
 import { useState, useEffect } from "react";
+// IMPORT PROVIDER BARU ANDA DISINI
+import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 
 // Periksa apakah aplikasi dibuka di dalam Frame
 const isFrame = () => {
@@ -57,7 +59,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          {children}
+          {/* PEMBUNGKUS FARCASTER WAJIB ADA DI SINI */}
+          <FarcasterProvider>
+            {children}
+          </FarcasterProvider>
         </QueryClientProvider>
       </WagmiProvider>
     </PrivyProvider>
