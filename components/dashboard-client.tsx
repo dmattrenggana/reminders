@@ -18,7 +18,9 @@ import sdk from "@farcaster/frame-sdk";
 import { formatUnits, parseUnits } from "viem";
 import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
-// Minimal ABI untuk fungsi ERC20 yang umum
+// Nilai Max Uint256 untuk Infinite Approval
+const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
 const ERC20_ABI = [
   {
     "inputs": [
@@ -99,8 +101,7 @@ export default function DashboardClient() {
     connect({ connector: fcConnector || injectedConnector || connectors[0] });
   };
 
-  // --- LOGIC: CEK ALLOWANCE ---
-  const checkAllowance = async (amount: bigint) => {
+  const checkAllowance = async (neededAmount: bigint) => {
     if (!publicClient || !address) return false;
     try {
       const currentAllowance = await publicClient.readContract({
@@ -110,14 +111,14 @@ export default function DashboardClient() {
         args: [address, VAULT_ADDRESS as `0x${string}`],
       }) as bigint;
       
-      return currentAllowance >= amount;
+      return currentAllowance >= neededAmount;
     } catch (e) {
       console.error("Allowance check failed", e);
       return false;
     }
   };
 
-  // --- LOGIC: CREATE REMINDER DENGAN SMART APPROVAL ---
+  // --- LOGIC: CREATE REMINDER DENGAN INFINITE APPROVAL ---
   const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
     if (!isConnected || !publicClient || !address) return alert("Please connect your wallet.");
     if (!desc || !amt || !dl) return alert("Please fill all fields.");
@@ -127,32 +128,32 @@ export default function DashboardClient() {
       const amountInWei = parseUnits(amt, 18);
       const deadlineTimestamp = BigInt(Math.floor(new Date(dl).getTime() / 1000));
 
-      // 1. CEK APAKAH PERLU APPROVE?
+      // 1. CEK ALLOWANCE
       const isApproved = await checkAllowance(amountInWei);
       
       if (!isApproved) {
-        console.log("Allowance insufficient. Requesting approval...");
+        console.log("Requesting Infinite Approval...");
+        // Estimasi gas untuk approve nilai maksimal
         const approveGas = await publicClient.estimateContractGas({
           address: TOKEN_ADDRESS as `0x${string}`,
           abi: ERC20_ABI,
           functionName: 'approve',
-          args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
+          args: [VAULT_ADDRESS as `0x${string}`, MAX_UINT256],
           account: address,
         });
 
+        // Eksekusi transaksi Approve (User hanya perlu melakukan ini 1x seumur hidup)
         await writeContractAsync({
           address: TOKEN_ADDRESS as `0x${string}`,
           abi: ERC20_ABI,
           functionName: 'approve',
-          args: [VAULT_ADDRESS as `0x${string}`, amountInWei],
-          gas: (approveGas * 120n) / 100n,
+          args: [VAULT_ADDRESS as `0x${string}`, MAX_UINT256],
+          gas: (approveGas * BigInt(120)) / BigInt(100),
         });
-        console.log("Approval granted.");
-      } else {
-        console.log("Already approved. Skipping approval step.");
+        console.log("Infinite Approval granted.");
       }
 
-      // 2. LOCK TOKENS
+      // 2. LOCK TOKENS (GAS DINAMIS)
       const lockGas = await publicClient.estimateContractGas({
         address: VAULT_ADDRESS as `0x${string}`,
         abi: VAULT_ABI,
@@ -166,7 +167,7 @@ export default function DashboardClient() {
         abi: VAULT_ABI,
         functionName: 'lockTokens',
         args: [amountInWei, deadlineTimestamp],
-        gas: (lockGas * 130n) / 100n,
+        gas: (lockGas * BigInt(130)) / BigInt(100),
       });
       
       alert("Success! Your commitment has been locked on-chain.");
@@ -197,7 +198,7 @@ export default function DashboardClient() {
         abi: VAULT_ABI,
         functionName: 'claimSuccess',
         args: [BigInt(id)],
-        gas: (gas * 120n) / 100n,
+        gas: (gas * BigInt(120)) / BigInt(100),
       });
       alert("Goal Accomplished!");
       refreshReminders();
