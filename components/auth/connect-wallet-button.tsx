@@ -12,16 +12,27 @@ export function ConnectWalletButton() {
   const { disconnect } = useDisconnect();
 
   const handleConnect = () => {
+    // Cari konektor khusus Farcaster
     const fcConnector = connectors.find((c) => c.id === "farcasterFrame");
     if (fcConnector) {
       connect({ connector: fcConnector });
     } else {
+      // Fallback untuk konektor pertama (Injected/MetaMask) jika di luar Farcaster
       connect({ connector: connectors[0] });
     }
   };
 
-  if (!isLoaded) return <Button disabled size="sm" variant="outline">Loading...</Button>;
+  // State 1: Sedang memuat SDK Farcaster
+  if (!isLoaded) {
+    return (
+      <Button disabled size="sm" variant="outline" className="rounded-full h-10 px-6">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin text-slate-400" />
+        Initializing...
+      </Button>
+    );
+  }
 
+  // State 2: Wallet sudah terhubung
   if (isConnected) {
     return (
       <Button 
@@ -35,6 +46,7 @@ export function ConnectWalletButton() {
     );
   }
 
+  // State 3: Wallet belum terhubung (Tampilan Default Brand Purple)
   return (
     <Button 
       onClick={handleConnect}
