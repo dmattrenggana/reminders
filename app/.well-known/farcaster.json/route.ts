@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  return NextResponse.json({
+  const config = {
     accountAssociation: {
-      header: "eyJmaWQiOjUwOTU3OCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGJkNThmNTc1ODEzRTM4OEM0OTIwNTlCM0ZhRmUzYzk2YjJGNzRmNzUifQ",
+      header: "eyJmaWQiOjUwOTU3OCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDI2NzdDMjNmMkViYjY3NjBFZTkzMjRCNmExZDNkRTIyNTg4NWU5N0QifQ",
       payload: "eyJkb21haW4iOiJyZW1pbmRlcnNiYXNlLnZlcmNlbC5hcHAifQ",
-      signature: "eeni1CPvW8ojznVoby6doMEDMwIG8/U+0IDFjB1S+o18QeDKht4ti8Fv3iPuXYIPQL3AZ7UsPsEUxZvzjjufJxw="
+      signature: "O0dZuSBpNKIAHatj2bTSNfbRMXn9wkeLmbovJR6/54dDUIYl5PbpYWYeZ/A3e+umnIVV5dn5mCLSlbD5yMdZnRs="
     },
     frame: {
       version: "1",
@@ -14,6 +14,13 @@ export async function GET() {
       splashImageUrl: "https://remindersbase.vercel.app/logo.jpg",
       splashBackgroundColor: "#4f46e5",
       homeUrl: "https://remindersbase.vercel.app",
+    },
+  };
+
+  return NextResponse.json(config, {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
     },
   });
 }
