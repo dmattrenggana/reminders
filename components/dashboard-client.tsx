@@ -65,25 +65,33 @@ export default function DashboardClient() {
   }, []);
 
   /**
-   * HELPER: Mendapatkan Signer secara Universal
-   * Mendukung Farcaster Frame SDK & Web3 Browser (MetaMask/Wagmi)
+   * FIX: Mendapatkan Signer dengan Request Account eksplisit
+   * Mengatasi Error -32603 dan UNKNOWN_ERROR pada external wallets
    */
   const getUniversalSigner = async () => {
     if (typeof window === "undefined") throw new Error("Window not found");
 
-    // 1. Cek Farcaster Frame Provider
+    // 1. Prioritas: Farcaster Frame Provider
     if (sdk?.wallet?.ethProvider) {
       const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
       return await provider.getSigner();
     }
     
-    // 2. Cek External Wallet Provider (MetaMask/Wagmi)
+    // 2. Fallback: External Wallet (MetaMask, Brave, dll)
     if (window.ethereum) {
-      const provider = new ethers.BrowserProvider(window.ethereum as any);
-      return await provider.getSigner();
+      try {
+        // PENTING: Minta izin akun sebelum membuat signer untuk mencegah error undefined
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        
+        const provider = new ethers.BrowserProvider(window.ethereum as any);
+        return await provider.getSigner();
+      } catch (err) {
+        console.error("User denied account access");
+        throw new Error("Please allow wallet access in your browser extension.");
+      }
     }
 
-    throw new Error("No wallet provider detected. Please connect a wallet.");
+    throw new Error("No wallet provider detected. Connect via Warpcast or a Web3 Browser.");
   };
 
   const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
@@ -105,7 +113,7 @@ export default function DashboardClient() {
       const approveTx = await tokenContract.approve(VAULT_ADDRESS, amountInWei);
       await approveTx.wait();
 
-      // STEP 2: LOCK (Ganti nama fungsi sesuai kontrak Anda: lockTokens atau createReminder)
+      // STEP 2: LOCK
       const lockTx = await vaultContract.lockTokens(amountInWei, deadlineTimestamp);
       await lockTx.wait();
 
@@ -114,7 +122,9 @@ export default function DashboardClient() {
       refreshBalance();
     } catch (error: any) {
       console.error("Transaction Error:", error);
-      alert("Error: " + (error.reason || error.message || "User rejected transaction"));
+      // Menampilkan pesan error yang lebih manusiawi
+      const msg = error.reason || error.message || "Transaction failed";
+      alert("Error: " + msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -128,7 +138,7 @@ export default function DashboardClient() {
       const tx = await contract.claimSuccess(id);
       await tx.wait();
 
-      alert("Goal Accomplished! Tokens returned to your wallet.");
+      alert("Goal Accomplished! Tokens returned.");
       refreshReminders();
     } catch (error: any) {
       alert("Failed to claim: " + (error.reason || error.message));
@@ -181,7 +191,11 @@ export default function DashboardClient() {
               </div>
             ) : (
               <Button 
-                onClick={() => connect({ connector: connectors.find(c => c.id === 'farcasterFrame') || connectors[0] })} 
+                onClick={() => {
+                   // Mencoba koneksi otomatis ke injected wallet jika di web
+                   const connector = connectors.find(c => c.id === 'injected') || connectors[0];
+                   connect({ connector });
+                }} 
                 className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}
               >
                 <Wallet className="mr-2 h-5 w-5" /> Connect Wallet
@@ -215,7 +229,7 @@ export default function DashboardClient() {
             <div className="flex items-center justify-between px-2">
               <h2 className="text-2xl font-black text-slate-800 tracking-tight">Recent Activity</h2>
               <Button variant="ghost" size="sm" onClick={() => {refreshReminders(); refreshBalance();}} className={`${brandText} font-black text-[10px] uppercase`}>
-                 <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync Data
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} /> Sync Data
               </Button>
             </div>
             
@@ -244,29 +258,4 @@ export default function DashboardClient() {
                            </Button>
                          )}
                       </div>
-                      <div className="bg-slate-50 px-6 py-4 rounded-2xl text-right border border-slate-100 w-full md:w-auto">
-                        <p className={`text-3xl font-black ${brandText}`}>{r.rewardPool}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Locked {symbol}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-32 bg-white rounded-[2rem] border-4 border-dashed border-slate-100">
-                <Bell className="h-12 w-12 text-slate-100 mx-auto mb-4" />
-                <p className="text-slate-300 text-sm font-black uppercase tracking-widest">Your commitments will appear here</p>
-              </div>
-            )}
-        </main>
-      </div>
-
-      {/* FLOATING ACTION PANEL - UNIVERSAL READY */}
-      <FloatingCreate 
-        symbol={symbol} 
-        isSubmitting={isSubmitting} 
-        onConfirm={handleCreateReminder} 
-      />
-    </div>
-  );
-}
+                      <div className="bg-slate-50 px-6 py-4 rounded-2xl text-right border border-slate-
