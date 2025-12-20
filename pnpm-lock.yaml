@@ -11,6 +11,9 @@ importers:
       '@farcaster/frame-sdk':
         specifier: ^0.0.17
         version: 0.0.17(typescript@5.6.2)(zod@3.25.76)
+      '@farcaster/frame-wagmi-connector':
+        specifier: ^0.0.12
+        version: 0.0.12(@farcaster/frame-sdk@0.0.17(typescript@5.6.2)(zod@3.25.76))(@wagmi/core@3.0.0(@tanstack/query-core@5.59.0)(@types/react@19.2.7)(react@19.0.0)(typescript@5.6.2)(use-sync-external-store@1.6.0(react@19.0.0))(viem@2.43.1(bufferutil@4.0.9)(typescript@5.6.2)(utf-8-validate@5.0.10)(zod@3.25.76)))(viem@2.43.1(bufferutil@4.0.9)(typescript@5.6.2)(utf-8-validate@5.0.10)(zod@3.25.76))
       '@farcaster/miniapp-sdk':
         specifier: latest
         version: 0.2.1(bufferutil@4.0.9)(typescript@5.6.2)(utf-8-validate@5.0.10)(zod@3.25.76)
@@ -314,6 +317,13 @@ packages:
 
   '@farcaster/frame-sdk@0.0.17':
     resolution: {integrity: sha512-5yiRWHBchK1urWZXkqFaHxKanJUYxann0rFN/hXSBggXSR2ZzwSBtgpkJJw6GtLuuWG5iWouCnHjJw/tcvK3Fg==}
+
+  '@farcaster/frame-wagmi-connector@0.0.12':
+    resolution: {integrity: sha512-YHeKeTSfG80MnQw/M2xCTk8DSKXglIQgmFgoN9Sq8MWRrwnhwH1mIJz93ZGdg76WZo3suz24AfD4uyFM/NKkVA==}
+    peerDependencies:
+      '@farcaster/frame-sdk': ^0.0.25
+      '@wagmi/core': ^2.14.1
+      viem: ^2.21.55
 
   '@farcaster/miniapp-core@0.4.1':
     resolution: {integrity: sha512-20FxHTRToYUKx7CQ8PvIy9OoQ6XjdmF1pRMS7dsj37qdqjVDeEkYoK8yXwnoReZoJRcYwIg8P3i6V8bTWNR5mg==}
@@ -4337,6 +4347,12 @@ snapshots:
     transitivePeerDependencies:
       - typescript
       - zod
+
+  '@farcaster/frame-wagmi-connector@0.0.12(@farcaster/frame-sdk@0.0.17(typescript@5.6.2)(zod@3.25.76))(@wagmi/core@3.0.0(@tanstack/query-core@5.59.0)(@types/react@19.2.7)(react@19.0.0)(typescript@5.6.2)(use-sync-external-store@1.6.0(react@19.0.0))(viem@2.43.1(bufferutil@4.0.9)(typescript@5.6.2)(utf-8-validate@5.0.10)(zod@3.25.76)))(viem@2.43.1(bufferutil@4.0.9)(typescript@5.6.2)(utf-8-validate@5.0.10)(zod@3.25.76))':
+    dependencies:
+      '@farcaster/frame-sdk': 0.0.17(typescript@5.6.2)(zod@3.25.76)
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.59.0)(@types/react@19.2.7)(react@19.0.0)(typescript@5.6.2)(use-sync-external-store@1.6.0(react@19.0.0))(viem@2.43.1(bufferutil@4.0.9)(typescript@5.6.2)(utf-8-validate@5.0.10)(zod@3.25.76))
+      viem: 2.43.1(bufferutil@4.0.9)(typescript@5.6.2)(utf-8-validate@5.0.10)(zod@3.25.76)
 
   '@farcaster/miniapp-core@0.4.1(bufferutil@4.0.9)(typescript@5.6.2)(utf-8-validate@5.0.10)':
     dependencies:

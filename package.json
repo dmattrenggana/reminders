@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@farcaster/frame-sdk": "^0.0.17",
+    "@farcaster/frame-wagmi-connector": "^0.0.12",
     "@farcaster/miniapp-sdk": "latest",
     "@farcaster/miniapp-wagmi-connector": "latest",
     "@neynar/nodejs-sdk": "^3.11.0",
