@@ -41,14 +41,13 @@ export function useTokenBalance() {
     ],
     query: {
       enabled: !!address && isConnected,
-      // Refetch otomatis setiap 20 detik untuk update saldo terbaru
-      refetchInterval: 20000, 
+      refetchInterval: 20000, // Update otomatis tiap 20 detik
     }
   });
 
   return {
-    // data[0] adalah balanceOf, data[1] adalah symbol
-    balance: data?.[0]?.result ?? 0n, 
+    // Menggunakan BigInt(0) agar tidak error "BigInt literals" saat build
+    balance: data?.[0]?.result ?? BigInt(0), 
     symbol: (data?.[1]?.result as string) || "RMNDtest",
     isLoading,
     refresh: refetch
