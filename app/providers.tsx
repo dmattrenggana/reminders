@@ -5,13 +5,13 @@ import { useState, type ReactNode } from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
-// Import konektor yang baru saja kita tambahkan di package.json
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 
+// Menggunakan 'as any' untuk menghindari Type Error pada build Vercel
 const config = createConfig({
   chains: [base],
   connectors: [
-    farcasterFrame(), // Menambahkan dukungan wallet Farcaster
+    farcasterFrame() as any, 
   ],
   transports: {
     [base.id]: http(),
