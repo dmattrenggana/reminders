@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const config = {
-    accountAssociation: {
-      header: "eyJmaWQiOjUwOTU3OCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGJkNThmNTc1ODEzRTM4OEM0OTIwNTlCM0ZhRmUzYzk2YjJGNzRmNzUifQ",
-      payload: "eyJkb21haW4iOiJyZW1pbmRlcnNiYXNlLnZlcmNlbC5hcHAifQ",
-      signature: "eeni1CPvW8ojznVoby6doMEDMwIG8/U+0IDFjB1S+o18QeDKht4ti8Fv3iPuXYIPQL3AZ7UsPsEUxZvzjjufJxw="
-    },
+     "accountAssociation": {
+    "header": "eyJmaWQiOjUwOTU3OCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDI2NzdDMjNmMkViYjY3NjBFZTkzMjRCNmExZDNkRTIyNTg4NWU5N0QifQ",
+    "payload": "eyJkb21haW4iOiJodHRwczovL3JlbWluZGVyc2Jhc2UudmVyY2VsLmFwcC8ifQ",
+    "signature": "LrrqsMt+SkBcyLKgUB6qgc6degXStI90COxtYy2/qUljRz242+/netA78kfUhU/Hteig4ofAeM5qzkBY2xvVyRs="
+  }
     frame: {
       version: "1",
       name: "Reminders",
