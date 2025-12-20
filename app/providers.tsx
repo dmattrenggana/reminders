@@ -10,11 +10,11 @@ import { injected } from "wagmi/connectors";
 
 const config = createConfig({
   chains: [base],
-  // PERBAIKAN: Matikan penemuan provider otomatis untuk menghindari error CSP di Warpcast
+  // SOLUSI: Matikan penemuan provider otomatis agar tidak melanggar CSP Warpcast
   multiInjectedProviderDiscovery: false, 
   connectors: [
-    farcasterFrame(), // Prioritas utama untuk Farcaster Miniapp
-    injected(),       // Fallback untuk MetaMask di Browser
+    farcasterFrame(), 
+    injected(),
   ],
   transports: {
     [base.id]: http(),
