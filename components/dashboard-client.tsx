@@ -41,6 +41,7 @@ export default function DashboardClient() {
   const brandText = "text-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
 
+  // Hitung stats berdasarkan field rewardPool dari ABI Anda
   const stats = {
     locked: reminders?.filter((r: any) => !r.isResolved).reduce((acc: number, curr: any) => acc + (Number(curr.rewardPool) || 0), 0) || 0,
     completed: reminders?.filter((r: any) => r.isResolved && r.isCompleted).length || 0,
@@ -63,20 +64,31 @@ export default function DashboardClient() {
     }
   }, []);
 
+  const handleConnect = () => {
+    const injected = connectors.find(c => c.id === 'injected');
+    const farcaster = connectors.find(c => c.id === 'farcaster-frame');
+    
+    // Gunakan connector yang sesuai dengan lingkungan (Miniapp vs Browser)
+    if (farcaster && typeof window !== 'undefined' && (window as any).ethereum?.isFarcaster) {
+      connect({ connector: farcaster });
+    } else if (injected) {
+      connect({ connector: injected });
+    } else {
+      alert("Wallet not found. Please install MetaMask extension.");
+    }
+  };
+
   const getUniversalSigner = async () => {
     if (typeof window === "undefined") throw new Error("Window not found");
+    // Jika di dalam Farcaster Frame
     if (sdk?.wallet?.ethProvider) {
       const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
       return await provider.getSigner();
     }
+    // Jika di Web Browser biasa
     if (window.ethereum) {
-      try {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const provider = new ethers.BrowserProvider(window.ethereum as any);
-        return await provider.getSigner();
-      } catch (err) {
-        throw new Error("Please allow wallet access.");
-      }
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      return await provider.getSigner();
     }
     throw new Error("No wallet provider detected.");
   };
@@ -87,16 +99,24 @@ export default function DashboardClient() {
     try {
       const signer = await getUniversalSigner();
       const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
+      
+      // Ambil alamat token RMND dari contract
       const tokenAddress = await vaultContract.rmndToken();
       const tokenContract = new ethers.Contract(tokenAddress, [
         "function approve(address spender, uint256 amount) public returns (bool)"
       ], signer);
+      
       const amountInWei = ethers.parseUnits(amt, 18);
       const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
+      
+      // Step 1: Approve
       const approveTx = await tokenContract.approve(VAULT_ADDRESS, amountInWei);
       await approveTx.wait();
+      
+      // Step 2: Lock
       const lockTx = await vaultContract.lockTokens(amountInWei, deadlineTimestamp);
       await lockTx.wait();
+      
       alert("Tokens Locked Successfully!");
       refreshReminders(); refreshBalance();
     } catch (error: any) {
@@ -161,7 +181,7 @@ export default function DashboardClient() {
               </div>
             ) : (
               <Button 
-                onClick={() => connect({ connector: connectors.find(c => c.id === 'injected') || connectors[0] })} 
+                onClick={handleConnect} 
                 className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}
               >
                 <Wallet className="mr-2 h-5 w-5" /> Connect Wallet

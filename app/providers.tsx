@@ -6,12 +6,13 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
+import { injected } from "wagmi/connectors";
 
-// Menggunakan 'as any' untuk menghindari Type Error pada build Vercel
 const config = createConfig({
   chains: [base],
   connectors: [
     farcasterFrame() as any, 
+    injected(), // Mendukung MetaMask & Browser Wallets
   ],
   transports: {
     [base.id]: http(),
