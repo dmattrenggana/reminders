@@ -18,13 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// PERBAIKAN: Menggunakan lucide-react yang benar
 import { 
   Plus, Bell, Loader2, Wallet, RefreshCw, 
-  CheckCircle2, Flame, Lock, Calendar 
+  CheckCircle2, Flame, Lock, Calendar, LogOut 
 } from "lucide-react";
 import Image from "next/image";
 import sdk from "@farcaster/frame-sdk";
+import { formatUnits } from "viem";
 
 export default function DashboardClient() {
   const { user } = useFarcaster();
@@ -38,13 +38,30 @@ export default function DashboardClient() {
   const [isSDKReady, setIsSDKReady] = useState(false);
   const isFirstMount = useRef(true);
 
+  // Helper untuk format saldo agar tidak muncul sebagai decimal mentah
+  const formatBalance = (val: any) => {
+    if (!val) return "0";
+    try {
+      // Mengasumsikan 18 desimal (standar Base/ETH). Jika token lain, sesuaikan angkanya.
+      const num = typeof val === 'bigint' ? formatUnits(val, 18) : val;
+      return Number(num).toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 4
+      });
+    } catch (e) {
+      return "0";
+    }
+  };
+
+  // Helper truncate address untuk Web App
+  const truncateAddr = (addr: string | undefined) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "Connected";
+
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
         try {
           await new Promise(resolve => setTimeout(resolve, 500));
           await sdk.actions.ready();
-          console.log("Farcaster SDK Ready");
         } catch (e) {
           console.error("SDK error:", e);
         } finally {
@@ -54,11 +71,7 @@ export default function DashboardClient() {
       init();
       isFirstMount.current = false;
     }
-
-    const timeout = setTimeout(() => {
-      setIsSDKReady(true);
-    }, 4000);
-
+    const timeout = setTimeout(() => setIsSDKReady(true), 4000);
     return () => clearTimeout(timeout);
   }, []);
 
@@ -112,7 +125,6 @@ export default function DashboardClient() {
             <div className="space-y-1">
               <h1 className="text-3xl font-black tracking-tighter text-slate-900">ReminderBase</h1>
               <div className="flex items-center gap-2">
-                {/* 1. SLOGAN TETAP STATIS */}
                 <p className={`${brandText} text-xs font-bold uppercase tracking-[0.2em]`}>
                   Never Miss What Matters
                 </p>
@@ -124,27 +136,29 @@ export default function DashboardClient() {
           <div className="flex items-center gap-3">
             {isConnected ? (
               <div className="flex items-center gap-3 bg-slate-50 pl-5 pr-1 py-1 rounded-full border border-slate-100 shadow-sm">
-                {/* 2. FORMAT BALANCE RAPI */}
                 <p className={`text-[10px] font-mono font-black ${brandText} border-r border-slate-200 pr-3`}>
-                  {balance ? Number(balance).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2
-                  }) : "0"} TOKENS
+                  {formatBalance(balance)} TOKENS
                 </p>
                 
-                {/* 3. USERNAME DI TOMBOL (MENGGANTIKAN ADDRESS) */}
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={() => disconnect()} 
-                  className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-5 text-slate-700 hover:text-red-500 transition-colors"
+                  className="rounded-full h-10 bg-white shadow-sm border-slate-200 text-xs font-black px-3 text-slate-700 hover:text-red-500 transition-all flex items-center gap-2"
                 >
-                  {user?.username ? `@${user.username}` : "Connected"}
+                  {/* Farcaster PFP */}
+                  {user?.pfpUrl && (
+                    <img src={user.pfpUrl} alt="PFP" className="w-6 h-6 rounded-full border border-slate-100 shadow-sm" />
+                  )}
+                  
+                  {/* Username Fallback to Truncated Address */}
+                  <span>{user?.username ? `@${user.username}` : truncateAddr(address)}</span>
+                  <LogOut className="h-3 w-3 opacity-30" />
                 </Button>
               </div>
             ) : (
               <Button 
-                onClick={() => connect({ connector: connectors[0] })} 
+                onClick={() => connect({ connector: connectors.find(c => c.id === 'farcasterFrame') || connectors[0] })} 
                 className={`rounded-full ${brandPurple} hover:opacity-90 h-12 px-8 font-bold text-white shadow-xl ${brandShadow} transition-all active:scale-95`}
               >
                 <Wallet className="mr-2 h-5 w-5" /> Connect Wallet
@@ -153,6 +167,7 @@ export default function DashboardClient() {
           </div>
         </header>
 
+        {/* STATS CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             { label: "Token Locked", val: stats.locked, icon: Lock, color: "text-amber-500" },
@@ -238,6 +253,7 @@ export default function DashboardClient() {
         </main>
       </div>
 
+      {/* MODAL CREATE REMINDER */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] p-8">
           <DialogHeader>
