@@ -34,7 +34,13 @@ export default function DashboardClient() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   
-  const { reminders = [], isLoading: loadingReminders, refresh: refreshReminders } = useReminders();
+  // FIX: Destructuring dengan renaming agar sesuai dengan Hook
+  const { 
+    activeReminders: reminders = [], 
+    loading: loadingReminders, 
+    refresh: refreshReminders 
+  } = useReminders();
+  
   const { balance, symbol, refresh: refreshBalance } = useTokenBalance();
 
   const [isSDKReady, setIsSDKReady] = useState(false);
@@ -53,9 +59,9 @@ export default function DashboardClient() {
 
   // --- LOGIKA STATS REAL-TIME ---
   const stats = {
-    locked: reminders?.filter(r => !r.isResolved).reduce((acc, curr) => acc + (Number(curr.rewardPool) || 0), 0) || 0,
-    completed: reminders?.filter(r => r.isResolved && r.isCompleted).length || 0,
-    burned: reminders?.filter(r => r.isResolved && !r.isCompleted).length || 0
+    locked: reminders?.filter((r: any) => !r.isResolved).reduce((acc: number, curr: any) => acc + (Number(curr.rewardPool) || 0), 0) || 0,
+    completed: reminders?.filter((r: any) => r.isResolved && r.isCompleted).length || 0,
+    burned: reminders?.filter((r: any) => r.isResolved && !r.isCompleted).length || 0
   };
 
   useEffect(() => {
@@ -74,18 +80,14 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // --- FUNGSI CREATE REMINDER (LOCK TOKENS) ---
   const handleCreateReminder = async () => {
-    if (!description || !amount || !deadline) return alert("Mohon isi semua data.");
+    if (!description || !amount || !deadline) return alert("Please fill all fields.");
     setIsSubmitting(true);
     try {
-      // Inisialisasi Ethers dengan Provider Farcaster
       const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
       const signer = await provider.getSigner();
-      
       const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
       
-      // Ambil alamat token RMND dari kontrak Vault
       const tokenAddress = await vaultContract.rmndToken();
       const tokenContract = new ethers.Contract(tokenAddress, [
         "function approve(address spender, uint256 amount) public returns (bool)"
@@ -94,27 +96,23 @@ export default function DashboardClient() {
       const amountInWei = ethers.parseUnits(amount, 18);
       const deadlineTimestamp = Math.floor(new Date(deadline).getTime() / 1000);
 
-      // Tahap 1: Persetujuan (Approve)
       const approveTx = await tokenContract.approve(VAULT_ADDRESS, amountInWei);
       await approveTx.wait();
 
-      // Tahap 2: Kunci Token (Lock)
       const lockTx = await vaultContract.lockTokens(amountInWei, deadlineTimestamp);
       await lockTx.wait();
 
-      alert("Berhasil mengunci token!");
+      alert("Tokens Locked Successfully!");
       setIsModalOpen(false);
       setDescription(""); setAmount(""); setDeadline("");
       refreshReminders(); refreshBalance();
     } catch (error: any) {
-      console.error(error);
-      alert("Gagal: " + (error.reason || error.message));
+      alert("Error: " + (error.reason || error.message));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // --- FUNGSI MARK AS COMPLETED ---
   const handleConfirmCompleted = async (id: number) => {
     try {
       const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider as any);
@@ -124,10 +122,10 @@ export default function DashboardClient() {
       const tx = await contract.claimSuccess(id);
       await tx.wait();
 
-      alert("Tugas selesai! Dana jaminan dikembalikan.");
+      alert("Completed! Funds returned.");
       refreshReminders();
     } catch (error: any) {
-      alert("Gagal konfirmasi: " + (error.reason || error.message));
+      alert("Failed: " + (error.reason || error.message));
     }
   };
 
@@ -185,12 +183,12 @@ export default function DashboardClient() {
            <CardContent><div className="text-2xl font-black">{stats.completed}</div></CardContent></Card>
            <Card className="bg-white border-slate-100 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase">Burned</CardTitle></CardHeader>
            <CardContent><div className="text-2xl font-black">{stats.burned}</div></CardContent></Card>
-           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-white">Active Tasks</CardTitle></CardHeader>
+           <Card className={`${brandPurple} border-none shadow-xl ${brandShadow}`}><CardHeader className="pb-2"><CardTitle className="text-[10px] font-bold uppercase text-white">My Tasks</CardTitle></CardHeader>
            <CardContent><div className="text-2xl font-black text-white">{reminders?.length || 0}</div></CardContent></Card>
         </div>
 
         <div className="flex justify-center">
-            <Button disabled={!isConnected} onClick={() => setIsModalOpen(true)} className={`px-20 py-10 text-2xl font-black rounded-3xl ${brandPurple} text-white shadow-2xl ${brandShadow} transition-transform active:scale-95`}>
+            <Button disabled={!isConnected} onClick={() => setIsModalOpen(true)} className={`px-20 py-10 text-2xl font-black rounded-3xl ${brandPurple} text-white shadow-2xl ${brandShadow} transition-all active:scale-95`}>
                 <Plus className="mr-4 h-8 w-8" /> Create Reminder
             </Button>
         </div>
@@ -206,13 +204,13 @@ export default function DashboardClient() {
            {reminders?.length > 0 ? (
              <div className="grid gap-5">
                {reminders.map((r: any) => (
-                 <Card key={r.id} className="bg-white border-slate-100 shadow-sm">
+                 <Card key={r.id} className="bg-white border-slate-100 shadow-sm overflow-hidden">
                    <CardContent className="p-8 flex justify-between items-center">
                      <div className="space-y-2">
                         <Badge variant="outline" className={`text-[9px] font-black ${r.isResolved ? "bg-slate-100" : "bg-green-50 text-green-700"}`}>
                           {r.isResolved ? "RESOLVED" : "ACTIVE"}
                         </Badge>
-                        <h3 className="text-xl font-black text-slate-800">{r.description || `Task #${r.id}`}</h3>
+                        <h3 className="text-xl font-black text-slate-800">Task #{r.id}</h3>
                         <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">
                           Deadline: {new Date(Number(r.deadline) * 1000).toLocaleDateString()}
                         </p>
@@ -223,7 +221,7 @@ export default function DashboardClient() {
                         )}
                      </div>
                      <div className="text-right">
-                       <p className={`text-3xl font-black ${brandText}`}>{r.rewardPool || r.tokenAmount}</p>
+                       <p className={`text-3xl font-black ${brandText}`}>{r.rewardPool}</p>
                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{symbol}</p>
                      </div>
                    </CardContent>
@@ -242,26 +240,26 @@ export default function DashboardClient() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-[2.5rem] p-8 bg-white border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-black text-slate-900 tracking-tighter">New Reminder</DialogTitle>
-            <DialogDescription className="text-slate-500 font-medium">Commit tokens to stay accountable.</DialogDescription>
+            <DialogTitle className="text-3xl font-black text-slate-900">New Reminder</DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium text-sm">Set your goal and stake {symbol}.</DialogDescription>
           </DialogHeader>
           <div className="space-y-6 pt-6">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Task Description</Label>
-              <Input placeholder="e.g. Finish landing page" value={description} onChange={(e) => setDescription(e.target.value)} className="h-14 rounded-2xl bg-slate-50 border-slate-100" />
+              <Label className="text-[10px] font-black uppercase text-slate-400">Description</Label>
+              <Input placeholder="e.g. Daily Coding" value={description} onChange={(e) => setDescription(e.target.value)} className="h-14 rounded-2xl bg-slate-50 border-slate-100" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Stake Amount</Label>
+                <Label className="text-[10px] font-black uppercase text-slate-400">Stake</Label>
                 <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-14 rounded-2xl bg-slate-50 border-slate-100" placeholder="100" />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Deadline</Label>
+                <Label className="text-[10px] font-black uppercase text-slate-400">Deadline</Label>
                 <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="h-14 rounded-2xl bg-slate-50 border-slate-100" />
               </div>
             </div>
             <DialogFooter className="pt-4">
-              <Button disabled={isSubmitting} onClick={handleCreateReminder} className={`w-full h-16 rounded-2xl ${brandPurple} text-white font-black text-xl shadow-lg shadow-indigo-200 transition-all active:scale-95`}>
+              <Button disabled={isSubmitting} onClick={handleCreateReminder} className={`w-full h-16 rounded-2xl ${brandPurple} text-white font-black text-xl`}>
                 {isSubmitting ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirm & Lock"}
               </Button>
             </DialogFooter>
