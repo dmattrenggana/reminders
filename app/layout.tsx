@@ -26,9 +26,11 @@ export const metadata: Metadata = {
           name: "Reminders",
           url: `${appUrl}/`,
           splashImageUrl: `${appUrl}/logo.jpg`,
-          splashBackgroundColor: "#4f46e5", // Disesuaikan dengan warna brand indigo Anda
+          splashBackgroundColor: "#4f46e5",
         },
       },
+      // Menambahkan noindex: false sesuai standar terbaru agar searchable
+      noindex: false,
     }),
   },
     generator: 'v0.app'
