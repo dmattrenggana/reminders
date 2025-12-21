@@ -20,7 +20,30 @@ import { formatUnits, parseUnits } from "viem";
 import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
 const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-const ERC20_ABI = [{ "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }, { "internalType": "address", "name": "spender", "type": "address" }], "name": "allowance", "outputs": [{ "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" }] as const;
+
+// PERBAIKAN SYNTAX DI SINI
+const ERC20_ABI = [
+  { 
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" }, 
+      { "internalType": "address", "name": "spender", "type": "address" }
+    ], 
+    "name": "allowance", 
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], 
+    "stateMutability": "view", 
+    "type": "function" 
+  }, 
+  { 
+    "inputs": [
+      { "internalType": "address", "name": "spender", "type": "address" }, 
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ], 
+    "name": "approve", 
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], 
+    "stateMutability": "nonpayable", 
+    "type": "function" 
+  }
+] as const;
 
 export default function DashboardClient() {
   const { user: providerUser, isLoaded: isFarcasterLoaded } = useFarcaster();
@@ -56,14 +79,13 @@ export default function DashboardClient() {
   const formattedBalance = (typeof balance === 'bigint') ? Number(formatUnits(balance, 18)).toFixed(2) : "0.00";
 
   useEffect(() => {
-    if (isFirstMount.current) {
+    if (isFirstMount.current && mounted) {
       const init = async () => {
         try {
           const context = await sdk.context;
           if (context?.user) setContextUser(context.user);
           await sdk.actions.ready();
           
-          // Auto-connect khusus Mobile Frame v2
           const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
           if (fcConnector && !isConnected) {
             connect({ connector: fcConnector });
@@ -77,14 +99,11 @@ export default function DashboardClient() {
       init();
       isFirstMount.current = false;
     }
-  }, [connectors, isConnected, connect]);
+  }, [connectors, isConnected, connect, mounted]);
 
   const handleConnect = async () => {
-    // 1. Cari konektor Farcaster (Native Mobile)
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
-    // 2. Cari konektor Injected (MetaMask/Browser Desktop)
     const injectedConnector = connectors.find((c) => c.id === "injected");
-    // 3. Cari Coinbase Wallet
     const cbConnector = connectors.find((c) => c.id === "coinbaseWalletSDK");
 
     try {
