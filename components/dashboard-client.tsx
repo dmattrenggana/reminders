@@ -21,7 +21,6 @@ import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
 const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
-// PERBAIKAN SYNTAX DI SINI
 const ERC20_ABI = [
   { 
     "inputs": [
@@ -78,6 +77,7 @@ export default function DashboardClient() {
   const pfpUrl = displayUser?.pfpUrl || displayUser?.pfp;
   const formattedBalance = (typeof balance === 'bigint') ? Number(formatUnits(balance, 18)).toFixed(2) : "0.00";
 
+  // Auto-connect Logic khusus Farcaster Frame
   useEffect(() => {
     if (isFirstMount.current && mounted) {
       const init = async () => {
@@ -102,17 +102,15 @@ export default function DashboardClient() {
   }, [connectors, isConnected, connect, mounted]);
 
   const handleConnect = async () => {
+    // Cari konektor native Farcaster terlebih dahulu
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
     const injectedConnector = connectors.find((c) => c.id === "injected");
-    const cbConnector = connectors.find((c) => c.id === "coinbaseWalletSDK");
 
     try {
       if (fcConnector) {
         connect({ connector: fcConnector });
       } else if (injectedConnector) {
         connect({ connector: injectedConnector });
-      } else if (cbConnector) {
-        connect({ connector: cbConnector });
       } else {
         connect({ connector: connectors[0] });
       }
