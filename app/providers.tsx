@@ -9,10 +9,9 @@ import { injected, coinbaseWallet } from "wagmi/connectors";
 import { useState, useEffect } from "react";
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 
-// Konfigurasi Wagmi di luar komponen untuk mencegah re-render
 export const config = createConfig({
   chains: [base],
-  multiInjectedProviderDiscovery: false,
+  multiInjectedProviderDiscovery: true, // Nyalakan untuk Desktop agar MetaMask terdeteksi
   connectors: [
     farcasterFrame(),
     injected(),
@@ -32,9 +31,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  // Jangan return null jika belum mounted agar SDK Farcaster bisa mulai inisialisasi lebih awal
-  // Cukup gunakan pengecekan mounted di dalam komponen yang butuh akses browser API
-
   return (
     <PrivyProvider
       appId="clzshclp807eay6ofun669cl5"
@@ -42,9 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: "light",
           accentColor: "#4f46e5",
-          showWalletLoginFirst: false, 
         },
-        // Jangan dikosongkan agar Privy tidak stuck, biarkan default
         embeddedWallets: {
           ethereum: {
             createOnLogin: "users-without-wallets",
@@ -55,7 +49,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <FarcasterProvider>
-            {mounted ? children : <div className="min-h-screen bg-white" />}
+            {/* Render children langsung, mounted check dilakukan di level komponen */}
+            {children}
           </FarcasterProvider>
         </QueryClientProvider>
       </WagmiProvider>

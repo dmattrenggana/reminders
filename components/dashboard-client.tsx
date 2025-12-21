@@ -20,7 +20,7 @@ import { formatUnits, parseUnits } from "viem";
 import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
 
 const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-const ERC20_ABI = [{ "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }, { "internalType": "address", "name": "spender", "type": "address" }], "name": "allowance", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" }] as const;
+const ERC20_ABI = [{ "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }, { "internalType": "address", "name": "spender", "type": "address" }], "name": "allowance", "outputs": [{ "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" }] as const;
 
 export default function DashboardClient() {
   const { user: providerUser, isLoaded: isFarcasterLoaded } = useFarcaster();
@@ -36,6 +36,11 @@ export default function DashboardClient() {
   const [isSDKReady, setIsSDKReady] = useState(false);
   const isFirstMount = useRef(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const stats = useMemo(() => ({
     locked: reminders.filter(r => !r.isResolved).reduce((acc, curr) => acc + Number(curr.rewardPool), 0),
@@ -50,7 +55,6 @@ export default function DashboardClient() {
   const pfpUrl = displayUser?.pfpUrl || displayUser?.pfp;
   const formattedBalance = (typeof balance === 'bigint') ? Number(formatUnits(balance, 18)).toFixed(2) : "0.00";
 
-  // Perbaikan Koneksi Mobile & Auto-Connect
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
@@ -59,12 +63,16 @@ export default function DashboardClient() {
           if (context?.user) setContextUser(context.user);
           await sdk.actions.ready();
           
-          // Auto-connect jika berada di dalam Frame v2
+          // Auto-connect khusus Mobile Frame v2
           const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
           if (fcConnector && !isConnected) {
             connect({ connector: fcConnector });
           }
-        } catch (e) { console.error(e); } finally { setIsSDKReady(true); }
+        } catch (e) { 
+          console.error("SDK Init Error:", e); 
+        } finally { 
+          setIsSDKReady(true); 
+        }
       };
       init();
       isFirstMount.current = false;
@@ -72,13 +80,25 @@ export default function DashboardClient() {
   }, [connectors, isConnected, connect]);
 
   const handleConnect = async () => {
-    // Gunakan Farcaster native picker jika tersedia
+    // 1. Cari konektor Farcaster (Native Mobile)
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
-    if (fcConnector) {
-      connect({ connector: fcConnector });
-    } else {
-      const injectedConnector = connectors.find((c) => c.id === "injected");
-      connect({ connector: injectedConnector || connectors[0] });
+    // 2. Cari konektor Injected (MetaMask/Browser Desktop)
+    const injectedConnector = connectors.find((c) => c.id === "injected");
+    // 3. Cari Coinbase Wallet
+    const cbConnector = connectors.find((c) => c.id === "coinbaseWalletSDK");
+
+    try {
+      if (fcConnector) {
+        connect({ connector: fcConnector });
+      } else if (injectedConnector) {
+        connect({ connector: injectedConnector });
+      } else if (cbConnector) {
+        connect({ connector: cbConnector });
+      } else {
+        connect({ connector: connectors[0] });
+      }
+    } catch (error) {
+      console.error("Manual Connection Error:", error);
     }
   };
 
@@ -138,7 +158,7 @@ export default function DashboardClient() {
     } catch (e: any) { alert(e.message); }
   };
 
-  if (!isSDKReady || !isFarcasterLoaded) {
+  if (!mounted || !isSDKReady || !isFarcasterLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-[#4f46e5]" />
@@ -176,7 +196,7 @@ export default function DashboardClient() {
                 </Button>
               </div>
             ) : (
-              <Button onClick={handleConnect} className="rounded-full bg-[#4f46e5] hover:opacity-90 font-bold text-white h-12 px-8 shadow-lg transition-all">Connect Wallet</Button>
+              <Button onClick={handleConnect} className="rounded-full bg-[#4f46e5] hover:opacity-90 font-bold text-white h-12 px-8 shadow-lg transition-all active:scale-95">Connect Wallet</Button>
             )}
           </div>
         </header>
