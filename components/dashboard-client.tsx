@@ -50,6 +50,7 @@ export default function DashboardClient() {
   const pfpUrl = displayUser?.pfpUrl || displayUser?.pfp;
   const formattedBalance = (typeof balance === 'bigint') ? Number(formatUnits(balance, 18)).toFixed(2) : "0.00";
 
+  // Perbaikan Koneksi Mobile & Auto-Connect
   useEffect(() => {
     if (isFirstMount.current) {
       const init = async () => {
@@ -57,17 +58,28 @@ export default function DashboardClient() {
           const context = await sdk.context;
           if (context?.user) setContextUser(context.user);
           await sdk.actions.ready();
+          
+          // Auto-connect jika berada di dalam Frame v2
+          const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
+          if (fcConnector && !isConnected) {
+            connect({ connector: fcConnector });
+          }
         } catch (e) { console.error(e); } finally { setIsSDKReady(true); }
       };
       init();
       isFirstMount.current = false;
     }
-  }, []);
+  }, [connectors, isConnected, connect]);
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
+    // Gunakan Farcaster native picker jika tersedia
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
-    const injectedConnector = connectors.find((c) => c.id === "injected");
-    connect({ connector: fcConnector || injectedConnector || connectors[0] });
+    if (fcConnector) {
+      connect({ connector: fcConnector });
+    } else {
+      const injectedConnector = connectors.find((c) => c.id === "injected");
+      connect({ connector: injectedConnector || connectors[0] });
+    }
   };
 
   const checkAllowance = async (neededAmount: bigint) => {
@@ -138,7 +150,6 @@ export default function DashboardClient() {
     <div className="flex flex-col min-h-screen bg-slate-50 p-4 md:p-10 pb-32">
       <div className="max-w-5xl mx-auto w-full space-y-8">
         
-        {/* HEADER: Font Title & Sub-judul dikembalikan */}
         <header className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-sm">
@@ -165,7 +176,7 @@ export default function DashboardClient() {
                 </Button>
               </div>
             ) : (
-              <Button onClick={handleConnect} className="rounded-full bg-[#4f46e5] hover:opacity-90 font-bold text-white px-8 shadow-lg transition-all">Connect Wallet</Button>
+              <Button onClick={handleConnect} className="rounded-full bg-[#4f46e5] hover:opacity-90 font-bold text-white h-12 px-8 shadow-lg transition-all">Connect Wallet</Button>
             )}
           </div>
         </header>
@@ -232,7 +243,6 @@ function ReminderList({ items, onHelp, onConfirm, address }: any) {
                     r.isDangerZone ? "bg-red-500 text-white animate-pulse" : 
                     "bg-indigo-50 text-indigo-700"
                   }`}>
-                    {/* ISTILAH DIUBAH: Danger Zone -> Deadline */}
                     {r.isResolved ? "SETTLED" : r.isDangerZone ? "DEADLINE" : "ACTIVE"}
                   </Badge>
                   {isOwner && <Badge variant="outline" className="text-[9px] font-black border-indigo-100 text-indigo-500 bg-indigo-50/30">MY TASK</Badge>}

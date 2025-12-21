@@ -7,23 +7,26 @@ import { base } from "wagmi/chains";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
 import { injected, coinbaseWallet } from "wagmi/connectors";
 import { useState, useEffect } from "react";
-// IMPORT PROVIDER BARU ANDA DISINI
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 
-// Periksa apakah aplikasi dibuka di dalam Frame
+// 1. Deteksi lingkungan Frame yang lebih akurat
 const isFrame = () => {
   if (typeof window === "undefined") return false;
-  return window.parent !== window || navigator.userAgent.includes("Farcaster");
+  // Cek apakah ada di dalam iframe atau memiliki tanda userAgent Farcaster
+  return window.parent !== window || /farcaster/i.test(navigator.userAgent);
 };
 
-// 1. Konfigurasi Wagmi Hybrid
+// 2. Konfigurasi Wagmi Hybrid yang Dioptimalkan
 export const config = createConfig({
   chains: [base],
-  // Matikan Discovery hanya jika di dalam Frame untuk mencegah error CSP Warpcast
-  multiInjectedProviderDiscovery: typeof window !== "undefined" ? !isFrame() : false,
-  connectors: typeof window !== "undefined" && isFrame() 
-    ? [farcasterFrame()] 
-    : [injected(), coinbaseWallet()],
+  // Sangat penting: matikan Discovery di mobile agar tidak memicu deteksi wallet eksternal yang gagal
+  multiInjectedProviderDiscovery: false, 
+  connectors: [
+    // Letakkan farcasterFrame di urutan pertama agar diprioritaskan oleh Mini App
+    farcasterFrame(),
+    injected(),
+    coinbaseWallet(),
+  ],
   transports: {
     [base.id]: http(),
   },
@@ -46,20 +49,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
       config={{
         appearance: {
           theme: "light",
-          accentColor: "#676FFF",
+          accentColor: "#4f46e5", // Sesuaikan dengan brand indigo Anda
           showWalletLoginFirst: false, 
         },
-        // PERBAIKAN STRUKTUR DI SINI UNTUK BUILD VERCEL
+        // Sembunyikan login Privy jika di dalam Frame agar tidak bentrok dengan SDK
+        loginMethods: isFrame() ? [] : ['email', 'wallet', 'google'],
         embeddedWallets: {
-          ethereum: {
-            createOnLogin: "users-without-wallets",
-          },
+          createOnLogin: "users-without-wallets",
+          requireUserPasswordOnCreate: false,
         },
       }}
     >
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          {/* PEMBUNGKUS FARCASTER WAJIB ADA DI SINI */}
           <FarcasterProvider>
             {children}
           </FarcasterProvider>
