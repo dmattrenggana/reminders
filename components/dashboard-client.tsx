@@ -64,15 +64,13 @@ export default function DashboardClient() {
     setMounted(true);
   }, []);
 
-  // Inisialisasi SDK Farcaster (Dipisah dari auto-connect)
+  // Inisialisasi SDK Farcaster
   useEffect(() => {
     const init = async () => {
       if (isFirstMount.current && mounted) {
         try {
           const context = await sdk.context;
           if (context?.user) setContextUser(context.user);
-          
-          // Memberitahu Farcaster bahwa frame siap ditampilkan
           await sdk.actions.ready();
           setIsSDKReady(true);
         } catch (e) {
@@ -98,19 +96,18 @@ export default function DashboardClient() {
   const pfpUrl = displayUser?.pfpUrl || displayUser?.pfp;
   const formattedBalance = (typeof balance === 'bigint') ? Number(formatUnits(balance, 18)).toFixed(2) : "0.00";
 
-  // Handler Connect yang lebih stabil
+  // Handler Connect: Fokus pada Farcaster Frame Connector untuk menghindari error CSP
   const handleConnect = useCallback(async () => {
-    console.log("Connect triggered...");
+    console.log("Attempting to connect...");
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
-    const injectedConnector = connectors.find((c) => c.id === "injected");
-
+    
     try {
       if (fcConnector) {
         connect({ connector: fcConnector });
-      } else if (injectedConnector) {
-        connect({ connector: injectedConnector });
       } else {
-        connect({ connector: connectors[0] });
+        // Fallback untuk injected wallet (Metamask, dll) jika tidak di dalam Warpcast
+        const injected = connectors.find((c) => c.id === "injected");
+        connect({ connector: injected || connectors[0] });
       }
     } catch (error) {
       console.error("Manual Connection Error:", error);
@@ -157,7 +154,7 @@ export default function DashboardClient() {
 
   const handleHelpRemindMe = (reminder: any) => {
     const text = encodeURIComponent(`🚨 Urgency! Help remind @user for Task #${reminder.id}. One hour left before tokens are burned!`);
-    window.open(`https://warpcast.com/~/compose?text=${text}`, "_blank");
+    sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${text}`);
   };
 
   const handleConfirmCompleted = async (id: number) => {
@@ -173,7 +170,6 @@ export default function DashboardClient() {
     } catch (e: any) { alert(e.message); }
   };
 
-  // Loading state yang bersih (tanpa atribut ikon yang salah)
   if (!mounted || !isSDKReady || !isFarcasterLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
@@ -206,7 +202,7 @@ export default function DashboardClient() {
                 <Button variant="ghost" onClick={() => disconnect()} className="flex items-center gap-2 h-9 px-3 rounded-full bg-white transition-all shadow-sm">
                   {pfpUrl ? (
                     <img src={pfpUrl} alt="PFP" className="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-50" referrerPolicy="no-referrer" />
-                  ) : ( <Wallet className="w-4 h-4 text-indigo-500" /> )}
+                  ) : ( <Wallet className="h-4 w-4 text-indigo-500" /> )}
                   <span className="text-xs font-black">{username ? `@${username}` : `${address?.slice(0,4)}...`}</span>
                   <LogOut className="h-3 w-3 opacity-20 ml-1" />
                 </Button>
@@ -217,7 +213,6 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
            {[
              { label: `Locked ${symbol}`, val: stats.locked, color: "border-b-indigo-500" },
@@ -257,7 +252,6 @@ export default function DashboardClient() {
   );
 }
 
-// Sub-component untuk List
 function ReminderList({ items, onHelp, onConfirm, address }: any) {
   if (!items.length) return (
     <div className="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
@@ -301,7 +295,7 @@ function ReminderList({ items, onHelp, onConfirm, address }: any) {
                         : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
                       }`}
                     >
-                      <Megaphone className="w-3.5 h-3.5 mr-2" /> Help Remind Me
+                      <Megaphone className="h-3.5 w-3.5 mr-2" /> Help Remind Me
                     </Button>
                   )}
                   {isOwner && !r.isResolved && (
@@ -309,7 +303,7 @@ function ReminderList({ items, onHelp, onConfirm, address }: any) {
                       onClick={() => onConfirm(r.id)} 
                       className="h-9 px-5 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] rounded-xl uppercase shadow-lg shadow-green-100"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Claim Success
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-2" /> Claim Success
                     </Button>
                   )}
                 </div>
