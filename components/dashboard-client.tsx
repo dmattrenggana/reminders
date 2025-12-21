@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAccount, useConnect, useDisconnect, useWriteContract, usePublicClient } from "wagmi";
 import { useReminders } from "@/hooks/useReminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
@@ -23,30 +23,21 @@ const MAX_UINT256 = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffff
 
 const ERC20_ABI = [
   { 
-    "inputs": [
-      { "internalType": "address", "name": "owner", "type": "address" }, 
-      { "internalType": "address", "name": "spender", "type": "address" }
-    ], 
+    "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }, { "internalType": "address", "name": "spender", "type": "address" }], 
     "name": "allowance", 
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], 
-    "stateMutability": "view", 
-    "type": "function" 
+    "stateMutability": "view", "type": "function" 
   }, 
   { 
-    "inputs": [
-      { "internalType": "address", "name": "spender", "type": "address" }, 
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ], 
+    "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }], 
     "name": "approve", 
     "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], 
-    "stateMutability": "nonpayable", 
-    "type": "function" 
+    "stateMutability": "nonpayable", "type": "function" 
   }
 ] as const;
 
 export default function DashboardClient() {
   const { user: providerUser, isLoaded: isFarcasterLoaded } = useFarcaster();
-  const [contextUser, setContextUser] = useState<any>(null);
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -55,8 +46,6 @@ export default function DashboardClient() {
   
   const { activeReminders: reminders = [], loading: loadingReminders, refresh: refreshReminders } = useReminders();
   const { balance, symbol, refresh: refreshBalance } = useTokenBalance();
-  const [isSDKReady, setIsSDKReady] = useState(false);
-  const isFirstMount = useRef(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -64,53 +53,32 @@ export default function DashboardClient() {
     setMounted(true);
   }, []);
 
-  // Inisialisasi SDK Farcaster
-  useEffect(() => {
-    const init = async () => {
-      if (isFirstMount.current && mounted) {
-        try {
-          const context = await sdk.context;
-          if (context?.user) setContextUser(context.user);
-          await sdk.actions.ready();
-          setIsSDKReady(true);
-        } catch (e) {
-          console.error("SDK Init Error:", e);
-          setIsSDKReady(true);
-        }
-        isFirstMount.current = false;
-      }
+  // Filter stats dengan pengamanan array
+  const stats = useMemo(() => {
+    const safeReminders = Array.isArray(reminders) ? reminders : [];
+    return {
+      locked: safeReminders.filter(r => !r.isResolved).reduce((acc, curr) => acc + Number(curr.rewardPool || 0), 0),
+      completed: safeReminders.filter(r => r.isResolved && r.isCompleted).length,
+      burned: safeReminders.filter(r => r.isResolved && !r.isCompleted).length,
+      publicFeed: safeReminders.filter(r => !r.isResolved),
+      myFeed: safeReminders.filter(r => r.creator?.toLowerCase() === address?.toLowerCase())
     };
-    init();
-  }, [mounted]);
+  }, [reminders, address]);
 
-  const stats = useMemo(() => ({
-    locked: reminders.filter(r => !r.isResolved).reduce((acc, curr) => acc + Number(curr.rewardPool), 0),
-    completed: reminders.filter(r => r.isResolved && r.isCompleted).length,
-    burned: reminders.filter(r => r.isResolved && !r.isCompleted).length,
-    publicFeed: reminders.filter(r => !r.isResolved),
-    myFeed: reminders.filter(r => r.creator?.toLowerCase() === address?.toLowerCase())
-  }), [reminders, address]);
-
-  const displayUser = contextUser || providerUser;
-  const username = displayUser?.username;
-  const pfpUrl = displayUser?.pfpUrl || displayUser?.pfp;
+  const username = providerUser?.username;
+  const pfpUrl = providerUser?.pfpUrl || providerUser?.pfp;
   const formattedBalance = (typeof balance === 'bigint') ? Number(formatUnits(balance, 18)).toFixed(2) : "0.00";
 
-  // Handler Connect: Fokus pada Farcaster Frame Connector untuk menghindari error CSP
-  const handleConnect = useCallback(async () => {
-    console.log("Attempting to connect...");
+  // Perbaikan Handler Connect - Fokus pada Farcaster Frame
+  const handleConnect = useCallback(() => {
+    console.log("Menjalankan koneksi...");
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
     
-    try {
-      if (fcConnector) {
-        connect({ connector: fcConnector });
-      } else {
-        // Fallback untuk injected wallet (Metamask, dll) jika tidak di dalam Warpcast
-        const injected = connectors.find((c) => c.id === "injected");
-        connect({ connector: injected || connectors[0] });
-      }
-    } catch (error) {
-      console.error("Manual Connection Error:", error);
+    if (fcConnector) {
+      connect({ connector: fcConnector });
+    } else {
+      const injected = connectors.find((c) => c.id === "injected");
+      connect({ connector: injected || connectors[0] });
     }
   }, [connectors, connect]);
 
@@ -153,7 +121,7 @@ export default function DashboardClient() {
   };
 
   const handleHelpRemindMe = (reminder: any) => {
-    const text = encodeURIComponent(`🚨 Urgency! Help remind @user for Task #${reminder.id}. One hour left before tokens are burned!`);
+    const text = encodeURIComponent(`🚨 Urgency! Help remind me for Task #${reminder.id}. One hour left before tokens are burned!`);
     sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${text}`);
   };
 
@@ -170,7 +138,8 @@ export default function DashboardClient() {
     } catch (e: any) { alert(e.message); }
   };
 
-  if (!mounted || !isSDKReady || !isFarcasterLoaded) {
+  // Gunakan isFarcasterLoaded sebagai gerbang utama
+  if (!mounted || !isFarcasterLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-[#4f46e5]" />
@@ -218,7 +187,7 @@ export default function DashboardClient() {
              { label: `Locked ${symbol}`, val: stats.locked, color: "border-b-indigo-500" },
              { label: "Completed", val: stats.completed, color: "border-b-green-500" },
              { label: "Burned", val: stats.burned, color: "border-b-red-500" },
-             { label: "Total Tasks", val: reminders.length, color: "bg-[#4f46e5] text-white border-none shadow-indigo-100 shadow-xl" }
+             { label: "Total Tasks", val: Array.isArray(reminders) ? reminders.length : 0, color: "bg-[#4f46e5] text-white border-none shadow-indigo-100 shadow-xl" }
            ].map((s, i) => (
              <Card key={i} className={`rounded-3xl shadow-sm border-slate-100 overflow-hidden ${s.color}`}>
                <CardHeader className="pb-1"><CardTitle className="text-[10px] font-black uppercase opacity-60 tracking-wider">{s.label}</CardTitle></CardHeader>
@@ -247,15 +216,15 @@ export default function DashboardClient() {
         </Tabs>
       </div>
 
-      <FloatingCreate symbol={symbol} isSubmitting={isSubmitting} onConfirm={handleCreateReminder} />
+      <FloatingCreate symbol={symbol} isSubmitting={isSubmitting} onConfirm={refreshReminders} />
     </div>
   );
 }
 
 function ReminderList({ items, onHelp, onConfirm, address }: any) {
-  if (!items.length) return (
+  if (!items || items.length === 0) return (
     <div className="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-      <Bell className="h-10 w-10 text-slate-100 mx-auto mb-4" />
+      <Bell size={40} className="text-slate-100 mx-auto mb-4" />
       <p className="text-slate-300 text-[10px] font-black uppercase tracking-[0.3em]">No activity found</p>
     </div>
   );
@@ -278,37 +247,32 @@ function ReminderList({ items, onHelp, onConfirm, address }: any) {
                   </Badge>
                   {isOwner && <Badge variant="outline" className="text-[9px] font-black border-indigo-100 text-indigo-500 bg-indigo-50/30">MY TASK</Badge>}
                 </div>
-
                 <div>
                   <h3 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">Task #{r.id}</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Creator: {isOwner ? "You" : `${r.creator?.slice(0,6)}...${r.creator?.slice(-4)}`}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Creator: {isOwner ? "You" : `${r.creator?.slice(0,6)}...`}</p>
                 </div>
-
                 <div className="flex flex-wrap items-center gap-3 pt-1">
                   {!r.isResolved && (
                     <Button 
                       disabled={!r.isDangerZone} 
                       onClick={() => onHelp(r)}
                       className={`h-9 px-5 rounded-xl text-[10px] font-black uppercase transition-all shadow-lg ${
-                        r.isDangerZone 
-                        ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-100" 
-                        : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                        r.isDangerZone ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-slate-100 text-slate-400"
                       }`}
                     >
-                      <Megaphone className="h-3.5 w-3.5 mr-2" /> Help Remind Me
+                      <Megaphone size={14} className="mr-2" /> Help Remind Me
                     </Button>
                   )}
                   {isOwner && !r.isResolved && (
                     <Button 
                       onClick={() => onConfirm(r.id)} 
-                      className="h-9 px-5 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] rounded-xl uppercase shadow-lg shadow-green-100"
+                      className="h-9 px-5 bg-green-500 hover:bg-green-600 text-white font-black text-[10px] rounded-xl uppercase shadow-lg"
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-2" /> Claim Success
+                      <CheckCircle2 size={14} className="mr-2" /> Claim Success
                     </Button>
                   )}
                 </div>
               </div>
-
               <div className="bg-slate-50 px-8 py-6 rounded-[2rem] text-right border border-slate-100 w-full md:w-auto min-w-[150px]">
                 <p className="text-3xl font-black text-[#4f46e5] leading-none mb-1">{r.rewardPool}</p>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Locked Amount</p>

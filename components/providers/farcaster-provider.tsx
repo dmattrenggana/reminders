@@ -23,21 +23,19 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        // Ambil context dari ready()
-        const context = (await sdk.actions.ready()) as any;
+        // Ambil context dan jalankan ready() sekaligus
+        const context = await sdk.context;
         
         if (context?.user) {
-          // NORMALISASI: Memastikan UI selalu mendapatkan pfpUrl dan username 
-          // apa pun nama variabel asli dari SDK
           const normalizedUser = {
             ...context.user,
-            username: context.user.username || context.user.displayName || "Farcaster User",
+            username: context.user.username || "Farcaster User",
             pfpUrl: context.user.pfpUrl || context.user.pfp || "" 
           };
-          
           setUser(normalizedUser);
-          console.log("Farcaster User Verified:", normalizedUser);
         }
+        
+        await sdk.actions.ready({});
       } catch (e) {
         setError("Failed to connect to Farcaster");
         console.error("SDK Init Error:", e);
