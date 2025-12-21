@@ -4,21 +4,21 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
-import { injected } from "wagmi/connectors";
+import { injected, coinbaseWallet } from "wagmi/connectors"; // Tambahkan coinbaseWallet
 import { useState, useEffect } from "react";
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 
-// Konfigurasi Wagmi yang dioptimalkan untuk Frame v2
 export const config = createConfig({
   chains: [base],
-  // Matikan discovery otomatis untuk mencegah error CSP (WalletConnect)
   multiInjectedProviderDiscovery: false, 
   connectors: [
-    farcasterFrame(), // Prioritas utama untuk Warpcast Mobile
-    injected(),       // Fallback untuk Browser Desktop (MetaMask, dll)
+    farcasterFrame(), 
+    injected(),
+    coinbaseWallet({ appName: "Reminders", preference: "smartWalletOnly" }), // Penting untuk user Base
   ],
   transports: {
-    [base.id]: http(),
+    // Gunakan RPC publik yang lebih stabil untuk menghindari kegagalan fetch data
+    [base.id]: http("https://mainnet.base.org"), 
   },
 });
 
@@ -27,7 +27,6 @@ const queryClient = new QueryClient();
 export function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
-  // Mencegah Hydration Mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -36,10 +35,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <FarcasterProvider>
-          {/* Gunakan pengecekan mounted agar sinkronisasi antara 
-            Wagmi dan DOM browser berjalan sempurna tanpa flash 
+          {/* PENTING: Jangan gunakan div kosong jika belum mounted. 
+            Gunakan null agar tidak ada elemen DOM yang mengganggu inisialisasi SDK.
           */}
-          {mounted ? children : <div className="min-h-screen bg-white" />}
+          {mounted ? children : null}
         </FarcasterProvider>
       </QueryClientProvider>
     </WagmiProvider>

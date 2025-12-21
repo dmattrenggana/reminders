@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useAccount, useConnect, useDisconnect, useWriteContract, usePublicClient } from "wagmi";
 import { useReminders } from "@/hooks/useReminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
@@ -64,6 +64,27 @@ export default function DashboardClient() {
     setMounted(true);
   }, []);
 
+  // Inisialisasi SDK Farcaster (Dipisah dari auto-connect)
+  useEffect(() => {
+    const init = async () => {
+      if (isFirstMount.current && mounted) {
+        try {
+          const context = await sdk.context;
+          if (context?.user) setContextUser(context.user);
+          
+          // Memberitahu Farcaster bahwa frame siap ditampilkan
+          await sdk.actions.ready();
+          setIsSDKReady(true);
+        } catch (e) {
+          console.error("SDK Init Error:", e);
+          setIsSDKReady(true);
+        }
+        isFirstMount.current = false;
+      }
+    };
+    init();
+  }, [mounted]);
+
   const stats = useMemo(() => ({
     locked: reminders.filter(r => !r.isResolved).reduce((acc, curr) => acc + Number(curr.rewardPool), 0),
     completed: reminders.filter(r => r.isResolved && r.isCompleted).length,
@@ -77,32 +98,9 @@ export default function DashboardClient() {
   const pfpUrl = displayUser?.pfpUrl || displayUser?.pfp;
   const formattedBalance = (typeof balance === 'bigint') ? Number(formatUnits(balance, 18)).toFixed(2) : "0.00";
 
-  // Auto-connect Logic khusus Farcaster Frame
-  useEffect(() => {
-    if (isFirstMount.current && mounted) {
-      const init = async () => {
-        try {
-          const context = await sdk.context;
-          if (context?.user) setContextUser(context.user);
-          await sdk.actions.ready();
-          
-          const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
-          if (fcConnector && !isConnected) {
-            connect({ connector: fcConnector });
-          }
-        } catch (e) { 
-          console.error("SDK Init Error:", e); 
-        } finally { 
-          setIsSDKReady(true); 
-        }
-      };
-      init();
-      isFirstMount.current = false;
-    }
-  }, [connectors, isConnected, connect, mounted]);
-
-  const handleConnect = async () => {
-    // Cari konektor native Farcaster terlebih dahulu
+  // Handler Connect yang lebih stabil
+  const handleConnect = useCallback(async () => {
+    console.log("Connect triggered...");
     const fcConnector = connectors.find((c) => c.id === "farcaster-frame");
     const injectedConnector = connectors.find((c) => c.id === "injected");
 
@@ -117,7 +115,7 @@ export default function DashboardClient() {
     } catch (error) {
       console.error("Manual Connection Error:", error);
     }
-  };
+  }, [connectors, connect]);
 
   const checkAllowance = async (neededAmount: bigint) => {
     if (!publicClient || !address) return false;
@@ -175,6 +173,7 @@ export default function DashboardClient() {
     } catch (e: any) { alert(e.message); }
   };
 
+  // Loading state yang bersih (tanpa atribut ikon yang salah)
   if (!mounted || !isSDKReady || !isFarcasterLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
@@ -258,6 +257,7 @@ export default function DashboardClient() {
   );
 }
 
+// Sub-component untuk List
 function ReminderList({ items, onHelp, onConfirm, address }: any) {
   if (!items.length) return (
     <div className="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
