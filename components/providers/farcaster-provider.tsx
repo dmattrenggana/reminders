@@ -23,15 +23,18 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        // Ambil context dan jalankan ready() sekaligus
         const context = await sdk.context;
         
         if (context?.user) {
+          // Gunakan 'as any' untuk menghindari error TypeScript pada .pfp
+          const userData = context.user as any;
+          
           const normalizedUser = {
-            ...context.user,
-            username: context.user.username || "Farcaster User",
-            pfpUrl: context.user.pfpUrl || context.user.pfp || "" 
+            ...userData,
+            username: userData.username || "Farcaster User",
+            pfpUrl: userData.pfpUrl || userData.pfp || "" 
           };
+          
           setUser(normalizedUser);
         }
         
