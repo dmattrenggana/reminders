@@ -9,20 +9,15 @@ import { injected, coinbaseWallet } from "wagmi/connectors";
 import { useState, useEffect } from "react";
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 
-// 1. Deteksi lingkungan Frame yang lebih akurat
 const isFrame = () => {
   if (typeof window === "undefined") return false;
-  // Cek apakah ada di dalam iframe atau memiliki tanda userAgent Farcaster
   return window.parent !== window || /farcaster/i.test(navigator.userAgent);
 };
 
-// 2. Konfigurasi Wagmi Hybrid yang Dioptimalkan
 export const config = createConfig({
   chains: [base],
-  // Sangat penting: matikan Discovery di mobile agar tidak memicu deteksi wallet eksternal yang gagal
   multiInjectedProviderDiscovery: false, 
   connectors: [
-    // Letakkan farcasterFrame di urutan pertama agar diprioritaskan oleh Mini App
     farcasterFrame(),
     injected(),
     coinbaseWallet(),
@@ -49,14 +44,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
       config={{
         appearance: {
           theme: "light",
-          accentColor: "#4f46e5", // Sesuaikan dengan brand indigo Anda
+          accentColor: "#4f46e5",
           showWalletLoginFirst: false, 
         },
-        // Sembunyikan login Privy jika di dalam Frame agar tidak bentrok dengan SDK
+        // Sesuai saran sebelumnya, kosongkan login methods jika di dalam frame
         loginMethods: isFrame() ? [] : ['email', 'wallet', 'google'],
         embeddedWallets: {
-          createOnLogin: "users-without-wallets",
-          requireUserPasswordOnCreate: false,
+          // PERBAIKAN DI SINI: Bungkus di dalam objek 'ethereum'
+          ethereum: {
+            createOnLogin: "users-without-wallets",
+          },
         },
       }}
     >
