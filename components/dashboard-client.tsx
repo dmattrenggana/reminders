@@ -111,7 +111,7 @@ export default function DashboardClient() {
             address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
             abi: COMMIT_TOKEN_ABI,
             functionName: 'approve',
-            args: [CONTRACTS.REMINDER_VAULT, amountInWei],
+            args: [CONTRACTS.REMINDER_VAULT as `0x${string}`, amountInWei],
           });
           
           setTxStatus("Waiting for approval confirmation...");
