@@ -292,18 +292,12 @@ export default function DashboardClient() {
           <TabsContent value="public">
             <ReminderList 
               items={stats.publicFeed} 
-              onHelp={handleHelpRemindMe}
-              onConfirm={confirmReminder} 
-              address={address} 
             />
           </TabsContent>
 
           <TabsContent value="my">
             <ReminderList 
               items={stats.myFeed} 
-              onHelp={handleHelpRemindMe}
-              onConfirm={confirmReminder} 
-              address={address} 
             />
           </TabsContent>
         </Tabs>
@@ -547,12 +541,9 @@ function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
 
 interface ReminderListProps {
   items: any[];
-  onHelp: (reminder: any) => void;
-  onConfirm: (id: number) => void;
-  address?: string;
 }
 
-function ReminderList({ items, onHelp, onConfirm, address }: ReminderListProps) {
+function ReminderList({ items }: ReminderListProps) {
   if (!items || items.length === 0) {
     return (
       <div className="
@@ -575,9 +566,6 @@ function ReminderList({ items, onHelp, onConfirm, address }: ReminderListProps) 
         <ReminderCard
           key={reminder.id}
           reminder={reminder}
-          address={address}
-          onHelp={onHelp}
-          onConfirm={onConfirm}
         />
       ))}
     </div>
