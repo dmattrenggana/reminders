@@ -7,6 +7,7 @@ interface FarcasterContextType {
   isLoaded: boolean;
   error: string | null;
   isMiniApp: boolean;
+  callReady: () => void; // Function to call sdk.actions.ready()
 }
 
 const FarcasterContext = createContext<FarcasterContextType>({
@@ -14,6 +15,7 @@ const FarcasterContext = createContext<FarcasterContextType>({
   isLoaded: false,
   error: null,
   isMiniApp: false,
+  callReady: () => {}, // Default no-op
 });
 
 export function FarcasterProvider({ children }: { children: ReactNode }) {
@@ -37,21 +39,12 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
             const { sdk } = await import("@farcaster/miniapp-sdk");
             console.log('[Farcaster] SDK imported successfully');
             
-            // CRITICAL: Call ready() IMMEDIATELY to dismiss splash screen
-            // This must be called synchronously, not awaited
-            console.log('[Farcaster] Calling sdk.actions.ready()...');
-            sdk.actions.ready({}).then(() => {
-              console.log('[Farcaster] ✅ ready() called successfully - splash screen should dismiss');
-            }).catch((err) => {
-              console.error("[Farcaster] ❌ Ready call failed:", err);
-              // Still set loaded to true so app can continue
-              setIsLoaded(true);
-            });
+            // Store SDK instance for ready() call later (after interface is loaded)
+            // According to Farcaster docs: "Call ready when your interface is ready to be displayed"
+            // We'll expose this via context so dashboard can call it when ready
+            (window as any).__farcasterSDK = sdk;
             
-            // Set loaded immediately after calling ready()
-            setIsLoaded(true);
-            
-            // Then get context and user data (non-blocking)
+            // Get context and user data first (non-blocking)
             try {
               console.log('[Farcaster] Fetching context...');
               const context = await sdk.context;
@@ -77,8 +70,10 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
               }
             } catch (contextError: any) {
               console.warn("[Farcaster] Context fetch error (non-critical):", contextError?.message || contextError);
-              // Continue even if context fails - ready() already called
             }
+            
+            // Set loaded to true (SDK is ready, but ready() will be called by dashboard)
+            setIsLoaded(true);
           } catch (importError: any) {
             console.error("[Farcaster] SDK import error:", importError?.message || importError);
             setError("Failed to load Farcaster SDK");
@@ -99,8 +94,21 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
     init();
   }, []);
 
+  // Function to call ready() - should be called after interface is loaded
+  const callReady = () => {
+    if (isMiniApp && typeof window !== 'undefined' && (window as any).__farcasterSDK) {
+      const sdk = (window as any).__farcasterSDK;
+      console.log('[Farcaster] Calling sdk.actions.ready() - interface is ready');
+      sdk.actions.ready({}).then(() => {
+        console.log('[Farcaster] ✅ ready() called successfully - splash screen should dismiss');
+      }).catch((err: any) => {
+        console.error("[Farcaster] ❌ Ready call failed:", err);
+      });
+    }
+  };
+
   return (
-    <FarcasterContext.Provider value={{ user, isLoaded, error, isMiniApp }}>
+    <FarcasterContext.Provider value={{ user, isLoaded, error, isMiniApp, callReady }}>
       {children}
     </FarcasterContext.Provider>
   );

@@ -28,7 +28,8 @@ export default function DashboardClient() {
   const { 
     user: providerUser, 
     isLoaded: isFarcasterLoaded, 
-    isMiniApp 
+    isMiniApp,
+    callReady 
   } = useFarcaster();
 
   // Wagmi hooks
@@ -319,6 +320,18 @@ export default function DashboardClient() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Call ready() after interface is loaded (per Farcaster docs best practices)
+  // "Call ready when your interface is ready to be displayed"
+  useEffect(() => {
+    if (mounted && isFarcasterLoaded && isMiniApp) {
+      // Small delay to ensure DOM is ready and avoid jitter
+      const timer = setTimeout(() => {
+        callReady();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [mounted, isFarcasterLoaded, isMiniApp, callReady]);
 
   // Computed values
   const username = providerUser?.username;
