@@ -41,6 +41,8 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
             (window as any).__farcasterSDK = sdk;
             
             // Get context and user data first (non-blocking)
+            // Note: Some Farcaster SDK internal API calls may fail (e.g., /~api/v2/unseen)
+            // These errors are harmless and don't affect functionality
             try {
               console.log('[Farcaster] Fetching context...');
               const context = await sdk.context;
@@ -65,7 +67,9 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
                 console.warn('[Farcaster] No user data in context');
               }
             } catch (contextError: any) {
-              console.warn("[Farcaster] Context fetch error (non-critical):", contextError?.message || contextError);
+              // Context fetch errors are non-critical - SDK may fail to fetch some internal data
+              // (e.g., unseen notifications API) but this doesn't affect core functionality
+              console.warn("[Farcaster] Context fetch error (non-critical, SDK internal API may be unavailable):", contextError?.message || contextError);
             }
             
             // Set loaded to true after SDK is initialized
