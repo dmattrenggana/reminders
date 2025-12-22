@@ -45,7 +45,7 @@
 - ✅ After: `"farcasterMiniApp"` or `"io.farcaster.miniapp"`
 
 **Files Updated:**
-- `components/dashboard-client.tsx`
+- `components/oard-client.tsx`
 - `components/auth/connect-wallet-button.tsx`
 
 ---
@@ -87,7 +87,7 @@ export const COMMIT_TOKEN_ABI (for ERC20)
 \`\`\`
 
 **Updated Imports in:**
-- `components/dashboard-client.tsx`
+- `components/oard-client.tsx`
 - `hooks/useVault.ts`
 - `hooks/useReminders.ts`
 - `hooks/use-token-balance.ts`
@@ -97,7 +97,7 @@ export const COMMIT_TOKEN_ABI (for ERC20)
 ### **7. Consolidated ERC20 ABI Definitions**
 
 **Problem:** ERC20 ABI defined 3 times in different files
-- ❌ Inline in `dashboard-client.tsx`
+- ❌ Inline in `oard-client.tsx`
 - ❌ Inline in `useVault.ts`
 - ✅ Now: Single source in `lib/contracts/config.ts`
 
