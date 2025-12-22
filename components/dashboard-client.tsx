@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useAccount, useConnect, useDisconnect, useWriteContract } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract, usePublicClient } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import Image from "next/image";
 import { CONTRACTS, REMINDER_VAULT_ABI, COMMIT_TOKEN_ABI } from "@/lib/contracts/config";
@@ -55,10 +55,12 @@ export default function DashboardClient() {
   });
 
   // Wagmi hooks for contract interactions
-  const { writeContract } = useWriteContract();
-
-  // State for submission
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+  
+  // State for submission and transaction tracking
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [txStatus, setTxStatus] = useState<string>("");
 
   // Create reminder function (V4)
   const createReminder = async (desc: string, amt: string, dl: string) => {
@@ -73,6 +75,8 @@ export default function DashboardClient() {
     }
 
     setIsSubmitting(true);
+    setTxStatus("Preparing transaction...");
+    
     try {
       const farcasterUsername = providerUser?.username || `wallet-${address.slice(0, 6)}`;
       const amountInWei = parseUnits(amt, 18);
@@ -82,42 +86,95 @@ export default function DashboardClient() {
       if (deadlineTimestamp <= Math.floor(Date.now() / 1000)) {
         alert("Deadline must be in the future");
         setIsSubmitting(false);
+        setTxStatus("");
         return;
       }
 
-      // Step 1: Check and approve token if needed
-      // Note: Approval check will be done via separate hook or API call
-      // For now, we'll try to approve first, then create
-      try {
-        await writeContract({
-          address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
-          abi: COMMIT_TOKEN_ABI,
-          functionName: 'approve',
-          args: [CONTRACTS.REMINDER_VAULT, amountInWei],
-        });
-        // Wait a bit for approval to be processed
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } catch (approveError: any) {
-        // If approval fails, might already be approved, continue anyway
-        console.log("Approval check:", approveError.message);
+      // Step 1: Check allowance first
+      setTxStatus("Checking token allowance...");
+      if (!publicClient) {
+        throw new Error("Public client not available");
+      }
+      
+      const allowance = await publicClient.readContract({
+        address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
+        abi: COMMIT_TOKEN_ABI,
+        functionName: 'allowance',
+        args: [address, CONTRACTS.REMINDER_VAULT],
+      }) as bigint;
+
+      // Step 2: Approve if needed
+      if (!allowance || allowance < amountInWei) {
+        setTxStatus("Approving tokens... Please confirm in wallet.");
+        try {
+          const approveTxHash = await writeContractAsync({
+            address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
+            abi: COMMIT_TOKEN_ABI,
+            functionName: 'approve',
+            args: [CONTRACTS.REMINDER_VAULT, amountInWei],
+          });
+          
+          setTxStatus("Waiting for approval confirmation...");
+          
+          // Wait for approval to be confirmed
+          const approveReceipt = await publicClient.waitForTransactionReceipt({
+            hash: approveTxHash,
+          });
+          
+          if (approveReceipt.status !== "success") {
+            throw new Error("Approval transaction failed");
+          }
+          
+          setTxStatus("Approval confirmed! Creating reminder...");
+        } catch (approveError: any) {
+          if (approveError.message?.includes("User rejected") || approveError.code === 4001) {
+            throw new Error("Approval cancelled by user");
+          }
+          throw approveError;
+        }
       }
 
-      // Step 2: Create reminder
-      await writeContract({
+      // Step 3: Create reminder
+      setTxStatus("Creating reminder... Please confirm in wallet.");
+      const createTxHash = await writeContractAsync({
         address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
         abi: REMINDER_VAULT_ABI,
         functionName: 'createReminder',
         args: [amountInWei, BigInt(deadlineTimestamp), desc, farcasterUsername],
       });
 
-      alert("✅ Reminder created! Transaction submitted.");
-      refreshReminders();
-      refreshBalance();
+      setTxStatus("Waiting for transaction confirmation...");
+      
+      // Wait for create reminder transaction to be confirmed
+      const createReceipt = await publicClient.waitForTransactionReceipt({
+        hash: createTxHash,
+      });
+      
+      if (createReceipt.status === "success") {
+        setTxStatus("");
+        alert("✅ Reminder created successfully! Transaction confirmed.");
+        refreshReminders();
+        refreshBalance();
+        setIsSubmitting(false);
+      } else {
+        throw new Error("Transaction reverted");
+      }
+      
     } catch (error: any) {
       console.error("Create reminder error:", error);
-      alert(error.shortMessage || error.message || "Failed to create reminder");
-    } finally {
+      setTxStatus("");
       setIsSubmitting(false);
+      
+      // Better error messages
+      if (error.message?.includes("User rejected") || error.code === 4001 || error.message?.includes("cancelled")) {
+        alert("❌ Transaction cancelled by user");
+      } else if (error.message?.includes("insufficient funds")) {
+        alert("❌ Insufficient funds for gas or tokens");
+      } else if (error.message?.includes("reverted") || error.shortMessage?.includes("reverted")) {
+        alert("❌ Transaction reverted. Please check:\n- Token balance is sufficient\n- Deadline is in the future\n- Contract address is correct");
+      } else {
+        alert(`❌ Failed to create reminder: ${error.shortMessage || error.message || "Unknown error"}`);
+      }
     }
   };
 
@@ -129,20 +186,40 @@ export default function DashboardClient() {
     }
 
     setIsSubmitting(true);
+    setTxStatus("Confirming reminder... Please confirm in wallet.");
     try {
-      await writeContract({
+      if (!publicClient) {
+        throw new Error("Public client not available");
+      }
+
+      const txHash = await writeContractAsync({
         address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
         abi: REMINDER_VAULT_ABI,
         functionName: 'confirmReminder',
         args: [BigInt(id)],
       });
 
-      alert("✅ Reminder confirmed! Tokens returned.");
-      refreshReminders();
-      refreshBalance();
+      setTxStatus("Waiting for transaction confirmation...");
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+
+      if (receipt.status === "success") {
+        setTxStatus("");
+        alert("✅ Reminder confirmed! Tokens returned.");
+        refreshReminders();
+        refreshBalance();
+      } else {
+        throw new Error("Transaction reverted");
+      }
     } catch (error: any) {
       console.error("Confirm reminder error:", error);
-      alert(error.shortMessage || error.message || "Failed to confirm reminder");
+      setTxStatus("");
+      if (error.message?.includes("User rejected") || error.code === 4001) {
+        alert("❌ Transaction cancelled by user");
+      } else {
+        alert(error.shortMessage || error.message || "Failed to confirm reminder");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -176,20 +253,40 @@ export default function DashboardClient() {
 
       // Then claim reward
       setIsSubmitting(true);
+      setTxStatus("Claiming reward... Please confirm in wallet.");
       try {
-        await writeContract({
+        if (!publicClient) {
+          throw new Error("Public client not available");
+        }
+
+        const txHash = await writeContractAsync({
           address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
           abi: REMINDER_VAULT_ABI,
           functionName: 'claimReward',
           args: [BigInt(reminder.id)],
         });
 
-        alert(`✅ Reward claimed! You earned ${data.data?.estimatedReward || "tokens"}`);
-        refreshReminders();
-        refreshBalance();
+        setTxStatus("Waiting for transaction confirmation...");
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+        });
+
+        if (receipt.status === "success") {
+          setTxStatus("");
+          alert(`✅ Reward claimed! You earned ${data.data?.estimatedReward || "tokens"}`);
+          refreshReminders();
+          refreshBalance();
+        } else {
+          throw new Error("Transaction reverted");
+        }
       } catch (error: any) {
         console.error("Claim reward error:", error);
-        alert(error.shortMessage || error.message || "Failed to claim reward");
+        setTxStatus("");
+        if (error.message?.includes("User rejected") || error.code === 4001) {
+          alert("❌ Transaction cancelled by user");
+        } else {
+          alert(error.shortMessage || error.message || "Failed to claim reward");
+        }
       } finally {
         setIsSubmitting(false);
       }
@@ -307,7 +404,8 @@ export default function DashboardClient() {
       <FloatingCreate 
         symbol={symbol} 
         isSubmitting={isSubmitting} 
-        onConfirm={createReminder} 
+        onConfirm={createReminder}
+        status={txStatus}
       />
     </div>
   );

@@ -12,9 +12,10 @@ interface FloatingCreateProps {
   symbol: string;
   isSubmitting: boolean;
   onConfirm: (desc: string, amt: string, dl: string) => void;
+  status?: string;
 }
 
-export function FloatingCreate({ symbol, isSubmitting, onConfirm }: FloatingCreateProps) {
+export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: FloatingCreateProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -128,6 +129,11 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm }: FloatingCrea
               </div>
             </div>
 
+            {status && (
+              <div className="text-xs text-slate-500 font-medium text-center py-2 px-3 bg-slate-50 rounded-xl">
+                {status}
+              </div>
+            )}
             <Button
               disabled={isSubmitting}
               onClick={() => onConfirm(description, amount, deadline)}
@@ -135,7 +141,7 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm }: FloatingCrea
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" /> {status || "Processing..."}
                 </>
               ) : (
                 "Lock & Commit"
