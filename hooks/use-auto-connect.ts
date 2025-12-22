@@ -3,7 +3,7 @@ import { useConnect } from "wagmi";
 
 interface UseAutoConnectProps {
   isMiniApp: boolean;
-  hasUser: boolean;
+  hasUser?: boolean; // Optional - user data may not be available immediately
   isConnected: boolean;
   isLoaded: boolean;
   mounted: boolean;
@@ -28,7 +28,7 @@ export function useAutoConnect({
     // Add small delay to ensure connectors are ready
     const timer = setTimeout(() => {
       if (isMiniApp && !isConnected) {
-        console.log("[Auto-Connect] Detected Farcaster Miniapp, auto-connecting...");
+        console.log("[Auto-Connect] Detected Farcaster Miniapp, attempting auto-connect...");
         
         // Find Farcaster miniapp connector
         const fcConnector = connectors.find((c) => 
@@ -40,12 +40,13 @@ export function useAutoConnect({
         if (fcConnector) {
           console.log("[Auto-Connect] Using Farcaster Miniapp connector:", fcConnector.id);
           connect({ connector: fcConnector }).catch((err) => {
-            console.warn("[Auto-Connect] Connection failed:", err);
+            console.warn("[Auto-Connect] Connection failed (user may need to connect manually):", err);
           });
         } else {
           console.warn("[Auto-Connect] Farcaster connector not found. Available connectors:", 
             connectors.map(c => ({ id: c.id, name: c.name }))
           );
+          console.log("[Auto-Connect] User will need to connect manually via Connect Wallet button");
         }
       } else if (!isMiniApp && !isConnected) {
         // Fallback to injected for web browser
@@ -55,7 +56,7 @@ export function useAutoConnect({
           connect({ connector: injectedConnector });
         }
       }
-    }, 500); // Small delay to ensure everything is ready
+    }, 1000); // Increased delay to ensure SDK and connectors are fully ready
     
     return () => clearTimeout(timer);
   }, [mounted, isMiniApp, isConnected, isLoaded, connect, connectors]);
