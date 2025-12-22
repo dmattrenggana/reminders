@@ -316,30 +316,22 @@ export default function DashboardClient() {
   const username = providerUser?.username;
   const pfpUrl = providerUser?.pfpUrl || providerUser?.pfp;
   
-  // Format balance with proper handling
-  const formattedBalance = (() => {
+  // Format balance with proper handling (memoized to prevent re-renders)
+  const formattedBalance = useMemo(() => {
     if (!isConnected || !address) {
       return "0.00";
     }
     if (typeof balance === 'bigint') {
-      const num = Number(formatUnits(balance, 18));
-      return num.toFixed(2);
+      try {
+        const num = Number(formatUnits(balance, 18));
+        return num.toFixed(2);
+      } catch (error) {
+        console.warn("[Dashboard] Error formatting balance:", error);
+        return "0.00";
+      }
     }
     return "0.00";
-  })();
-
-  // Debug logging
-  useEffect(() => {
-    if (isConnected && address) {
-      console.log("[Dashboard] Balance:", {
-        balance,
-        formattedBalance,
-        symbol,
-        address,
-        isConnected
-      });
-    }
-  }, [balance, formattedBalance, symbol, address, isConnected]);
+  }, [balance, isConnected, address]);
 
   // Stats calculation
   const stats = useMemo(() => {
