@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { CreateReminderDialog } from "./create-reminder-dialog"
 import { ReminderList } from "./reminder-list"
 import { ReminderStats } from "./reminder-stats"
 import { Button } from "@/components/ui/button"
 import { Plus, Users } from "lucide-react"
 import Link from "next/link"
+import { FloatingCreate } from "@/components/floating-create"
 
 export function ReminderDashboard() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -16,6 +16,13 @@ export function ReminderDashboard() {
     setRefreshKey((prev) => prev + 1)
     setIsCreateOpen(false)
   }
+
+  // Placeholder create function - should be passed from parent or use hook
+  const createReminder = async (desc: string, amt: string, dl: string) => {
+    console.log("Create reminder:", { desc, amt, dl });
+    // TODO: Implement with V4 contract or use hook
+    handleReminderCreated();
+  };
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl">
@@ -47,7 +54,14 @@ export function ReminderDashboard() {
         <ReminderList key={`list-${refreshKey}`} />
       </div>
 
-      <CreateReminderDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} onSuccess={handleReminderCreated} />
+      {/* Use FloatingCreate instead of deleted CreateReminderDialog */}
+      {isCreateOpen && (
+        <FloatingCreate 
+          symbol="RMND"
+          isSubmitting={false}
+          onConfirm={createReminder}
+        />
+      )}
     </div>
   )
 }
