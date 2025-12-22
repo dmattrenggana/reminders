@@ -708,7 +708,7 @@ function ReminderList({ items }: ReminderListProps) {
         text-center py-24 bg-white rounded-[3rem] 
         border-2 border-dashed border-slate-100
       ">
-        <Bell size={40} className="text-slate-100 mx-auto mb-4" />
+        <Bell width={40} height={40} className="text-slate-100 mx-auto mb-4" />
         <p className="
           text-slate-300 text-[10px] font-black uppercase tracking-[0.3em]
         ">
