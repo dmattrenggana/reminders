@@ -100,7 +100,7 @@ export default function DashboardClient() {
         address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
         abi: COMMIT_TOKEN_ABI,
         functionName: 'allowance',
-        args: [address, CONTRACTS.REMINDER_VAULT],
+        args: [address, CONTRACTS.REMINDER_VAULT as `0x${string}`],
       }) as bigint;
 
       // Step 2: Approve if needed
