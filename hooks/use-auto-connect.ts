@@ -23,30 +23,61 @@ export function useAutoConnect({
   const { connect, connectors } = useConnect();
 
   useEffect(() => {
-    if (!mounted || isConnected || !isLoaded) return;
+    if (!mounted || isConnected || !isLoaded) {
+      if (!mounted) console.log("[Auto-Connect] Waiting for mount...");
+      if (isConnected) console.log("[Auto-Connect] Already connected");
+      if (!isLoaded) console.log("[Auto-Connect] Waiting for Farcaster to load...");
+      return;
+    }
     
-    // Add small delay to ensure connectors are ready
+    console.log("[Auto-Connect] Starting auto-connect process...", {
+      isMiniApp,
+      isConnected,
+      isLoaded,
+      mounted,
+      connectorCount: connectors.length
+    });
+    
+    // Add delay to ensure connectors are ready
     const timer = setTimeout(() => {
       if (isMiniApp && !isConnected) {
         console.log("[Auto-Connect] Detected Farcaster Miniapp, attempting auto-connect...");
-        
-        // Find Farcaster miniapp connector
-        const fcConnector = connectors.find((c) => 
-          c.id === "farcasterMiniApp" || 
-          c.id === "io.farcaster.miniapp" ||
-          c.name?.toLowerCase().includes("farcaster")
+        console.log("[Auto-Connect] Available connectors:", 
+          connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
         );
         
+        // Find Farcaster miniapp connector - try multiple possible IDs
+        const fcConnector = connectors.find((c) => {
+          const id = c.id?.toLowerCase();
+          const name = c.name?.toLowerCase() || '';
+          return (
+            id === "farcasterminiapp" ||
+            id === "io.farcaster.miniapp" ||
+            id === "farcaster" ||
+            name.includes("farcaster") ||
+            name.includes("miniapp")
+          );
+        });
+        
         if (fcConnector) {
-          console.log("[Auto-Connect] Using Farcaster Miniapp connector:", fcConnector.id);
+          console.log("[Auto-Connect] ✅ Found Farcaster connector:", {
+            id: fcConnector.id,
+            name: fcConnector.name,
+            type: fcConnector.type
+          });
+          
           try {
+            console.log("[Auto-Connect] Attempting to connect...");
             connect({ connector: fcConnector });
-          } catch (err) {
-            console.warn("[Auto-Connect] Connection failed (user may need to connect manually):", err);
+            console.log("[Auto-Connect] ✅ Connect call executed");
+          } catch (err: any) {
+            console.error("[Auto-Connect] ❌ Connection failed:", err?.message || err);
+            console.log("[Auto-Connect] User will need to connect manually via Connect Wallet button");
           }
         } else {
-          console.warn("[Auto-Connect] Farcaster connector not found. Available connectors:", 
-            connectors.map(c => ({ id: c.id, name: c.name }))
+          console.warn("[Auto-Connect] ❌ Farcaster connector not found!");
+          console.warn("[Auto-Connect] Available connectors:", 
+            connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
           );
           console.log("[Auto-Connect] User will need to connect manually via Connect Wallet button");
         }
@@ -58,7 +89,7 @@ export function useAutoConnect({
           connect({ connector: injectedConnector });
         }
       }
-    }, 1000); // Increased delay to ensure SDK and connectors are fully ready
+    }, 1500); // Increased delay to ensure SDK and connectors are fully ready
     
     return () => clearTimeout(timer);
   }, [mounted, isMiniApp, isConnected, isLoaded, connect, connectors]);
