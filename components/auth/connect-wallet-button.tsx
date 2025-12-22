@@ -11,12 +11,22 @@ export function ConnectWalletButton() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
+  /**
+   * Handle manual wallet connection
+   * Per Farcaster docs: https://miniapps.farcaster.xyz/docs/guides/wallets
+   * "It's possible a user doesn't have a connected wallet so you should always check 
+   * for a connection and prompt them to connect if they aren't already connected."
+   * 
+   * Note: In miniapp, Farcaster client handles wallet selection - no dialog needed
+   */
   const handleConnect = () => {
+    console.log("[ConnectWallet] Manual connect requested");
     console.log("[ConnectWallet] Available connectors:", 
-      connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
+      connectors.map(c => ({ id: c.id, name: c.name, type: c.type, ready: c.ready }))
     );
     
-    // Cari konektor khusus Farcaster Miniapp - coba berbagai kemungkinan ID
+    // Find Farcaster miniapp connector first
+    // Per Farcaster docs: connector should be available in miniapp
     const fcConnector = connectors.find((c) => {
       const id = c.id?.toLowerCase();
       const name = c.name?.toLowerCase() || '';
@@ -33,12 +43,16 @@ export function ConnectWalletButton() {
       console.log("[ConnectWallet] ✅ Found Farcaster connector:", {
         id: fcConnector.id,
         name: fcConnector.name,
-        type: fcConnector.type
+        type: fcConnector.type,
+        ready: fcConnector.ready
       });
+      
+      // Per Farcaster docs: "Your Mini App won't need to show a wallet selection dialog"
+      // Farcaster client will handle wallet connection
       connect({ connector: fcConnector });
     } else {
       // Fallback untuk web browser (Injected/MetaMask)
-      console.log("[ConnectWallet] Farcaster connector not found, using first available connector");
+      console.log("[ConnectWallet] Farcaster connector not found, using injected connector");
       const injectedConnector = connectors.find((c) => c.id === "injected");
       connect({ connector: injectedConnector || connectors[0] });
     }

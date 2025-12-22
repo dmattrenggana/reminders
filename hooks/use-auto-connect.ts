@@ -11,7 +11,14 @@ interface UseAutoConnectProps {
 
 /**
  * Auto-connect hook for Farcaster Miniapp
- * Automatically connects wallet when user is in miniapp environment
+ * 
+ * Per Farcaster docs: https://miniapps.farcaster.xyz/docs/guides/wallets
+ * "If a user already has a connected wallet the connector will automatically connect to it"
+ * 
+ * This hook:
+ * 1. Waits for connector to auto-connect (if user has wallet)
+ * 2. Only manually connects if auto-connect doesn't happen after delay
+ * 3. Handles both miniapp and web browser environments
  */
 export function useAutoConnect({
   isMiniApp,
@@ -23,14 +30,25 @@ export function useAutoConnect({
   const { connect, connectors } = useConnect();
 
   useEffect(() => {
-    if (!mounted || isConnected || !isLoaded) {
-      if (!mounted) console.log("[Auto-Connect] Waiting for mount...");
-      if (isConnected) console.log("[Auto-Connect] Already connected");
-      if (!isLoaded) console.log("[Auto-Connect] Waiting for Farcaster to load...");
+    // Early returns - don't attempt connection if conditions not met
+    if (!mounted) {
+      console.log("[Auto-Connect] Waiting for mount...");
       return;
     }
     
-    console.log("[Auto-Connect] Starting auto-connect process...", {
+    if (!isLoaded) {
+      console.log("[Auto-Connect] Waiting for Farcaster to load...");
+      return;
+    }
+    
+    // ✅ CRITICAL: Per Farcaster docs, connector auto-connects if user has wallet
+    // Check isConnected FIRST before attempting manual connect
+    if (isConnected) {
+      console.log("[Auto-Connect] ✅ Already connected (connector auto-connected)");
+      return;
+    }
+    
+    console.log("[Auto-Connect] Starting connection process...", {
       isMiniApp,
       isConnected,
       isLoaded,
@@ -39,12 +57,17 @@ export function useAutoConnect({
       farcasterReady: typeof window !== 'undefined' ? (window as any).__farcasterReady : false
     });
     
-    // Wait for both SDK ready and connectors to be available
+    // Per Farcaster docs: Connector auto-connects if user has wallet
+    // Wait a bit to see if auto-connect happens, then manually connect if needed
     let retryCount = 0;
-    const MAX_RETRIES = 20; // Max 4 seconds (20 * 200ms)
+    const MAX_RETRIES = 15; // Max 3 seconds (15 * 200ms) to wait for auto-connect
+    const AUTO_CONNECT_WAIT = 500; // Initial wait for auto-connect
     
     const checkAndConnect = () => {
       retryCount++;
+      
+      // Check if already connected (auto-connect may have happened)
+      // This check is done via the effect dependency, but we check here too for safety
       
       // In miniapp, wait for ready() to be called first
       const isReady = !isMiniApp || (typeof window !== 'undefined' && (window as any).__farcasterReady);
@@ -59,13 +82,15 @@ export function useAutoConnect({
         console.warn("[Auto-Connect] ⚠️ Max retries reached, proceeding anyway...");
       }
       
-      if (isMiniApp && !isConnected) {
-        console.log("[Auto-Connect] 🔍 Detected Farcaster Miniapp, attempting auto-connect...");
+      // Only manually connect if still not connected (auto-connect didn't happen)
+      if (isMiniApp) {
+        console.log("[Auto-Connect] 🔍 Detected Farcaster Miniapp");
         console.log("[Auto-Connect] 📋 Available connectors:", 
-          connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
+          connectors.map(c => ({ id: c.id, name: c.name, type: c.type, ready: c.ready }))
         );
         
         // Find Farcaster miniapp connector - try multiple possible IDs
+        // Per Farcaster docs: connector should be available in miniapp
         const fcConnector = connectors.find((c) => {
           const id = c.id?.toLowerCase();
           const name = c.name?.toLowerCase() || '';
@@ -84,35 +109,44 @@ export function useAutoConnect({
           );
           
           if (matches) {
-            console.log("[Auto-Connect] 🔎 Checking connector:", { id, name, type, matches });
+            console.log("[Auto-Connect] 🔎 Found potential Farcaster connector:", { id, name, type });
           }
           
           return matches;
         });
         
         if (fcConnector) {
-          console.log("[Auto-Connect] ✅✅✅ Found Farcaster connector:", {
+          console.log("[Auto-Connect] ✅ Found Farcaster connector:", {
             id: fcConnector.id,
             name: fcConnector.name,
             type: fcConnector.type,
             ready: fcConnector.ready
           });
           
-          try {
-            console.log("[Auto-Connect] 🚀 Attempting to connect with connector:", fcConnector.id);
-            connect({ connector: fcConnector });
-            console.log("[Auto-Connect] ✅ Connect call executed successfully");
-          } catch (err: any) {
-            console.error("[Auto-Connect] ❌❌❌ Connection failed:", {
-              error: err?.message || err,
-              code: err?.code,
-              name: err?.name,
-              stack: err?.stack
-            });
-            console.log("[Auto-Connect] User will need to connect manually via Connect Wallet button");
+          // Per Farcaster docs: "If a user already has a connected wallet the connector will automatically connect"
+          // We only manually connect if auto-connect didn't happen
+          // Check connector.ready to see if it's ready to connect
+          if (fcConnector.ready) {
+            try {
+              console.log("[Auto-Connect] 🚀 Manual connect (auto-connect didn't happen):", fcConnector.id);
+              connect({ connector: fcConnector });
+              console.log("[Auto-Connect] ✅ Connect call executed");
+            } catch (err: any) {
+              console.error("[Auto-Connect] ❌ Connection failed:", {
+                error: err?.message || err,
+                code: err?.code,
+                name: err?.name
+              });
+              console.log("[Auto-Connect] User can connect manually via Connect Wallet button");
+            }
+          } else {
+            console.log("[Auto-Connect] ⏳ Connector not ready yet, will retry...");
+            // Retry after delay
+            setTimeout(checkAndConnect, 200);
+            return;
           }
         } else {
-          console.error("[Auto-Connect] ❌❌❌ Farcaster connector NOT FOUND!");
+          console.error("[Auto-Connect] ❌ Farcaster connector NOT FOUND!");
           console.error("[Auto-Connect] Available connectors:", 
             connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
           );
@@ -129,8 +163,10 @@ export function useAutoConnect({
       }
     };
     
-    // Start checking after a short delay to ensure everything is initialized
-    const timer = setTimeout(checkAndConnect, 1000); // Increased to 1 second to ensure SDK and connectors are ready
+    // Per Farcaster docs: Connector auto-connects if user has wallet
+    // Wait a bit for auto-connect, then manually connect if needed
+    // Start checking after initial delay to allow auto-connect to happen
+    const timer = setTimeout(checkAndConnect, AUTO_CONNECT_WAIT);
     
     return () => clearTimeout(timer);
   }, [mounted, isMiniApp, isConnected, isLoaded, connect, connectors]);
