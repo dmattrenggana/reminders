@@ -6,6 +6,8 @@
  * authentication tokens or API keys. Client-side access is required for Web3 interactions.
  */
 
+import { parseAbi } from "viem";
+
 export const CONTRACT_ADDRESSES = {
   COMMIT_TOKEN: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "",
   REMINDER_VAULT: process.env.NEXT_PUBLIC_VAULT_CONTRACT || "",
@@ -49,8 +51,6 @@ export function validateContractConfig(): { isValid: boolean; errors: string[] }
     errors,
   }
 }
-
-import { parseAbi } from "viem";
 
 export const COMMIT_TOKEN_ABI = parseAbi([
   "function name() view returns (string)",
