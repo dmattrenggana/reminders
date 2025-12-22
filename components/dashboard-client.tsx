@@ -160,6 +160,12 @@ export default function DashboardClient() {
           refreshBalance();
         }, 2000);
         
+        // Also refresh again after longer delay to ensure data is synced
+        setTimeout(() => {
+          refreshReminders();
+          refreshBalance();
+        }, 5000);
+        
         setIsSubmitting(false);
       } else {
         throw new Error("Transaction reverted");

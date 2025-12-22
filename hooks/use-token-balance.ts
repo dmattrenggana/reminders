@@ -41,7 +41,8 @@ export function useTokenBalance() {
     ],
     query: {
       enabled: !!address && isConnected,
-      refetchInterval: 20000, 
+      refetchInterval: 10000, // Refresh every 10 seconds
+      staleTime: 5000, // Consider data stale after 5 seconds
     }
   });
 
