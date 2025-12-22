@@ -40,7 +40,21 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
             // Store SDK instance for later use
             (window as any).__farcasterSDK = sdk;
             
-            // Get context and user data first (non-blocking)
+            // CRITICAL: Call ready() IMMEDIATELY after SDK import to dismiss splash screen
+            // Per Farcaster docs: "After your app loads, you must call sdk.actions.ready() to hide the splash screen"
+            // We call it immediately to ensure splash screen dismisses as soon as possible
+            console.log('[Farcaster] ⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY to dismiss splash screen...');
+            try {
+              await sdk.actions.ready({});
+              console.log('[Farcaster] ✅✅✅ ready() called successfully - splash screen should dismiss NOW');
+              (window as any).__farcasterReady = true;
+            } catch (readyError: any) {
+              console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", readyError);
+              // Even if ready() fails, mark as ready so app can continue
+              (window as any).__farcasterReady = true;
+            }
+            
+            // Get context and user data (non-blocking, can happen after ready())
             // Note: Some Farcaster SDK internal API calls may fail (e.g., /~api/v2/unseen)
             // These errors are harmless and don't affect functionality
             try {
@@ -73,7 +87,6 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
             }
             
             // Set loaded to true after SDK is initialized
-            // ready() will be called in separate useEffect after interface is ready
             setIsLoaded(true);
           } catch (importError: any) {
             console.error("[Farcaster] SDK import error:", importError?.message || importError);
@@ -95,43 +108,9 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
     init();
   }, []);
 
-  // Call ready() after interface is loaded (per Farcaster docs)
-  // Per documentation: "After your app is fully loaded and ready to display"
-  // "After your app loads, you must call sdk.actions.ready() to hide the splash screen"
-  // This useEffect runs after children are rendered, ensuring interface is ready
-  useEffect(() => {
-    if (isMiniApp && isLoaded && typeof window !== 'undefined' && (window as any).__farcasterSDK) {
-      const sdk = (window as any).__farcasterSDK;
-      
-      // Per Farcaster docs: "After your app is fully loaded and ready to display"
-      // We use requestAnimationFrame to ensure DOM is fully rendered
-      // This is better than setTimeout as it waits for browser paint cycle
-      const callReady = async () => {
-        try {
-          console.log('[Farcaster] Calling sdk.actions.ready() - app is fully loaded and ready to display');
-          // Per docs: "await sdk.actions.ready()"
-          await sdk.actions.ready({});
-          console.log('[Farcaster] ✅ ready() called successfully - splash screen should dismiss');
-          
-          // Store ready state so auto-connect knows when to proceed
-          (window as any).__farcasterReady = true;
-        } catch (err: any) {
-          console.error("[Farcaster] ❌ Ready call failed:", err);
-          // Still mark as ready even if call failed, so app can continue
-          (window as any).__farcasterReady = true;
-        }
-      };
-      
-      // Use requestAnimationFrame to ensure DOM is painted before calling ready()
-      // This avoids jitter and content reflows per Farcaster docs
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Double RAF ensures we're after the next paint
-          callReady();
-        });
-      });
-    }
-  }, [isMiniApp, isLoaded]); // Only run when miniapp is detected and SDK is loaded
+  // Note: ready() is now called IMMEDIATELY after SDK import (above)
+  // This ensures splash screen dismisses as soon as possible
+  // No need for separate useEffect - ready() is called synchronously during SDK initialization
 
   return (
     <FarcasterContext.Provider value={{ user, isLoaded, error, isMiniApp }}>
