@@ -22,7 +22,7 @@ export function ConnectWalletButton() {
   const handleConnect = () => {
     console.log("[ConnectWallet] Manual connect requested");
     console.log("[ConnectWallet] Available connectors:", 
-      connectors.map(c => ({ id: c.id, name: c.name, type: c.type, ready: c.ready }))
+      connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
     );
     
     // Find Farcaster miniapp connector first
@@ -43,8 +43,7 @@ export function ConnectWalletButton() {
       console.log("[ConnectWallet] ✅ Found Farcaster connector:", {
         id: fcConnector.id,
         name: fcConnector.name,
-        type: fcConnector.type,
-        ready: fcConnector.ready
+        type: fcConnector.type
       });
       
       // Per Farcaster docs: "Your Mini App won't need to show a wallet selection dialog"

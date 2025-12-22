@@ -57,7 +57,8 @@ if (typeof window !== 'undefined') {
     id: c.id,
     name: c.name,
     type: c.type,
-    ready: c.ready
+    // Note: 'ready' property may not exist on all connector types
+    // ready: (c as any).ready // Uncomment if needed for debugging
   })));
 }
 

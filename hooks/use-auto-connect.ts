@@ -86,7 +86,7 @@ export function useAutoConnect({
       if (isMiniApp) {
         console.log("[Auto-Connect] 🔍 Detected Farcaster Miniapp");
         console.log("[Auto-Connect] 📋 Available connectors:", 
-          connectors.map(c => ({ id: c.id, name: c.name, type: c.type, ready: c.ready }))
+          connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
         );
         
         // Find Farcaster miniapp connector - try multiple possible IDs
@@ -119,31 +119,23 @@ export function useAutoConnect({
           console.log("[Auto-Connect] ✅ Found Farcaster connector:", {
             id: fcConnector.id,
             name: fcConnector.name,
-            type: fcConnector.type,
-            ready: fcConnector.ready
+            type: fcConnector.type
           });
           
           // Per Farcaster docs: "If a user already has a connected wallet the connector will automatically connect"
           // We only manually connect if auto-connect didn't happen
-          // Check connector.ready to see if it's ready to connect
-          if (fcConnector.ready) {
-            try {
-              console.log("[Auto-Connect] 🚀 Manual connect (auto-connect didn't happen):", fcConnector.id);
-              connect({ connector: fcConnector });
-              console.log("[Auto-Connect] ✅ Connect call executed");
-            } catch (err: any) {
-              console.error("[Auto-Connect] ❌ Connection failed:", {
-                error: err?.message || err,
-                code: err?.code,
-                name: err?.name
-              });
-              console.log("[Auto-Connect] User can connect manually via Connect Wallet button");
-            }
-          } else {
-            console.log("[Auto-Connect] ⏳ Connector not ready yet, will retry...");
-            // Retry after delay
-            setTimeout(checkAndConnect, 200);
-            return;
+          // Note: Connector doesn't have a 'ready' property in Wagmi types, so we proceed with connect
+          try {
+            console.log("[Auto-Connect] 🚀 Manual connect (auto-connect didn't happen):", fcConnector.id);
+            connect({ connector: fcConnector });
+            console.log("[Auto-Connect] ✅ Connect call executed");
+          } catch (err: any) {
+            console.error("[Auto-Connect] ❌ Connection failed:", {
+              error: err?.message || err,
+              code: err?.code,
+              name: err?.name
+            });
+            console.log("[Auto-Connect] User can connect manually via Connect Wallet button");
           }
         } else {
           console.error("[Auto-Connect] ❌ Farcaster connector NOT FOUND!");
