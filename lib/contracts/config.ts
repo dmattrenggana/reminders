@@ -127,3 +127,7 @@ import { REMINDER_VAULT_V4_ABI } from "./v4-abi"
 // Default ABI: Use V4 (latest version)
 export const REMINDER_VAULT_ABI = REMINDER_VAULT_V4_ABI
 export const REMINDER_VAULT_V4_ABI_EXPORT = REMINDER_VAULT_V4_ABI
+
+// Export aliases for backward compatibility
+export const VAULT_ABI = REMINDER_VAULT_ABI
+export const VAULT_ADDRESS = CONTRACTS.REMINDER_VAULT

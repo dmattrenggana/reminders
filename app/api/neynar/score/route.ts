@@ -32,7 +32,9 @@ export async function GET(request: NextRequest) {
     // Others based on follower count with diminishing returns
     let neynarScore = 0;
     
-    if (user.power_badge) {
+    // Type assertion untuk power_badge (optional property)
+    const userWithPowerBadge = user as any;
+    if (userWithPowerBadge.power_badge) {
       neynarScore = 0.95; // Power badge = premium users
     } else {
       // Logarithmic scale for followers (diminishing returns)
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
         username: user.username,
         pfp: user.pfp_url,
         followerCount: user.follower_count,
-        powerBadge: user.power_badge
+        powerBadge: (user as any).power_badge
       }
     });
   } catch (error: any) {
