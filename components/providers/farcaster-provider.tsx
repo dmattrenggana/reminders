@@ -68,16 +68,10 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
               console.warn("[Farcaster] Context fetch error (non-critical):", contextError?.message || contextError);
             }
             
+            // Store SDK instance - ready() will be called after interface is loaded
             // According to Farcaster docs: "Call ready when your interface is ready to be displayed"
             // "Call ready as soon as possible while avoiding jitter and content reflows"
-            // We call ready() immediately after SDK is loaded and context is fetched
-            // This will dismiss the splash screen once the app is ready
-            console.log('[Farcaster] Calling sdk.actions.ready() to dismiss splash screen...');
-            sdk.actions.ready({}).then(() => {
-              console.log('[Farcaster] ✅ ready() called successfully - splash screen should dismiss');
-            }).catch((err: any) => {
-              console.error("[Farcaster] ❌ Ready call failed:", err);
-            });
+            // We'll call ready() in a separate useEffect after children are rendered
             
             // Set loaded to true after SDK is initialized
             setIsLoaded(true);
@@ -100,6 +94,27 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
 
     init();
   }, []);
+
+  // Call ready() after interface is loaded (per Farcaster docs)
+  // This useEffect runs after children are rendered, ensuring interface is ready
+  useEffect(() => {
+    if (isMiniApp && isLoaded && typeof window !== 'undefined' && (window as any).__farcasterSDK) {
+      const sdk = (window as any).__farcasterSDK;
+      
+      // Small delay to ensure DOM is fully rendered and avoid jitter
+      // Per Farcaster docs: "Don't call ready until your interface has loaded"
+      const timer = setTimeout(() => {
+        console.log('[Farcaster] Calling sdk.actions.ready() - interface is ready');
+        sdk.actions.ready({}).then(() => {
+          console.log('[Farcaster] ✅ ready() called successfully - splash screen should dismiss');
+        }).catch((err: any) => {
+          console.error("[Farcaster] ❌ Ready call failed:", err);
+        });
+      }, 100); // Small delay to ensure DOM is ready
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMiniApp, isLoaded]); // Only run when miniapp is detected and SDK is loaded
 
   return (
     <FarcasterContext.Provider value={{ user, isLoaded, error, isMiniApp }}>
