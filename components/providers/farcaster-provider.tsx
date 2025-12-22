@@ -45,26 +45,62 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
           // Only load SDK if in miniapp environment
           console.log('[Farcaster] Running in miniapp mode - initializing SDK...');
           
+          let sdk: any = null;
+          
           try {
-            const { sdk } = await import("@farcaster/miniapp-sdk");
+            const sdkModule = await import("@farcaster/miniapp-sdk");
+            sdk = sdkModule.sdk;
             console.log('[Farcaster] SDK imported successfully');
             
             // Store SDK instance for later use
             (window as any).__farcasterSDK = sdk;
-            
-            // CRITICAL: Call ready() IMMEDIATELY after SDK import to dismiss splash screen
-            // Per Farcaster docs: "After your app loads, you must call sdk.actions.ready() to hide the splash screen"
-            // We call it immediately to ensure splash screen dismisses as soon as possible
-            console.log('[Farcaster] ⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY to dismiss splash screen...');
+          } catch (importError: any) {
+            console.error("[Farcaster] ❌ SDK import failed:", importError?.message || importError);
+            // Try to get SDK from window if it exists
+            sdk = (window as any).__farcasterSDK || (window as any).Farcaster?.sdk;
+            if (sdk) {
+              console.log('[Farcaster] ✅ Found SDK from window object');
+            } else {
+              console.error("[Farcaster] ❌ SDK not available - cannot call ready()");
+              setIsLoaded(true);
+              return; // Exit early if SDK not available
+            }
+          }
+          
+          // CRITICAL: Call ready() IMMEDIATELY after SDK is available to dismiss splash screen
+          // Per Farcaster docs: "After your app loads, you must call sdk.actions.ready() to hide the splash screen"
+          // This MUST be called or splash screen will persist
+          if (sdk && sdk.actions && sdk.actions.ready) {
+            console.log('[Farcaster] ⚡⚡⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY to dismiss splash screen...');
             try {
+              // Call ready() with empty object as per Farcaster docs
               await sdk.actions.ready({});
-              console.log('[Farcaster] ✅✅✅ ready() called successfully - splash screen should dismiss NOW');
+              console.log('[Farcaster] ✅✅✅✅✅ ready() called successfully - splash screen should dismiss NOW');
               (window as any).__farcasterReady = true;
             } catch (readyError: any) {
-              console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", readyError);
-              // Even if ready() fails, mark as ready so app can continue
+              console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", {
+                error: readyError?.message || readyError,
+                name: readyError?.name,
+                stack: readyError?.stack
+              });
+              // Try to call ready() again without await (non-blocking)
+              try {
+                sdk.actions.ready({}).catch((e: any) => {
+                  console.error("[Farcaster] Retry ready() also failed:", e);
+                });
+              } catch (retryError) {
+                console.error("[Farcaster] Cannot retry ready():", retryError);
+              }
+              // Mark as ready anyway so app can continue
               (window as any).__farcasterReady = true;
             }
+          } else {
+            console.error("[Farcaster] ❌❌❌ SDK or sdk.actions.ready() not available!");
+            console.error("[Farcaster] SDK object:", sdk);
+            console.error("[Farcaster] sdk.actions:", sdk?.actions);
+            // Mark as ready anyway to prevent infinite splash screen
+            (window as any).__farcasterReady = true;
+          }
             
             // Get context and user data (non-blocking, can happen after ready())
             // Note: Some Farcaster SDK internal API calls may fail (e.g., /~api/v2/unseen)
