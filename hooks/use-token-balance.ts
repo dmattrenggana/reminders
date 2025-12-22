@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { useAccount, useReadContracts } from "wagmi"
 
 // ABI minimal untuk token ERC-20 (RMNDtest)
