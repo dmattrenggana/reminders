@@ -315,9 +315,31 @@ export default function DashboardClient() {
   // Computed values
   const username = providerUser?.username;
   const pfpUrl = providerUser?.pfpUrl || providerUser?.pfp;
-  const formattedBalance = typeof balance === 'bigint' 
-    ? Number(formatUnits(balance, 18)).toFixed(2) 
-    : "0.00";
+  
+  // Format balance with proper handling
+  const formattedBalance = (() => {
+    if (!isConnected || !address) {
+      return "0.00";
+    }
+    if (typeof balance === 'bigint') {
+      const num = Number(formatUnits(balance, 18));
+      return num.toFixed(2);
+    }
+    return "0.00";
+  })();
+
+  // Debug logging
+  useEffect(() => {
+    if (isConnected && address) {
+      console.log("[Dashboard] Balance:", {
+        balance,
+        formattedBalance,
+        symbol,
+        address,
+        isConnected
+      });
+    }
+  }, [balance, formattedBalance, symbol, address, isConnected]);
 
   // Stats calculation
   const stats = useMemo(() => {
