@@ -25,24 +25,39 @@ export function useAutoConnect({
   useEffect(() => {
     if (!mounted || isConnected || !isLoaded) return;
     
-    if (isMiniApp && hasUser && !isConnected) {
-      console.log("[Auto-Connect] Detected Farcaster Miniapp, auto-connecting...");
-      
-      // Find Farcaster miniapp connector
-      const fcConnector = connectors.find((c) => 
-        c.id === "farcasterMiniApp" || c.id === "io.farcaster.miniapp"
-      );
-      
-      if (fcConnector) {
-        console.log("[Auto-Connect] Using Farcaster Miniapp connector");
-        connect({ connector: fcConnector });
-      } else {
+    // Add small delay to ensure connectors are ready
+    const timer = setTimeout(() => {
+      if (isMiniApp && !isConnected) {
+        console.log("[Auto-Connect] Detected Farcaster Miniapp, auto-connecting...");
+        
+        // Find Farcaster miniapp connector
+        const fcConnector = connectors.find((c) => 
+          c.id === "farcasterMiniApp" || 
+          c.id === "io.farcaster.miniapp" ||
+          c.name?.toLowerCase().includes("farcaster")
+        );
+        
+        if (fcConnector) {
+          console.log("[Auto-Connect] Using Farcaster Miniapp connector:", fcConnector.id);
+          connect({ connector: fcConnector }).catch((err) => {
+            console.warn("[Auto-Connect] Connection failed:", err);
+          });
+        } else {
+          console.warn("[Auto-Connect] Farcaster connector not found. Available connectors:", 
+            connectors.map(c => ({ id: c.id, name: c.name }))
+          );
+        }
+      } else if (!isMiniApp && !isConnected) {
         // Fallback to injected for web browser
         const injectedConnector = connectors.find((c) => c.id === "injected");
-        console.log("[Auto-Connect] Using injected connector for web");
-        connect({ connector: injectedConnector || connectors[0] });
+        if (injectedConnector) {
+          console.log("[Auto-Connect] Using injected connector for web");
+          connect({ connector: injectedConnector });
+        }
       }
-    }
-  }, [mounted, isMiniApp, hasUser, isConnected, isLoaded, connect, connectors]);
+    }, 500); // Small delay to ensure everything is ready
+    
+    return () => clearTimeout(timer);
+  }, [mounted, isMiniApp, isConnected, isLoaded, connect, connectors]);
 }
 

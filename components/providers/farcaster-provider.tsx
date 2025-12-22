@@ -34,21 +34,32 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
           console.log('[Farcaster] Running in miniapp mode');
           
           const { sdk } = await import("@farcaster/miniapp-sdk");
-          const context = await sdk.context;
           
-          if (context?.user) {
-            const userData = context.user as any;
+          // CRITICAL: Call ready() FIRST to dismiss splash screen
+          // Don't await it - it should be called immediately
+          sdk.actions.ready({}).catch((err) => {
+            console.warn("[Farcaster] Ready call warning:", err);
+          });
+          
+          // Then get context and user data
+          try {
+            const context = await sdk.context;
             
-            const normalizedUser = {
-              ...userData,
-              username: userData.username || "Farcaster User",
-              pfpUrl: userData.pfpUrl || userData.pfp || "" 
-            };
-            
-            setUser(normalizedUser);
+            if (context?.user) {
+              const userData = context.user as any;
+              
+              const normalizedUser = {
+                ...userData,
+                username: userData.username || "Farcaster User",
+                pfpUrl: userData.pfpUrl || userData.pfp || "" 
+              };
+              
+              setUser(normalizedUser);
+            }
+          } catch (contextError) {
+            console.warn("[Farcaster] Context fetch error (non-critical):", contextError);
+            // Continue even if context fails - ready() already called
           }
-          
-          await sdk.actions.ready({});
         } else {
           // Web browser mode - no Farcaster SDK needed
           console.log('[Farcaster] Running in web browser mode');
