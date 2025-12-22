@@ -153,8 +153,13 @@ export default function DashboardClient() {
       if (createReceipt.status === "success") {
         setTxStatus("");
         alert("✅ Reminder created successfully! Transaction confirmed.");
-        refreshReminders();
-        refreshBalance();
+        
+        // Wait a bit for blockchain state to update, then refresh
+        setTimeout(() => {
+          refreshReminders();
+          refreshBalance();
+        }, 2000);
+        
         setIsSubmitting(false);
       } else {
         throw new Error("Transaction reverted");

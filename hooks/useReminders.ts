@@ -33,11 +33,17 @@ export function useReminders() {
         promises.push(
           contract.reminders(i).then((r) => ({
             id: i,
-            creator: r.creator,
-            rewardPool: ethers.formatUnits(r.rewardPool, 18),
-            deadline: Number(r.deadline),
-            isResolved: r.isResolved,
-            isCompleted: r.isCompleted,
+            creator: r.user, // V4 uses 'user' not 'creator'
+            rewardPool: ethers.formatUnits(r.rewardPoolAmount, 18), // V4 uses 'rewardPoolAmount'
+            deadline: Number(r.reminderTime), // V4 uses 'reminderTime'
+            isResolved: r.confirmed || r.burned, // V4: resolved if confirmed or burned
+            isCompleted: r.confirmed, // V4: completed if confirmed
+            description: r.description,
+            farcasterUsername: r.farcasterUsername,
+            commitAmount: ethers.formatUnits(r.commitAmount, 18),
+            confirmationDeadline: Number(r.confirmationDeadline),
+            totalReminders: Number(r.totalReminders),
+            rewardsClaimed: ethers.formatUnits(r.rewardsClaimed, 18),
           })).catch(e => {
             console.error(`Error fetching ID ${i}:`, e);
             return null;
