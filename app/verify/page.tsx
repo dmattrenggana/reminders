@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { ethers } from "ethers"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { CONTRACTS, REMINDER_VAULT_V3_ABI, COMMIT_TOKEN_ABI } from "@/lib/contracts/config"
+import { CONTRACTS, REMINDER_VAULT_ABI, COMMIT_TOKEN_ABI } from "@/lib/contracts/config"
 
 export default function VerifyPage() {
   const [results, setResults] = useState<any>(null)
@@ -49,7 +49,7 @@ export default function VerifyPage() {
 
       if (checks.vaultHasCode) {
         try {
-          const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, provider)
+          const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_ABI, provider)
 
           // Try calling nextReminderId
           const nextId = await vaultContract.nextReminderId()

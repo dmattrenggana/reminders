@@ -1,4 +1,4 @@
-import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_V3_ABI } from "./config"
+import { CONTRACTS, COMMIT_TOKEN_ABI, REMINDER_VAULT_ABI } from "./config"
 import { parseUnits, formatUnits } from "@/lib/utils/ethers-utils"
 
 export interface ReminderData {
@@ -85,7 +85,7 @@ export class ReminderService {
       console.log("[v0]   Vault:", CONTRACTS.REMINDER_VAULT)
       console.log("[v0]   Token:", CONTRACTS.COMMIT_TOKEN)
 
-      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, this.provider)
+      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_ABI, this.provider)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, this.provider)
 
       try {
@@ -150,7 +150,7 @@ export class ReminderService {
     if (activeSigner && typeof activeSigner.getAddress === "function") {
       const { Contract } = await import("ethers")
       this.signer = activeSigner
-      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, activeSigner)
+      this.vaultContract = new Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_ABI, activeSigner)
       this.tokenContract = new Contract(CONTRACTS.COMMIT_TOKEN, COMMIT_TOKEN_ABI, activeSigner)
       console.log("[v0] Contracts connected with active signer")
     } else {

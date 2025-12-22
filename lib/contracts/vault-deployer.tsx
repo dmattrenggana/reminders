@@ -10,7 +10,7 @@ import { useFarcaster } from "@/components/providers/farcaster-provider"
 
 // ALAMAT KONTRAK ASLI (BASE MAINNET)
 const TOKEN_ADDRESS = "0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07"
-const VAULT_ADDRESS = "0xf272D440F42293C1511F4Ee2fb3BEf78715d9974"
+const VAULT_ADDRESS = "0x2e3A524912636BF456B3C19f88693087c4dAa25f" // V4
 
 export function VaultDeployer() {
   const { address: walletAddress } = useAccount()

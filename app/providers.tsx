@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
-import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
+import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { injected } from "wagmi/connectors";
 import { useState, useEffect } from "react";
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
@@ -13,8 +13,8 @@ export const config = createConfig({
   // MATIKAN discovery otomatis agar tidak memicu error CSP di Warpcast
   multiInjectedProviderDiscovery: false, 
   connectors: [
-    farcasterFrame(), 
-    injected(),
+    farcasterMiniApp() as any, // Miniapp connector untuk Farcaster client
+    injected(), // Injected untuk web browser (MetaMask, etc)
   ],
   transports: {
     [base.id]: http("https://mainnet.base.org"), 

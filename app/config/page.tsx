@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, XCircle, ExternalLink, Copy, Check, AlertTriangle } from "lucide-react"
-import { CONTRACTS, CHAIN_CONFIG, validateContractConfig, REMINDER_VAULT_V3_ABI } from "@/lib/contracts/config"
+import { CONTRACTS, CHAIN_CONFIG, validateContractConfig, REMINDER_VAULT_ABI } from "@/lib/contracts/config"
 import { ethers } from "ethers"
 
 export default function ConfigPage() {
@@ -84,7 +84,7 @@ export default function ConfigPage() {
 
           if (vaultDeployed) {
             // Test if the contract has the getUserReminders function
-            const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, provider)
+            const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_ABI, provider)
 
             try {
               // Try calling nextReminderId (simple view function)

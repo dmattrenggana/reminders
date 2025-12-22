@@ -12,12 +12,16 @@ export function ConnectWalletButton() {
   const { disconnect } = useDisconnect();
 
   const handleConnect = () => {
-    // Cari konektor khusus Farcaster
-    const fcConnector = connectors.find((c) => c.id === "farcasterFrame");
+    // Cari konektor khusus Farcaster Miniapp
+    const fcConnector = connectors.find((c) => 
+      c.id === "farcasterMiniApp" || c.id === "io.farcaster.miniapp"
+    );
     if (fcConnector) {
+      console.log("Using Farcaster Miniapp connector");
       connect({ connector: fcConnector });
     } else {
-      // Fallback untuk konektor pertama (Injected/MetaMask) jika di luar Farcaster
+      // Fallback untuk web browser (Injected/MetaMask)
+      console.log("Using injected connector for web");
       connect({ connector: connectors[0] });
     }
   };

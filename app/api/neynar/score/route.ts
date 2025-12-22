@@ -10,10 +10,13 @@ export async function GET(request: NextRequest) {
   }
 
   const apiKey = process.env.NEYNAR_API_KEY || "";
+  if (!apiKey) {
+    return NextResponse.json({ error: "Neynar API key not configured" }, { status: 500 });
+  }
+
   const client = new NeynarAPIClient({ apiKey });
 
   try {
-    // Perbaikan: Gunakan objek { fids: [...] } sesuai ekspektasi SDK terbaru
     const response = await client.fetchBulkUsers({ 
       fids: [parseInt(fid)] 
     });
@@ -24,20 +27,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Logika perhitungan skor (contoh sederhana berdasarkan followers)
-    const score = (user.follower_count || 0) * 10;
+    // Calculate Neynar score (0-1 range)
+    // Power badge users get high score (0.9-1.0)
+    // Others based on follower count with diminishing returns
+    let neynarScore = 0;
+    
+    if (user.power_badge) {
+      neynarScore = 0.95; // Power badge = premium users
+    } else {
+      // Logarithmic scale for followers (diminishing returns)
+      // 100 followers = ~0.4, 1000 = ~0.6, 10000 = ~0.8
+      const followerCount = user.follower_count || 0;
+      neynarScore = Math.min(Math.log10(followerCount + 1) / 5, 0.89);
+    }
+
+    // Normalize to 0-1 range
+    const normalizedScore = Math.max(0, Math.min(1, neynarScore));
 
     return NextResponse.json({ 
-      score,
+      score: normalizedScore,
+      rawScore: neynarScore,
       user: {
+        fid: user.fid,
         username: user.username,
-        pfp: user.pfp_url
+        pfp: user.pfp_url,
+        followerCount: user.follower_count,
+        powerBadge: user.power_badge
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Neynar Score Error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch score" },
+      { error: "Failed to fetch score", details: error.message },
       { status: 500 }
     );
   }

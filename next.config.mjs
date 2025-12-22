@@ -9,19 +9,8 @@ const nextConfig = {
       },
     ];
   },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://*.warpcast.com https://*.farcaster.xyz",
-          },
-        ],
-      },
-    ];
-  },
+  // CSP headers moved to vercel.json for better compatibility
+  // vercel.json takes precedence and has more complete configuration
 };
 
 export default nextConfig;

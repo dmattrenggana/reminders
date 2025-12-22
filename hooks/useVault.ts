@@ -1,12 +1,8 @@
 import { ethers } from "ethers";
-import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS } from "@/constants";
+import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS, COMMIT_TOKEN_ABI } from "@/lib/contracts/config";
 
-// ABI Standar minimal untuk interaksi dengan Token RMND (ERC20)
-const ERC20_ABI = [
-  "function allowance(address owner, address spender) view returns (uint256)",
-  "function approve(address spender, uint256 amount) returns (bool)",
-  "function balanceOf(address account) view returns (uint256)"
-];
+// Use centralized ERC20 ABI from config
+const ERC20_ABI = COMMIT_TOKEN_ABI;
 
 export const useVault = (signer: ethers.Signer | null) => {
   if (!signer) {

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { CONTRACTS, REMINDER_VAULT_V3_ABI } from "@/lib/contracts/config"
+import { CONTRACTS, REMINDER_VAULT_ABI } from "@/lib/contracts/config"
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL)
-    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_V3_ABI, provider)
+    const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_ABI, provider)
 
     const activeReminderIds = await vaultContract.getActiveReminders()
     console.log("[API] Active reminder IDs (raw):", activeReminderIds)
