@@ -18,7 +18,7 @@
 **File:** `components/dashboard-client.tsx`
 
 **Fix imports:**
-```typescript
+\`\`\`typescript
 // ❌ Remove these (deleted files)
 // import { useClaimCallback } from "@/hooks/use-claim-callback";
 // import { useReminderOperations } from "@/hooks/use-reminder-operations";
@@ -26,7 +26,7 @@
 
 // ✅ Use existing
 import { ReminderCard } from "@/components/reminders/reminder-card";
-```
+\`\`\`
 
 #### **Step 1.2: Replace Deleted Hooks**
 
@@ -57,13 +57,13 @@ import { ReminderCard } from "@/components/reminders/reminder-card";
 
 #### **Step 2.3: Update Environment**
 
-```env
+\`\`\`env
 # .env.local
 NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_ADDRESS
 
 # Vercel
 # Update in dashboard
-```
+\`\`\`
 
 ---
 
@@ -92,10 +92,10 @@ Update reminder struct fields
 
 #### **Step 4.1: Environment Variables**
 
-```env
+\`\`\`env
 CRON_WALLET_PRIVATE_KEY=0x...
 CRON_SECRET=your_secret
-```
+\`\`\`
 
 #### **Step 4.2: Fund Cron Wallet**
 
@@ -104,14 +104,14 @@ Send ~0.01 ETH for gas fees
 #### **Step 4.3: Setup Vercel Cron**
 
 Add to `vercel.json`:
-```json
+\`\`\`json
 {
   "crons": [{
     "path": "/api/cron/process-reminders",
     "schedule": "*/15 * * * *"
   }]
 }
-```
+\`\`\`
 
 ---
 
@@ -198,4 +198,3 @@ Add to `vercel.json`:
 **Status**: ⚠️ Needs immediate action  
 **Priority**: Fix errors → Deploy V4 → Test  
 **Estimated Time**: 30 min - 3 hours (depending on approach)
-

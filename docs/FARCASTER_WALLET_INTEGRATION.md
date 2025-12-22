@@ -14,7 +14,7 @@ Implementasi ini mengikuti [Farcaster Miniapp Wallet Guide](https://miniapps.far
 > "If a user already has a connected wallet the connector will automatically connect to it (e.g. `isConnected` will be true)."
 
 **Implementasi:**
-```typescript
+\`\`\`typescript
 // ✅ CORRECT: Check isConnected FIRST
 if (isConnected) {
   console.log("Already connected (connector auto-connected)");
@@ -25,7 +25,7 @@ if (isConnected) {
 if (!isConnected && connector.ready) {
   connect({ connector: fcConnector });
 }
-```
+\`\`\`
 
 **Alasan:**
 - Connector **otomatis** connect jika user sudah punya wallet
@@ -40,11 +40,11 @@ if (!isConnected && connector.ready) {
 > "Your Mini App won't need to show a wallet selection dialog that is common in a web based dapp, the Farcaster client hosting your app will take care of getting the user connected to their preferred crypto wallet."
 
 **Implementasi:**
-```typescript
+\`\`\`typescript
 // ✅ CORRECT: Just call connect() - Farcaster handles the rest
 connect({ connector: fcConnector });
 // No need to show wallet selection UI
-```
+\`\`\`
 
 **Alasan:**
 - Farcaster client handle wallet selection
@@ -59,7 +59,7 @@ connect({ connector: fcConnector });
 > "It's possible a user doesn't have a connected wallet so you should always check for a connection and prompt them to connect if they aren't already connected."
 
 **Implementasi:**
-```typescript
+\`\`\`typescript
 // ✅ CORRECT: Always check connection state
 const { isConnected, address } = useAccount();
 
@@ -68,7 +68,7 @@ if (isConnected) {
 }
 
 return <button onClick={handleConnect}>Connect</button>;
-```
+\`\`\`
 
 **Alasan:**
 - User mungkin belum punya wallet connected
@@ -80,7 +80,7 @@ return <button onClick={handleConnect}>Connect</button>;
 ### **4. Connector Setup** ✅
 
 **Per Farcaster Docs:**
-```typescript
+\`\`\`typescript
 import { farcasterMiniApp as miniAppConnector } from '@farcaster/miniapp-wagmi-connector'
 
 export const config = createConfig({
@@ -89,16 +89,16 @@ export const config = createConfig({
     miniAppConnector() // ✅ Always include
   ]
 })
-```
+\`\`\`
 
 **Implementasi:**
-```typescript
+\`\`\`typescript
 // ✅ CORRECT: Always include connector
 connectors: [
   farcasterMiniApp(), // Handles environment detection internally
   injected(),         // Fallback for web browser
 ]
-```
+\`\`\`
 
 **Alasan:**
 - Connector handle environment detection secara internal
@@ -111,7 +111,7 @@ connectors: [
 
 ### **Auto-Connect Flow**
 
-```
+\`\`\`
 1. App loads in miniapp
    ↓
 2. Connector initialized in config
@@ -121,10 +121,10 @@ connectors: [
 4. useAccount().isConnected = true
    ↓
 5. UI shows connected state
-```
+\`\`\`
 
 **Jika auto-connect tidak terjadi:**
-```
+\`\`\`
 1. Wait 500ms for auto-connect
    ↓
 2. Check isConnected
@@ -132,13 +132,13 @@ connectors: [
 3. If still false, manually connect
    ↓
 4. User prompted by Farcaster client
-```
+\`\`\`
 
 ---
 
 ### **Manual Connect Flow**
 
-```
+\`\`\`
 1. User clicks "Connect Wallet"
    ↓
 2. Find Farcaster connector
@@ -150,7 +150,7 @@ connectors: [
 5. User approves connection
    ↓
 6. isConnected = true
-```
+\`\`\`
 
 ---
 
@@ -243,7 +243,7 @@ connectors: [
 
 ### **Example 1: Check Connection**
 
-```typescript
+\`\`\`typescript
 import { useAccount } from 'wagmi';
 
 function MyComponent() {
@@ -255,13 +255,13 @@ function MyComponent() {
   
   return <button onClick={handleConnect}>Connect Wallet</button>;
 }
-```
+\`\`\`
 
 ---
 
 ### **Example 2: Manual Connect**
 
-```typescript
+\`\`\`typescript
 import { useConnect } from 'wagmi';
 
 function ConnectButton() {
@@ -279,13 +279,13 @@ function ConnectButton() {
   
   return <button onClick={handleConnect}>Connect</button>;
 }
-```
+\`\`\`
 
 ---
 
 ### **Example 3: Auto-Connect Hook**
 
-```typescript
+\`\`\`typescript
 function useAutoConnect() {
   const { isConnected } = useAccount();
   const { connect, connectors } = useConnect();
@@ -305,7 +305,7 @@ function useAutoConnect() {
     return () => clearTimeout(timer);
   }, [isConnected, connect, connectors]);
 }
-```
+\`\`\`
 
 ---
 
@@ -329,4 +329,3 @@ Implementasi saat ini **100% compliant** dengan dokumentasi Farcaster:
 6. ✅ Hybrid mode support (miniapp + web)
 
 **Status: ✅ Production Ready**
-

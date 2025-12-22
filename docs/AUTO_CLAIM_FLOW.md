@@ -5,7 +5,7 @@ Implementasi otomatis untuk flow "Help Remind Me" yang memungkinkan helpers mend
 
 ## Flow Diagram
 
-```
+\`\`\`
 [User clicks "Help Remind Me"] 
     ↓
 [Opens Warpcast Compose dengan callback URL]
@@ -27,7 +27,7 @@ Implementasi otomatis untuk flow "Help Remind Me" yang memungkinkan helpers mend
 [Success: Remove from pending claims]
     ↓
 [Failed: Increment retry count, show pada reload]
-```
+\`\`\`
 
 ## Key Features
 
@@ -92,16 +92,16 @@ Implementasi otomatis untuk flow "Help Remind Me" yang memungkinkan helpers mend
 
 ### POST `/api/reminders/record`
 **Request:**
-```json
+\`\`\`json
 {
   "reminderId": 123,
   "helperAddress": "0x...",
   "helperFid": 12345
 }
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "data": {
@@ -117,11 +117,11 @@ Implementasi otomatis untuk flow "Help Remind Me" yang memungkinkan helpers mend
     "shouldClaim": true
   }
 }
-```
+\`\`\`
 
 ### GET `/api/neynar/score?fid=123`
 **Response:**
-```json
+\`\`\`json
 {
   "score": 0.85,
   "rawScore": 0.847,
@@ -133,7 +133,7 @@ Implementasi otomatis untuk flow "Help Remind Me" yang memungkinkan helpers mend
     "powerBadge": false
   }
 }
-```
+\`\`\`
 
 ## Smart Contract Functions
 
@@ -196,7 +196,7 @@ Implementasi otomatis untuk flow "Help Remind Me" yang memungkinkan helpers mend
 
 ## Environment Variables Required
 
-```env
+\`\`\`env
 # Neynar API
 NEYNAR_API_KEY=your_neynar_api_key
 
@@ -206,7 +206,7 @@ NEXT_PUBLIC_VAULT_CONTRACT=0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6
 
 # RPC
 NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
-```
+\`\`\`
 
 ## Known Limitations
 
@@ -238,4 +238,3 @@ NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
 **Status**: ✅ Implemented and ready for testing  
 **Last Updated**: Dec 22, 2025  
 **Author**: AI Assistant
-

@@ -15,12 +15,12 @@ Contract V4 **otomatis generate reminder ID** untuk setiap reminder yang dibuat.
 **Location:** `contracts/ReminderVaultV4.sol`
 
 **State Variable:**
-```solidity
+\`\`\`solidity
 uint256 public nextReminderId;  // Line 59
-```
+\`\`\`
 
 **Auto-Generation Logic:**
-```solidity
+\`\`\`solidity
 function createReminder(
     uint256 totalAmount,
     uint256 reminderTime,
@@ -43,7 +43,7 @@ function createReminder(
     // ✅ Return auto-generated ID
     return reminderId;  // Line 170
 }
-```
+\`\`\`
 
 **✅ Key Points:**
 - ✅ ID di-generate **otomatis** oleh contract
@@ -58,7 +58,7 @@ function createReminder(
 
 ### **Step-by-Step:**
 
-```
+\`\`\`
 1. User calls createReminder() via frontend
    ↓
 2. Contract receives call
@@ -74,7 +74,7 @@ function createReminder(
    return reminderId;  // Returns 5
    ↓
 6. Frontend receives ID from transaction receipt
-```
+\`\`\`
 
 ---
 
@@ -85,7 +85,7 @@ function createReminder(
 **⚠️ Note:** File `hooks/use-reminder-operations.ts` sudah di-delete, tapi logic tetap sama.
 
 **Expected Implementation:**
-```typescript
+\`\`\`typescript
 // Frontend calls contract
 const hash = await writeContractAsync({
   address: CONTRACTS.REMINDER_VAULT,
@@ -102,7 +102,7 @@ const hash = await writeContractAsync({
 // ✅ Contract returns reminderId in transaction receipt
 const receipt = await waitForTransaction({ hash });
 // receipt contains the return value (reminderId)
-```
+\`\`\`
 
 **✅ Frontend Does NOT:**
 - ❌ Generate ID manually
@@ -122,7 +122,7 @@ const receipt = await waitForTransaction({ hash });
 
 Reminder ID digunakan untuk semua operasi berikut:
 
-```solidity
+\`\`\`solidity
 // 1. Record helper reminder
 recordReminder(uint256 reminderId, uint256 neynarScore)
 
@@ -143,7 +143,7 @@ reminders[reminderId]
 
 // 7. Get helpers for reminder
 getHelpersFor(uint256 reminderId)
-```
+\`\`\`
 
 ---
 
@@ -167,13 +167,13 @@ getHelpersFor(uint256 reminderId)
 
 ### **Public Variables:**
 
-```solidity
+\`\`\`solidity
 // ✅ Can be read by anyone
 uint256 public nextReminderId;
 
 // ✅ Can query current counter
 // Example: const currentId = await contract.nextReminderId();
-```
+\`\`\`
 
 **Usage:**
 - Frontend bisa check `nextReminderId` untuk mengetahui ID berikutnya
@@ -186,7 +186,7 @@ uint256 public nextReminderId;
 
 ### **Scenario: Creating 3 Reminders**
 
-```
+\`\`\`
 Initial State:
 nextReminderId = 0
 
@@ -211,7 +211,7 @@ Reminder 3:
 Final State:
 nextReminderId = 3
 Reminders: [0, 1, 2]
-```
+\`\`\`
 
 ---
 
@@ -258,4 +258,3 @@ Reminders: [0, 1, 2]
 **Last Updated**: December 22, 2025  
 **Contract**: ReminderVaultV4  
 **Status**: ✅ Auto-Generation Implemented
-

@@ -19,7 +19,7 @@ Contract V4 sudah memiliki **reclaim function** yang **100% sesuai** dengan work
 > Returns: 30% commitment + unclaimed portion of 70% reward pool
 
 **Contract Implementation:**
-```solidity
+\`\`\`solidity
 function reclaimReminder(uint256 reminderId) external nonReentrant {
     // ✅ Check: Only creator can reclaim
     require(reminder.user == msg.sender, "Not reminder owner");
@@ -50,7 +50,7 @@ function reclaimReminder(uint256 reminderId) external nonReentrant {
 
     emit ReminderReclaimed(reminderId, msg.sender, reminder.commitAmount, unclaimedRewards);
 }
-```
+\`\`\`
 
 **✅ Verification:**
 - ✅ Only creator can call
@@ -70,7 +70,7 @@ function reclaimReminder(uint256 reminderId) external nonReentrant {
 > Return unclaimed 70% reward pool ke creator
 
 **Contract Implementation:**
-```solidity
+\`\`\`solidity
 function burnMissedReminder(uint256 reminderId) external nonReentrant {
     // ✅ Check: Not confirmed, not burned
     require(!reminder.confirmed, "Reminder was confirmed");
@@ -96,7 +96,7 @@ function burnMissedReminder(uint256 reminderId) external nonReentrant {
 
     emit TokensBurned(reminderId, reminder.user, reminder.commitAmount);
 }
-```
+\`\`\`
 
 **✅ Verification:**
 - ✅ Can be called by anyone (cron job)
@@ -126,7 +126,7 @@ function burnMissedReminder(uint256 reminderId) external nonReentrant {
 
 ### **Scenario 1: Creator Reclaims at T-1 Hour**
 
-```
+\`\`\`
 Reminder: 1000 tokens locked
 ├── 30% Commitment: 300 tokens
 └── 70% Reward Pool: 700 tokens
@@ -138,11 +138,11 @@ Creator calls reclaimReminder():
 ├── Gets: 300 tokens (30% commitment) ✅
 ├── Gets: 567 tokens (unclaimed 70%) ✅
 └── Total: 867 tokens returned ✅
-```
+\`\`\`
 
 ### **Scenario 2: Creator Misses Deadline (Cron Job)**
 
-```
+\`\`\`
 Reminder: 1000 tokens locked
 ├── 30% Commitment: 300 tokens
 └── 70% Reward Pool: 700 tokens
@@ -154,7 +154,7 @@ Cron job calls burnMissedReminder():
 ├── Burns: 300 tokens → 0xdead 🔥
 ├── Returns: 567 tokens to creator ✅
 └── Creator gets: 567 tokens (56.7%)
-```
+\`\`\`
 
 ---
 
@@ -162,14 +162,14 @@ Cron job calls burnMissedReminder():
 
 ### **Reclaim Window:**
 
-```
+\`\`\`
 Timeline:
 ├── Create Reminder (T-0)
 ├── ... waiting ...
 ├── T-1 Hour (reminderTime - 1 hour) ← Reclaim window opens
 ├── Deadline (reminderTime) ← Reclaim window closes
 └── Deadline + 1 hour (confirmationDeadline) ← Burn can happen
-```
+\`\`\`
 
 **Reclaim can be called:**
 - ✅ From: `reminderTime - 1 hour`
@@ -200,20 +200,20 @@ Timeline:
 
 ### **For Creators:**
 
-```solidity
+\`\`\`solidity
 // Reclaim at T-1 hour
 function reclaimReminder(uint256 reminderId) external
 
 // Confirm completion (alternative to reclaim)
 function confirmReminder(uint256 reminderId) external
-```
+\`\`\`
 
 ### **For Cron Jobs:**
 
-```solidity
+\`\`\`solidity
 // Burn missed reminder (after deadline)
 function burnMissedReminder(uint256 reminderId) external
-```
+\`\`\`
 
 ---
 
@@ -250,4 +250,3 @@ Semua requirements sudah diimplementasikan:
 **Last Updated**: December 22, 2025  
 **Contract**: ReminderVaultV4  
 **Status**: ✅ Complete & Verified
-

@@ -3,25 +3,25 @@
 ## ✅ **PRE-DEPLOYMENT CHECKLIST**
 
 ### **1. Update Node.js Version**
-```bash
+\`\`\`bash
 node --version
 # Must be: v22.11.0 or higher
 
 # If lower, update:
 nvm install 22.11.0
 nvm use 22.11.0
-```
+\`\`\`
 
 ### **2. Install/Update Dependencies**
-```bash
+\`\`\`bash
 npm install
 # or
 pnpm install
-```
+\`\`\`
 
 ### **3. Verify Environment Variables**
 Create/update `.env.local`:
-```env
+\`\`\`env
 # Contract Addresses (Required)
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6ee85c2cfab33678de10a5e1634d86abb5eebb07
 NEXT_PUBLIC_VAULT_CONTRACT=0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6
@@ -33,15 +33,15 @@ NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
 # API Keys (For notifications/backend)
 FARCASTER_API_KEY=your_neynar_key
 CRON_SECRET=your_vercel_cron_secret
-```
+\`\`\`
 
 ### **4. Test Build Locally**
-```bash
+\`\`\`bash
 npm run build
 
 # If successful, test locally:
 npm run start
-```
+\`\`\`
 
 ### **5. Verify Manifest**
 Check manifest is accessible:
@@ -62,7 +62,7 @@ Should redirect to: `https://api.farcaster.xyz/miniapps/hosted-manifest/...`
 5. Deploy
 
 ### **Method 2: Via CLI**
-```bash
+\`\`\`bash
 # Install Vercel CLI
 npm i -g vercel
 
@@ -76,7 +76,7 @@ vercel --prod
 vercel env add NEXT_PUBLIC_CONTRACT_ADDRESS
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT
 vercel env add NEXT_PUBLIC_TOKEN_ADDRESS
-```
+\`\`\`
 
 ---
 
@@ -103,22 +103,22 @@ vercel env add NEXT_PUBLIC_TOKEN_ADDRESS
 Open DevTools console:
 
 **In Web Browser:**
-```javascript
+\`\`\`javascript
 console.log('Environment:', window.Farcaster ? 'Miniapp' : 'Web')
 // Should show: "Environment: Web"
 
 console.log('Connectors:', connectors.map(c => c.id))
 // Should show: ["injected"]
-```
+\`\`\`
 
 **In Farcaster Miniapp:**
-```javascript
+\`\`\`javascript
 console.log('Environment:', window.Farcaster ? 'Miniapp' : 'Web')
 // Should show: "Environment: Miniapp"
 
 console.log('Connectors:', connectors.map(c => c.id))
 // Should show: ["farcasterMiniApp", "injected"] or ["io.farcaster.miniapp", "injected"]
-```
+\`\`\`
 
 ---
 
@@ -128,10 +128,10 @@ console.log('Connectors:', connectors.map(c => c.id))
 **Cause:** `sdk.actions.ready()` not called
 **Solution:** Already implemented in `components/providers/farcaster-provider.tsx`
 **Verify:**
-```typescript
+\`\`\`typescript
 // Should see this in code:
 await sdk.actions.ready({});
-```
+\`\`\`
 
 ### **Issue: "Cannot connect wallet"**
 **Cause 1:** Wrong connector ID
@@ -143,28 +143,28 @@ await sdk.actions.ready({});
 ### **Issue: "Module not found" errors**
 **Cause:** Dependencies not installed
 **Solution:**
-```bash
+\`\`\`bash
 rm -rf node_modules
 rm package-lock.json
 npm install
-```
+\`\`\`
 
 ### **Issue: Build fails on Vercel**
 **Cause:** Node.js version mismatch
 **Solution:** Vercel should auto-detect from `package.json`:
-```json
+\`\`\`json
 "engines": {
   "node": ">=22.11.0"
 }
-```
+\`\`\`
 
 ### **Issue: CSP errors in console**
 **Cause:** Restrictive Content Security Policy
 **Solution:** Already configured in `vercel.json`
 **Verify:**
-```json
+\`\`\`json
 "frame-ancestors 'self' https://*.warpcast.com https://*.farcaster.xyz"
-```
+\`\`\`
 
 ---
 
@@ -179,7 +179,7 @@ If you want to list in Farcaster's miniapp directory:
 
 ### **2. Update Manifest**
 Update `app/manifest.json` with accountAssociation:
-```json
+\`\`\`json
 {
   "frame": {
     "name": "Reminders",
@@ -192,7 +192,7 @@ Update `app/manifest.json` with accountAssociation:
     "signature": "..."
   }
 }
-```
+\`\`\`
 
 ### **3. Submit for Review**
 - Test thoroughly
@@ -222,7 +222,7 @@ Update `app/manifest.json` with accountAssociation:
 If issues occur after deployment:
 
 ### **Quick Rollback:**
-```bash
+\`\`\`bash
 # Via Vercel Dashboard:
 # 1. Go to Deployments
 # 2. Find previous working deployment
@@ -230,10 +230,10 @@ If issues occur after deployment:
 
 # Via CLI:
 vercel rollback
-```
+\`\`\`
 
 ### **Emergency Fixes:**
-```bash
+\`\`\`bash
 # Make fix locally
 git add .
 git commit -m "fix: emergency fix"
@@ -242,7 +242,7 @@ git push
 # Vercel auto-deploys from main branch
 # Or manual deploy:
 vercel --prod
-```
+\`\`\`
 
 ---
 
@@ -272,4 +272,3 @@ Your deployment is successful when:
 
 **Last Updated:** December 22, 2025  
 **Status:** ✅ Ready for production deployment
-

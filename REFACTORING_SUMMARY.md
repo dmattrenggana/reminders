@@ -14,7 +14,7 @@
 - ✅ After: Using `@farcaster/miniapp-sdk` (for full screen apps)
 
 **Changes Made:**
-```typescript
+\`\`\`typescript
 // components/providers/farcaster-provider.tsx
 - import sdk from "@farcaster/frame-sdk"
 + import { sdk } from "@farcaster/miniapp-sdk"
@@ -22,7 +22,7 @@
 // app/providers.tsx
 - import { farcasterFrame } from "@farcaster/frame-wagmi-connector"
 + import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector"
-```
+\`\`\`
 
 **Reference:** [Farcaster Miniapp Docs](https://miniapps.farcaster.xyz/docs/getting-started)
 
@@ -54,11 +54,11 @@
 
 **New File:** `lib/utils/environment.ts`
 
-```typescript
+\`\`\`typescript
 export function isMiniApp(): boolean
 export async function detectEnvironment(): Promise<'miniapp' | 'web'>
 export function getEnvironmentName(): string
-```
+\`\`\`
 
 This enables hybrid mode support (web + miniapp).
 
@@ -79,12 +79,12 @@ This enables hybrid mode support (web + miniapp).
 ### **6. Consolidated Configuration**
 
 **Centralized Exports:** `lib/contracts/config.ts`
-```typescript
+\`\`\`typescript
 export const VAULT_ADDRESS
 export const TOKEN_ADDRESS
 export const VAULT_ABI
 export const COMMIT_TOKEN_ABI (for ERC20)
-```
+\`\`\`
 
 **Updated Imports in:**
 - `components/dashboard-client.tsx`
@@ -140,11 +140,11 @@ export const COMMIT_TOKEN_ABI (for ERC20)
 
 ### **Verify Connector Detection:**
 Open DevTools console and check:
-```javascript
+\`\`\`javascript
 console.log('Available connectors:', connectors.map(c => c.id))
 // Miniapp: ["farcasterMiniApp", "injected"]
 // Web: ["injected"]
-```
+\`\`\`
 
 ---
 
@@ -167,17 +167,17 @@ All changes based on official documentation:
 
 ### **TypeScript Errors:**
 The linter shows type errors related to missing `node_modules` - these are build-time only and will resolve after:
-```bash
+\`\`\`bash
 npm install
-```
+\`\`\`
 
 ### **Environment Variables Required:**
-```env
+\`\`\`env
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_VAULT_CONTRACT=0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6
 NEXT_PUBLIC_TOKEN_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
-```
+\`\`\`
 
 **See:** `ENV_SETUP.md` for detailed setup instructions
 
@@ -203,13 +203,12 @@ NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
 - Miniapp connector: `"farcasterMiniApp"` or `"io.farcaster.miniapp"`
 
 ### **Hybrid Mode Pattern:**
-```typescript
+\`\`\`typescript
 const isMiniAppEnv = typeof window !== 'undefined' && 'Farcaster' in window;
 const connector = isMiniAppEnv ? farcasterMiniApp() : injected();
-```
+\`\`\`
 
 ---
 
 **Status:** ✅ All refactoring tasks completed  
 **Ready for:** Production deployment and testing
-

@@ -14,14 +14,14 @@ Implementasi ini mengikuti [Wagmi Getting Started Guide](https://wagmi.sh/react/
 > Config should be created at module level, not inside components
 
 **Implementasi:**
-```typescript
+\`\`\`typescript
 // ✅ CORRECT: Created at module level
 export const config = createConfig({
   chains: [base],
   connectors: [...],
   transports: {...}
 });
-```
+\`\`\`
 
 **Alasan:**
 - Config hanya dibuat sekali saat module load
@@ -36,7 +36,7 @@ export const config = createConfig({
 > Wrap app with WagmiProvider, then QueryClientProvider inside
 
 **Implementasi:**
-```typescript
+\`\`\`typescript
 // ✅ CORRECT: Correct provider order
 <WagmiProvider config={config}>
   <QueryClientProvider client={queryClient}>
@@ -45,7 +45,7 @@ export const config = createConfig({
     </FarcasterProvider>
   </QueryClientProvider>
 </WagmiProvider>
-```
+\`\`\`
 
 **Alasan:**
 - `WagmiProvider` harus di luar untuk menyediakan Wagmi context
@@ -60,7 +60,7 @@ export const config = createConfig({
 > QueryClient should be created at module level with default options
 
 **Implementasi:**
-```typescript
+\`\`\`typescript
 // ✅ CORRECT: Module-level QueryClient with defaults
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,7 +70,7 @@ const queryClient = new QueryClient({
     },
   },
 });
-```
+\`\`\`
 
 **Alasan:**
 - Mencegah re-creation pada setiap render
@@ -85,7 +85,7 @@ const queryClient = new QueryClient({
 > Connectors should be initialized at module level
 
 **Implementasi:**
-```typescript
+\`\`\`typescript
 // ✅ CORRECT: Module-level connector initialization
 let farcasterConnector: ReturnType<typeof farcasterMiniApp> | null = null;
 try {
@@ -93,7 +93,7 @@ try {
 } catch (error) {
   // Handle gracefully - connector may work at runtime
 }
-```
+\`\`\`
 
 **Alasan:**
 - Connector di-initialize sekali saat module load
@@ -106,9 +106,9 @@ try {
 
 ### **Chains**
 
-```typescript
+\`\`\`typescript
 chains: [base]
-```
+\`\`\`
 
 - ✅ Menggunakan Base Mainnet
 - ✅ Chain ID: 8453
@@ -118,12 +118,12 @@ chains: [base]
 
 ### **Connectors**
 
-```typescript
+\`\`\`typescript
 connectors: [
   farcasterMiniApp(), // For Farcaster miniapp
   injected(),          // For web browser (MetaMask, etc)
 ]
-```
+\`\`\`
 
 **Farcaster Miniapp Connector:**
 - ✅ Auto-detect miniapp environment
@@ -139,11 +139,11 @@ connectors: [
 
 ### **Transports**
 
-```typescript
+\`\`\`typescript
 transports: {
   [base.id]: http("https://mainnet.base.org"),
 }
-```
+\`\`\`
 
 - ✅ HTTP transport untuk Base Mainnet
 - ✅ RPC endpoint: `https://mainnet.base.org`
@@ -184,7 +184,7 @@ transports: {
 
 ### **Example: Using Wagmi Hooks**
 
-```typescript
+\`\`\`typescript
 import { useAccount, useConnect } from 'wagmi';
 
 export function MyComponent() {
@@ -193,7 +193,7 @@ export function MyComponent() {
   
   // Use hooks...
 }
-```
+\`\`\`
 
 **Per Wagmi Docs:**
 - ✅ Hooks hanya bisa digunakan di dalam `WagmiProvider`
@@ -207,9 +207,9 @@ export function MyComponent() {
 ### **Issue: Connector Not Found**
 
 **Symptoms:**
-```
+\`\`\`
 [Auto-Connect] ❌ Farcaster connector NOT FOUND!
-```
+\`\`\`
 
 **Check:**
 1. ✅ Connector di-initialize di module level?
@@ -260,4 +260,3 @@ Implementasi saat ini **100% compliant** dengan dokumentasi resmi Wagmi:
 6. ✅ Type safety maintained
 
 **Status: ✅ Production Ready**
-

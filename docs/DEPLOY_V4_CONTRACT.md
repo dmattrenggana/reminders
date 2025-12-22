@@ -70,9 +70,9 @@ V4 contract implements the **exact workflow** we discussed:
 ### **Step 4: Update Environment Variables**
 
 **Local (.env.local):**
-```env
+\`\`\`env
 NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_CONTRACT_ADDRESS
-```
+\`\`\`
 
 **Vercel:**
 1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
@@ -85,7 +85,7 @@ NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_CONTRACT_ADDRESS
 
 ### **For Creators:**
 
-```solidity
+\`\`\`solidity
 // Create reminder with 30/70 split
 function createReminder(
     uint256 totalAmount,
@@ -99,28 +99,28 @@ function confirmReminder(uint256 reminderId)
 
 // Reclaim at T-1 hour (returns 30% + unclaimed 70%)
 function reclaimReminder(uint256 reminderId)
-```
+\`\`\`
 
 ### **For Helpers:**
 
-```solidity
+\`\`\`solidity
 // Record reminder with Neynar score (only at T-1 hour)
 function recordReminder(uint256 reminderId, uint256 neynarScore)
 
 // Claim reward (after confirmation or deadline)
 function claimReward(uint256 reminderId)
-```
+\`\`\`
 
 ### **For Cron Jobs:**
 
-```solidity
+\`\`\`solidity
 // Burn missed reminder (after deadline)
 function burnMissedReminder(uint256 reminderId)
-```
+\`\`\`
 
 ### **View Functions:**
 
-```solidity
+\`\`\`solidity
 // Get helpers for reminder
 function getHelpersFor(uint256 reminderId) view returns (address[])
 
@@ -132,45 +132,45 @@ function canRemind(uint256 reminderId) view returns (bool)
 
 // Get active reminders
 function getActiveReminders() view returns (uint256[])
-```
+\`\`\`
 
 ---
 
 ## 📊 Example Flow
 
 ### **1. Create Reminder:**
-```
+\`\`\`
 User locks 1000 tokens
 → 300 tokens (30%) → commitment
 → 700 tokens (70%) → reward pool
-```
+\`\`\`
 
 ### **2. Helper Helps (T-1 hour):**
-```
+\`\`\`
 Helper with Neynar score 0.95 (95/100)
 → Tier: HIGH (10%)
 → Reward: 70 tokens (10% of 700)
-```
+\`\`\`
 
 ### **3. Creator Confirms:**
-```
+\`\`\`
 → Gets back 300 tokens (30% commitment)
 → Helpers can claim their rewards
-```
+\`\`\`
 
 ### **4. Creator Reclaims (Alternative):**
-```
+\`\`\`
 At T-1 hour, creator reclaims:
 → Gets 300 tokens (30% commitment)
 → Gets unclaimed portion of 700 tokens (70% reward pool)
-```
+\`\`\`
 
 ### **5. Missed Deadline (Cron Job):**
-```
+\`\`\`
 After deadline:
 → Burns 300 tokens (30% commitment) → 0xdead
 → Returns unclaimed 70% to creator
-```
+\`\`\`
 
 ---
 
@@ -242,14 +242,14 @@ Or:
 ## 📚 Contract Addresses
 
 **Token Contract (unchanged):**
-```
+\`\`\`
 0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
-```
+\`\`\`
 
 **Vault Contract (V4 - new):**
-```
+\`\`\`
 [YOUR_NEW_V4_ADDRESS]
-```
+\`\`\`
 
 ---
 
@@ -277,4 +277,3 @@ Or:
 **Network**: Base Mainnet  
 **Compiler**: Solidity 0.8.20  
 **Last Updated**: December 22, 2025
-

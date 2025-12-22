@@ -163,4 +163,3 @@ export function useAutoConnect({
     return () => clearTimeout(timer);
   }, [mounted, isMiniApp, isConnected, isLoaded, connect, connectors]);
 }
-

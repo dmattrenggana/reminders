@@ -2,10 +2,10 @@
 
 ## ⚠️ **Error yang Terlihat**
 
-```
+\`\`\`
 Connecting to 'https://explorer-api.walletconnect.com/v3/wallets?projectId=...' 
 violates the following Content Security Policy directive: "connect-src 'self' ..."
-```
+\`\`\`
 
 ## 🔍 **Root Cause**
 
@@ -33,7 +33,7 @@ violates the following Content Security Policy directive: "connect-src 'self' ..
 
 CSP sudah dikonfigurasi dengan benar di `vercel.json` untuk allow WalletConnect domains:
 
-```json
+\`\`\`json
 {
   "headers": [
     {
@@ -47,7 +47,7 @@ CSP sudah dikonfigurasi dengan benar di `vercel.json` untuk allow WalletConnect 
     }
   ]
 }
-```
+\`\`\`
 
 ### 2. Removed Meta Tag CSP
 
@@ -60,7 +60,7 @@ Meta tag CSP di `app/layout.tsx` sudah dihapus karena:
 
 Di `app/providers.tsx`, wallet discovery sudah di-disable:
 
-```typescript
+\`\`\`typescript
 export const config = createConfig({
   chains: [base],
   multiInjectedProviderDiscovery: false, // ✅ Disabled
@@ -69,7 +69,7 @@ export const config = createConfig({
     injected(),         // ✅ Injected connector
   ],
 });
-```
+\`\`\`
 
 ## 📝 **Kesimpulan**
 
@@ -91,7 +91,7 @@ Error ini bisa diabaikan karena:
 
 Jika ingin suppress error di console, bisa tambahkan error handler:
 
-```typescript
+\`\`\`typescript
 // Di app/providers.tsx atau _app.tsx
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (event) => {
@@ -102,7 +102,7 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-```
+\`\`\`
 
 **Note**: Suppressing error tidak direkomendasikan karena bisa menyembunyikan error penting lainnya.
 
@@ -111,4 +111,3 @@ if (typeof window !== 'undefined') {
 - [Farcaster Miniapp Docs](https://miniapps.farcaster.xyz/docs/getting-started)
 - [Content Security Policy MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
 - [Vercel Headers Configuration](https://vercel.com/docs/concepts/projects/project-configuration#headers)
-

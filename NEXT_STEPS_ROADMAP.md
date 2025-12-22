@@ -55,13 +55,13 @@ Use `components/reminders/reminder-card.tsx` instead
 ### **3. Update Environment Variables**
 
 **After deploying V4:**
-```env
+\`\`\`env
 # .env.local
 NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_ADDRESS
 
 # Vercel
 # Update in dashboard → Settings → Environment Variables
-```
+\`\`\`
 
 ---
 
@@ -85,23 +85,23 @@ NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_ADDRESS
 
 **File:** `components/dashboard-client.tsx`
 
-```typescript
+\`\`\`typescript
 // ❌ Old
 import { ReminderCard } from "@/components/reminder-card";
 
 // ✅ New
 import { ReminderCard } from "@/components/reminders/reminder-card";
-```
+\`\`\`
 
 ### **Fix 2: Remove Deleted Hook Imports**
 
 **File:** `components/dashboard-client.tsx`
 
 Remove or comment out:
-```typescript
+\`\`\`typescript
 // import { useClaimCallback } from "@/hooks/use-claim-callback";
 // import { useReminderOperations } from "@/hooks/use-reminder-operations";
-```
+\`\`\`
 
 ### **Fix 3: Use Existing Hooks**
 
@@ -148,4 +148,3 @@ Use `useVault` and `useReminders` instead, or recreate minimal versions.
 **Status**: ⚠️ Needs immediate fix  
 **Priority**: Fix imports → Deploy V4 → Test  
 **Last Updated**: December 22, 2025
-

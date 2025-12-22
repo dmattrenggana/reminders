@@ -12,7 +12,7 @@ Ketika user sudah login di Farcaster Miniapp, connect wallet button masih menamp
 ### Fix Applied
 **File**: `components/dashboard-client.tsx`
 
-```typescript
+\`\`\`typescript
 // Before
 <Button onClick={handleConnect}>Connect Wallet</Button>
 
@@ -29,10 +29,10 @@ Ketika user sudah login di Farcaster Miniapp, connect wallet button masih menamp
     "Connect Wallet"
   )}
 </Button>
-```
+\`\`\`
 
 **Additional**: Added auto-connect for miniapp users
-```typescript
+\`\`\`typescript
 // Auto-connect untuk Farcaster Miniapp
 useEffect(() => {
   const autoConnect = async () => {
@@ -47,7 +47,7 @@ useEffect(() => {
 
   autoConnect();
 }, [mounted, isMiniApp, providerUser, isConnected, isFarcasterLoaded]);
-```
+\`\`\`
 
 ---
 
@@ -75,7 +75,7 @@ User tidak bisa melakukan call contract untuk create new reminder ketika menggun
 
 #### Fix 1: Updated handleCreateReminder function
 
-```typescript
+\`\`\`typescript
 // Before
 await writeContractAsync({
   address: VAULT_ADDRESS as `0x${string}`,
@@ -91,11 +91,11 @@ await writeContractAsync({
   functionName: 'createReminder',
   args: [amountInWei, deadlineTimestamp, desc, farcasterUsername],
 });
-```
+\`\`\`
 
 #### Fix 2: Added validation and error handling
 
-```typescript
+\`\`\`typescript
 const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
   // Added input validation
   if (!isConnected || !address) {
@@ -133,11 +133,11 @@ const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
     setIsSubmitting(false); 
   }
 };
-```
+\`\`\`
 
 #### Fix 3: Corrected FloatingCreate callback
 
-```typescript
+\`\`\`typescript
 // Before
 <FloatingCreate 
   symbol={symbol} 
@@ -151,7 +151,7 @@ const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
   isSubmitting={isSubmitting} 
   onConfirm={handleCreateReminder}  // ✅ Correct - accepts (desc, amt, dl)
 />
-```
+\`\`\`
 
 ---
 
@@ -207,7 +207,7 @@ const handleCreateReminder = async (desc: string, amt: string, dl: string) => {
 
 ## Environment Requirements
 
-```env
+\`\`\`env
 # Required for Farcaster integration
 NEYNAR_API_KEY=your_key_here
 
@@ -217,11 +217,10 @@ NEXT_PUBLIC_VAULT_CONTRACT=0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6
 
 # RPC URL
 NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
-```
+\`\`\`
 
 ---
 
 **Status**: ✅ Fixed and ready for testing  
 **Date**: December 22, 2025  
 **Priority**: High - Core functionality
-

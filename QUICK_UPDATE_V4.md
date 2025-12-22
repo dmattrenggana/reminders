@@ -12,9 +12,9 @@ Contract V4 baru sudah di-deploy dengan alamat:
 ### **1. Update Environment Variable**
 
 **Local (.env.local):**
-```env
+\`\`\`env
 NEXT_PUBLIC_VAULT_CONTRACT=0x2e3A524912636BF456B3C19f88693087c4dAa25f
-```
+\`\`\`
 
 **Vercel:**
 - Go to Project Settings → Environment Variables
@@ -43,4 +43,3 @@ Semua file code sudah diupdate:
 ---
 
 **Basescan:** https://basescan.org/address/0x2e3A524912636BF456B3C19f88693087c4dAa25f
-

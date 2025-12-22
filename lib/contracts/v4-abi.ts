@@ -37,4 +37,3 @@ export const REMINDER_VAULT_V4_ABI = parseAbi([
   "event TokensBurned(uint256 indexed reminderId, address indexed user, uint256 commitAmount)",
   "event RewardPoolReturned(uint256 indexed reminderId, address indexed user, uint256 rewardPoolAmount)",
 ]);
-

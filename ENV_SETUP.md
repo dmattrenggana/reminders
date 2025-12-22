@@ -8,7 +8,7 @@ Copy this configuration to your environment:
 
 Create `.env.local` in project root:
 
-```env
+\`\`\`env
 # Contract Addresses (Base Mainnet)
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_TOKEN_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
@@ -24,7 +24,7 @@ CRON_SECRET=your_vercel_cron_secret_here
 
 # App URL
 NEXT_PUBLIC_APP_URL=https://remindersbase.vercel.app
-```
+\`\`\`
 
 ---
 
@@ -45,7 +45,7 @@ NEXT_PUBLIC_APP_URL=https://remindersbase.vercel.app
 
 ### **Method 2: Via CLI**
 
-```bash
+\`\`\`bash
 # Install Vercel CLI if not already installed
 npm i -g vercel
 
@@ -67,7 +67,7 @@ vercel env add NEXT_PUBLIC_VAULT_CONTRACT
 
 # Redeploy to apply changes
 vercel --prod
-```
+\`\`\`
 
 ---
 
@@ -75,18 +75,18 @@ vercel --prod
 
 ### **Check if variables are loaded:**
 
-```bash
+\`\`\`bash
 # Local development
 npm run dev
 
 # Check console for:
 # - No errors about missing contract addresses
 # - Contracts initialize successfully
-```
+\`\`\`
 
 ### **Test in browser console:**
 
-```javascript
+\`\`\`javascript
 // Should show contract addresses
 console.log('Token:', process.env.NEXT_PUBLIC_CONTRACT_ADDRESS)
 console.log('Vault:', process.env.NEXT_PUBLIC_VAULT_CONTRACT)
@@ -94,7 +94,7 @@ console.log('Vault:', process.env.NEXT_PUBLIC_VAULT_CONTRACT)
 // Or check in your app's config
 import { CONTRACTS } from '@/lib/contracts/config'
 console.log('Contracts:', CONTRACTS)
-```
+\`\`\`
 
 ---
 
@@ -154,7 +154,7 @@ You only need `NEXT_PUBLIC_BASE_MAINNET_RPC_URL` if you have a premium RPC provi
 **Cause:** Build cache or browser cache
 
 **Solution:**
-```bash
+\`\`\`bash
 # Clear build cache
 rm -rf .next
 
@@ -163,7 +163,7 @@ npm run build
 
 # On Vercel: Trigger new deployment
 vercel --prod --force
-```
+\`\`\`
 
 ---
 
@@ -178,4 +178,3 @@ vercel --prod --force
 **Last Updated:** December 22, 2025  
 **Vault Contract:** `0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6`  
 **Token Contract:** `0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07`
-

@@ -37,17 +37,17 @@
 
 ### **Step 1: Final Code Check**
 
-```bash
+\`\`\`bash
 # Check for errors
 npm run build
 
 # If successful, continue
 # If errors, fix them first
-```
+\`\`\`
 
 ### **Step 2: Commit & Push**
 
-```bash
+\`\`\`bash
 # Stage all changes
 git add .
 
@@ -57,7 +57,7 @@ git commit -m "Implement V4 contract functions and update to V4 address"
 # Push to repository
 git push origin main
 # (or your branch name)
-```
+\`\`\`
 
 ### **Step 3: Deploy to Vercel**
 
@@ -66,7 +66,7 @@ git push origin main
 - Check deployment status in Vercel dashboard
 
 **Option B: Manual Deploy**
-```bash
+\`\`\`bash
 # Install Vercel CLI (if not installed)
 npm i -g vercel
 
@@ -75,7 +75,7 @@ vercel login
 
 # Deploy to production
 vercel --prod
-```
+\`\`\`
 
 ### **Step 4: Verify Environment Variables**
 
@@ -95,13 +95,13 @@ vercel --prod
 ### **Step 5: Redeploy After Env Update**
 
 If you updated environment variables:
-```bash
+\`\`\`bash
 # Trigger redeploy
 vercel --prod
 
 # Or via dashboard:
 # Deployments → Redeploy latest
-```
+\`\`\`
 
 ---
 
@@ -168,7 +168,7 @@ vercel --prod
 
 ## 📋 **Quick Deployment Command**
 
-```bash
+\`\`\`bash
 # 1. Build check
 npm run build
 
@@ -180,7 +180,7 @@ git push
 
 # 4. Deploy (if not auto-deploy)
 vercel --prod
-```
+\`\`\`
 
 ---
 
@@ -217,4 +217,3 @@ Before clicking deploy:
 **You're ready to deploy! 🚀**
 
 **Last Updated:** December 22, 2025
-

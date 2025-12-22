@@ -35,15 +35,15 @@ Semua code sudah siap. Tinggal deploy!
 
 ### **Step 1: Build Check (Optional tapi recommended)**
 
-```bash
+\`\`\`bash
 npm run build
-```
+\`\`\`
 
 **Jika ada error, fix dulu. Jika success, lanjut!**
 
 ### **Step 2: Commit & Push**
 
-```bash
+\`\`\`bash
 # Stage semua changes
 git add .
 
@@ -52,7 +52,7 @@ git commit -m "Deploy V4 contract integration - Ready for production"
 
 # Push
 git push
-```
+\`\`\`
 
 ### **Step 3: Deploy**
 
@@ -61,9 +61,9 @@ git push
 - Check status di Vercel dashboard
 
 **Jika manual deploy:**
-```bash
+\`\`\`bash
 vercel --prod
-```
+\`\`\`
 
 ### **Step 4: Redeploy (Jika update env vars)**
 
@@ -104,7 +104,7 @@ vercel --prod
 
 ## 🎯 **Quick Commands**
 
-```bash
+\`\`\`bash
 # 1. Build check
 npm run build
 
@@ -113,7 +113,7 @@ git add . && git commit -m "Deploy V4" && git push
 
 # 3. Deploy (if manual)
 vercel --prod
-```
+\`\`\`
 
 ---
 
@@ -137,4 +137,3 @@ vercel --prod
 **Siap deploy! 🚀**
 
 **Last Updated:** December 22, 2025
-

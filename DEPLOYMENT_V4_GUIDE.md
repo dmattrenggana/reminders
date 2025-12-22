@@ -61,9 +61,9 @@ Remix should auto-detect OpenZeppelin imports. If not:
 3. **Account:** Select your wallet (should show Base Mainnet)
 4. **Contract:** Select `ReminderVaultV4`
 5. **Constructor Arguments:**
-   ```
+   \`\`\`
    0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
-   ```
+   \`\`\`
    (Token contract address)
 6. Click **"Deploy"**
 7. **Approve transaction** in MetaMask
@@ -92,9 +92,9 @@ Remix should auto-detect OpenZeppelin imports. If not:
 ### **1. Update Environment Variables**
 
 **Local (.env.local):**
-```env
+\`\`\`env
 NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_ADDRESS
-```
+\`\`\`
 
 **Vercel:**
 1. Dashboard → Project → Settings → Environment Variables
@@ -105,13 +105,13 @@ NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_ADDRESS
 
 **File: `lib/contracts/config.ts`**
 
-```typescript
+\`\`\`typescript
 import { REMINDER_VAULT_V4_ABI } from "./v4-abi";
 
 // Use V4 ABI
 export const VAULT_ABI = REMINDER_VAULT_V4_ABI;
 export const REMINDER_VAULT_ABI = REMINDER_VAULT_V4_ABI;
-```
+\`\`\`
 
 ### **3. Update Function Calls**
 
@@ -124,13 +124,13 @@ Already using `createReminder` - no changes needed!
 Already using `recordReminder` and `claimReward` - no changes needed!
 
 **But update Neynar score format:**
-```typescript
+\`\`\`typescript
 // V4 expects 0-100 scale (not 0-1)
 args: [
   BigInt(pendingClaimData.reminderId), 
   Math.floor(pendingClaimData.neynarScore * 100) // Multiply by 100!
 ],
-```
+\`\`\`
 
 ---
 
@@ -138,7 +138,7 @@ args: [
 
 ### **1. Test Create Reminder**
 
-```javascript
+\`\`\`javascript
 // In browser console or Remix
 const vault = new ethers.Contract(
   "YOUR_V4_ADDRESS",
@@ -154,37 +154,37 @@ const tx = await vault.createReminder(
 );
 await tx.wait();
 console.log("Reminder created!");
-```
+\`\`\`
 
 ### **2. Test Record Reminder**
 
 Wait until T-1 hour, then:
 
-```javascript
+\`\`\`javascript
 const tx = await vault.recordReminder(
   reminderId,
   95 // Neynar score (0-100 scale)
 );
 await tx.wait();
-```
+\`\`\`
 
 ### **3. Test Claim Reward**
 
 After confirmation or deadline:
 
-```javascript
+\`\`\`javascript
 const tx = await vault.claimReward(reminderId);
 await tx.wait();
-```
+\`\`\`
 
 ### **4. Test Reclaim**
 
 At T-1 hour:
 
-```javascript
+\`\`\`javascript
 const tx = await vault.reclaimReminder(reminderId);
 await tx.wait();
-```
+\`\`\`
 
 ---
 
@@ -285,4 +285,3 @@ Estimated gas per function:
 **Last Updated**: December 22, 2025  
 **Contract Version**: V4  
 **Network**: Base Mainnet
-

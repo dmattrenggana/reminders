@@ -105,4 +105,3 @@ export function incrementRetry(reminderId: number) {
 export function hasPendingClaims(): boolean {
   return getPendingClaims().length > 0;
 }
-

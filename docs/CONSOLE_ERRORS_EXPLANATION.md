@@ -4,10 +4,10 @@
 
 ### **1. CSP WalletConnect Error** ✅ **HARMLESS**
 
-```
+\`\`\`
 Connecting to 'https://explorer-api.walletconnect.com/v3/wallets?projectId=...' 
 violates the following Content Security Policy directive
-```
+\`\`\`
 
 **Penjelasan:**
 - Error ini berasal dari Privy (dependency transitif) yang mencoba fetch wallet list
@@ -21,10 +21,10 @@ violates the following Content Security Policy directive
 
 ### **2. Error 400 dari `/~api/v2/unseen`** ✅ **HARMLESS**
 
-```
+\`\`\`
 Failed to load resource: the server responded with a status of 400
 /~api/v2/unseen:1 Failed to load resource: net::ERR_CONNECTION_CLOSED
-```
+\`\`\`
 
 **Penjelasan:**
 - Error ini berasal dari Farcaster SDK yang mencoba fetch unseen notifications
@@ -38,10 +38,10 @@ Failed to load resource: the server responded with a status of 400
 
 ### **3. SVG Error "small"** ✅ **HARMLESS**
 
-```
+\`\`\`
 Error: <svg> attribute width: Expected length, "small".
 Error: <svg> attribute height: Expected length, "small".
-```
+\`\`\`
 
 **Penjelasan:**
 - Error ini berasal dari library eksternal atau Farcaster SDK
@@ -55,12 +55,12 @@ Error: <svg> attribute height: Expected length, "small".
 
 ### **4. Unhandled Fetch Error** ✅ **HARMLESS**
 
-```
+\`\`\`
 Uncaught (in promise) UnhandledFetchError$1: Unhandled fetch error
 Details: Failed to fetch
 at FarcasterApiClient.fetch
 at FarcasterApiClient.getUnseen
-```
+\`\`\`
 
 **Penjelasan:**
 - Error ini terkait dengan error #2 (unseen API)
@@ -135,4 +135,3 @@ at FarcasterApiClient.getUnseen
 - [CSP WalletConnect Error](./CSP_WALLETCONNECT_ERROR.md)
 - [Farcaster Miniapp Docs](https://miniapps.farcaster.xyz/docs/getting-started)
 - [Next.js Error Handling](https://nextjs.org/docs/app/building-your-application/routing/error-handling)
-

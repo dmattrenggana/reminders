@@ -16,7 +16,7 @@
 **File:** `app/api/reminders/record/route.ts`
 
 **Current Flow:**
-```typescript
+\`\`\`typescript
 // 1. Get Neynar score (no signer needed)
 const neynarClient = new NeynarAPIClient({ apiKey });
 const userdata = await neynarClient.fetchBulkUsers({ fids: [helperFid] });
@@ -29,7 +29,7 @@ if (helpers.includes(helperAddress)) {
 
 // 3. Return data for frontend
 // ❌ NO VERIFICATION if user actually posted!
-```
+\`\`\`
 
 **Problem:** Tidak verify apakah user benar-benar sudah post mention!
 
@@ -41,7 +41,7 @@ if (helpers.includes(helperAddress)) {
 
 **No signer needed!** Cukup pakai Neynar API untuk check casts.
 
-```typescript
+\`\`\`typescript
 // app/api/reminders/record/route.ts
 
 // Add this function:
@@ -96,7 +96,7 @@ if (!hasPosted) {
     message: "You must post and mention the creator before claiming reward"
   }, { status: 400 });
 }
-```
+\`\`\`
 
 ---
 
@@ -124,7 +124,7 @@ if (!hasPosted) {
 
 **File:** `lib/farcaster/neynar-service.ts`
 
-```typescript
+\`\`\`typescript
 // This needs signer:
 const signerUuid = process.env.FARCASTER_SIGNER_UUID
 if (!signerUuid) {
@@ -143,27 +143,27 @@ await fetch("https://api.neynar.com/v2/farcaster/cast", {
     text: `Reminder: ${description}`,
   }),
 })
-```
+\`\`\`
 
 ### **Setup Signer:**
 
 1. **Create Signer via Neynar:**
-   ```bash
+   \`\`\`bash
    # Via Neynar API
    curl -X POST https://api.neynar.com/v2/farcaster/signer \
      -H "X-API-Key: YOUR_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{"fid": YOUR_FID}'
-   ```
+   \`\`\`
 
 2. **Get Signer UUID:**
    - Response akan return `signer_uuid`
    - Copy UUID ini
 
 3. **Add to Environment:**
-   ```env
+   \`\`\`env
    FARCASTER_SIGNER_UUID=your_signer_uuid_here
-   ```
+   \`\`\`
 
 ---
 
@@ -184,7 +184,7 @@ await fetch("https://api.neynar.com/v2/farcaster/cast", {
 
 Update `app/api/reminders/record/route.ts`:
 
-```typescript
+\`\`\`typescript
 // Add verification
 const hasPosted = await verifyHelperPost(
   neynarClient,
@@ -198,7 +198,7 @@ if (!hasPosted) {
     error: "Please post mention first"
   }, { status: 400 });
 }
-```
+\`\`\`
 
 ### **2. Keep Signer for Notifications (Optional)**
 
@@ -226,4 +226,3 @@ Signer hanya untuk POST notification, bukan untuk verification.
 
 **Last Updated**: December 22, 2025  
 **Status**: Verification recommended but not required
-
