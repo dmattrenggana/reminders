@@ -43,7 +43,7 @@ export default function DashboardClient() {
     refresh: refreshReminders 
   } = useReminders();
   
-  const { balance, symbol, refresh: refreshBalance } = useTokenBalance();
+  const { balance, symbol, refresh: refreshBalance, isLoading: isLoadingBalance } = useTokenBalance();
 
   // Auto-connect for miniapp
   useAutoConnect({
@@ -154,7 +154,10 @@ export default function DashboardClient() {
         setTxStatus("");
         alert("✅ Reminder created successfully! Transaction confirmed.");
         
-        // Wait a bit for blockchain state to update, then refresh
+        // Immediately refresh balance (may need to wait for block confirmation)
+        refreshBalance();
+        
+        // Wait a bit for blockchain state to update, then refresh again
         setTimeout(() => {
           refreshReminders();
           refreshBalance();
@@ -165,6 +168,11 @@ export default function DashboardClient() {
           refreshReminders();
           refreshBalance();
         }, 5000);
+        
+        // Final refresh after 10 seconds to ensure balance is updated
+        setTimeout(() => {
+          refreshBalance();
+        }, 10000);
         
         setIsSubmitting(false);
       } else {
