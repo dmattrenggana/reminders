@@ -1,14 +1,36 @@
 import { useReminders } from "@/hooks/useReminders";
-import sdk from "@farcaster/frame-sdk";
+import { useEffect, useState } from "react";
 
 export default function HelperDashboard() {
   const { activeReminders, loading, refresh } = useReminders();
+  const [sdk, setSdk] = useState<any>(null);
+
+  // Load miniapp SDK dynamically if in miniapp environment
+  useEffect(() => {
+    const loadSDK = async () => {
+      if (typeof window !== 'undefined' && 'Farcaster' in window) {
+        try {
+          const { sdk: miniappSdk } = await import("@farcaster/miniapp-sdk");
+          setSdk(miniappSdk);
+        } catch (error) {
+          console.warn("Failed to load Farcaster miniapp SDK:", error);
+        }
+      }
+    };
+    loadSDK();
+  }, []);
 
   const handleShareMention = (creatorAddress: string) => {
     // Fungsi untuk membuka composer Farcaster otomatis
     // Catatan: Idealnya Anda menyimpan username creator di DB atau mapping address->username
     const text = `Hey @farcaster_user (Creator), don't forget your task! #VaultReminder`;
-    sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`);
+    
+    if (sdk?.actions?.openUrl) {
+      sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`);
+    } else {
+      // Fallback untuk web browser
+      window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`, '_blank');
+    }
   };
 
   if (loading) return <div className="p-10 text-center text-gray-500">Memuat Target...</div>;
