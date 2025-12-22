@@ -5,18 +5,18 @@
 ### **Perbedaan yang Ditemukan:**
 
 **Di `ACTION_REQUIRED_NOW.md`:**
-```env
+\`\`\`env
 # Neynar API (jika belum ada)
 NEYNAR_API_KEY=your_neynar_api_key_here
-```
+\`\`\`
 
 **Di `ENV_SETUP.md`:**
-```env
+\`\`\`env
 # API Keys (For backend features - optional)
 FARCASTER_API_KEY=your_neynar_api_key_here
 NEYNAR_API_KEY=your_neynar_api_key_here
 CRON_SECRET=your_vercel_cron_secret_here
-```
+\`\`\`
 
 ### **Penjelasan:**
 
@@ -43,7 +43,7 @@ CRON_SECRET=your_vercel_cron_secret_here
 
 **Copy ini ke `.env.local`:**
 
-```env
+\`\`\`env
 # ============================================
 # CONTRACT ADDRESSES (Base Mainnet)
 # ============================================
@@ -77,7 +77,7 @@ CRON_WALLET_PRIVATE_KEY=0x_your_private_key_here
 # APP URL (Optional - for redirects)
 # ============================================
 NEXT_PUBLIC_APP_URL=https://remindersbase.vercel.app
-```
+\`\`\`
 
 ---
 
@@ -97,7 +97,7 @@ NEXT_PUBLIC_APP_URL=https://remindersbase.vercel.app
 5. **Redeploy** setelah update
 
 **Via CLI:**
-```bash
+\`\`\`bash
 # Remove old
 vercel env rm NEXT_PUBLIC_VAULT_CONTRACT production
 vercel env rm NEXT_PUBLIC_VAULT_CONTRACT preview
@@ -109,7 +109,7 @@ vercel env add NEXT_PUBLIC_VAULT_CONTRACT production
 
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT preview
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT development
-```
+\`\`\`
 
 ### **2. Verify All Required Variables**
 
@@ -125,13 +125,13 @@ vercel env add NEXT_PUBLIC_VAULT_CONTRACT development
 
 ### **3. After Update - Redeploy**
 
-```bash
+\`\`\`bash
 # Trigger redeploy
 vercel --prod
 
 # Or via dashboard:
 # Deployments → Redeploy latest
-```
+\`\`\`
 
 ---
 
@@ -186,4 +186,3 @@ vercel --prod
 
 **Last Updated:** December 22, 2025  
 **V4 Address:** `0x2e3A524912636BF456B3C19f88693087c4dAa25f`
-

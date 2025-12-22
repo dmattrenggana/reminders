@@ -11,19 +11,19 @@ Guide ini membantu Anda menemukan masalah mengapa wallet tidak bisa connect di F
 ### **1. Environment Detection** ✅
 
 **Cek di Console:**
-```javascript
+\`\`\`javascript
 // Paste di console browser/miniapp
 console.log('Farcaster in window:', 'Farcaster' in window);
 console.log('window.Farcaster:', window.Farcaster);
 console.log('User Agent:', navigator.userAgent);
-```
+\`\`\`
 
 **Expected Output (di Miniapp):**
-```
+\`\`\`
 Farcaster in window: true
 window.Farcaster: [object Object]
 User Agent: ... (Warpcast/Farcaster client)
-```
+\`\`\`
 
 **Jika `false`:**
 - ❌ App tidak terdeteksi sebagai miniapp
@@ -34,12 +34,12 @@ User Agent: ... (Warpcast/Farcaster client)
 ### **2. SDK Initialization** ✅
 
 **Cek Console Log:**
-```
+\`\`\`
 [Farcaster] Running in miniapp mode - initializing SDK...
 [Farcaster] SDK imported successfully
 [Farcaster] ⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY...
 [Farcaster] ✅✅✅ ready() called successfully - splash screen should dismiss NOW
-```
+\`\`\`
 
 **Jika tidak muncul:**
 - ❌ SDK tidak ter-load
@@ -50,12 +50,12 @@ User Agent: ... (Warpcast/Farcaster client)
 ### **3. Connector Detection** ✅
 
 **Cek Console Log:**
-```
+\`\`\`
 [Wagmi Config] ✅ Farcaster miniapp connector initialized
 [Wagmi Config] Connectors configured: [...]
 [Auto-Connect] 📋 Available connectors: [...]
 [Auto-Connect] ✅✅✅ Found Farcaster connector: { id: "...", name: "...", type: "..." }
-```
+\`\`\`
 
 **Jika connector tidak ditemukan:**
 - ❌ Connector tidak ter-initialize
@@ -66,12 +66,12 @@ User Agent: ... (Warpcast/Farcaster client)
 ### **4. Auto-Connect Process** ✅
 
 **Cek Console Log:**
-```
+\`\`\`
 [Auto-Connect] Starting auto-connect process...
 [Auto-Connect] 🔍 Detected Farcaster Miniapp, attempting auto-connect...
 [Auto-Connect] 🚀 Attempting to connect with connector: ...
 [Auto-Connect] ✅ Connect call executed successfully
-```
+\`\`\`
 
 **Jika gagal:**
 - ❌ Error akan muncul di console
@@ -85,10 +85,10 @@ User Agent: ... (Warpcast/Farcaster client)
 
 1. Klik "Connect Wallet" button
 2. Cek console log:
-   ```
+   \`\`\`
    [ConnectWallet] Available connectors: [...]
    [ConnectWallet] ✅ Found Farcaster connector: {...}
-   ```
+   \`\`\`
 
 **Jika connector tidak ditemukan:**
 - ❌ Connector tidak tersedia
@@ -101,10 +101,10 @@ User Agent: ... (Warpcast/Farcaster client)
 ### **Issue 1: "Farcaster connector not found"**
 
 **Symptoms:**
-```
+\`\`\`
 [Auto-Connect] ❌❌❌ Farcaster connector NOT FOUND!
 [Auto-Connect] Available connectors: [{ id: "injected", name: "..." }]
-```
+\`\`\`
 
 **Possible Causes:**
 1. Connector tidak ter-initialize
@@ -121,9 +121,9 @@ User Agent: ... (Warpcast/Farcaster client)
 ### **Issue 2: "SDK import error"**
 
 **Symptoms:**
-```
+\`\`\`
 [Farcaster] SDK import error: ...
-```
+\`\`\`
 
 **Possible Causes:**
 1. `@farcaster/miniapp-sdk` tidak terinstall
@@ -140,9 +140,9 @@ User Agent: ... (Warpcast/Farcaster client)
 ### **Issue 3: "Environment not detected as miniapp"**
 
 **Symptoms:**
-```
+\`\`\`
 [Farcaster] Running in web browser mode
-```
+\`\`\`
 
 **Possible Causes:**
 1. App dibuka di browser, bukan Warpcast
@@ -159,10 +159,10 @@ User Agent: ... (Warpcast/Farcaster client)
 ### **Issue 4: "ready() called but splash screen still stuck"**
 
 **Symptoms:**
-```
+\`\`\`
 [Farcaster] ✅✅✅ ready() called successfully
 // But splash screen still visible
-```
+\`\`\`
 
 **Possible Causes:**
 1. `ready()` dipanggil terlalu cepat
@@ -179,10 +179,10 @@ User Agent: ... (Warpcast/Farcaster client)
 ### **Issue 5: "Connection fails silently"**
 
 **Symptoms:**
-```
+\`\`\`
 [Auto-Connect] ✅ Connect call executed
 // But wallet not connected
-```
+\`\`\`
 
 **Possible Causes:**
 1. User rejected connection
@@ -200,7 +200,7 @@ User Agent: ... (Warpcast/Farcaster client)
 
 ### **Step 1: Check Environment**
 
-```javascript
+\`\`\`javascript
 // Paste di console
 console.log({
   hasFarcaster: 'Farcaster' in window,
@@ -208,33 +208,33 @@ console.log({
   userAgent: navigator.userAgent,
   location: window.location.href
 });
-```
+\`\`\`
 
 ### **Step 2: Check SDK**
 
-```javascript
+\`\`\`javascript
 // Paste di console
 console.log({
   sdkAvailable: typeof window !== 'undefined' && window.__farcasterSDK,
   readyCalled: window.__farcasterReady
 });
-```
+\`\`\`
 
 ### **Step 3: Check Connectors**
 
-```javascript
+\`\`\`javascript
 // Paste di console (di React DevTools atau via window)
 // Connectors akan ter-log otomatis di console
-```
+\`\`\`
 
 ### **Step 4: Check Connection State**
 
-```javascript
+\`\`\`javascript
 // Di React DevTools, cek:
 // - useAccount().isConnected
 // - useAccount().address
 // - useConnect().connectors
-```
+\`\`\`
 
 ---
 
@@ -242,7 +242,7 @@ console.log({
 
 ### **Success Flow:**
 
-```
+\`\`\`
 [Farcaster] Environment detection: { isInMiniApp: true, ... }
 [Farcaster] Running in miniapp mode - initializing SDK...
 [Farcaster] SDK imported successfully
@@ -256,7 +256,7 @@ console.log({
 [Auto-Connect] ✅✅✅ Found Farcaster connector: {...}
 [Auto-Connect] 🚀 Attempting to connect with connector: ...
 [Auto-Connect] ✅ Connect call executed successfully
-```
+\`\`\`
 
 ---
 
@@ -274,4 +274,3 @@ console.log({
 - [Farcaster Miniapp Docs](https://miniapps.farcaster.xyz/docs/getting-started)
 - [Wagmi Connectors](https://wagmi.sh/core/connectors)
 - [Console Errors Explanation](./CONSOLE_ERRORS_EXPLANATION.md)
-

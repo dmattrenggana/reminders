@@ -22,7 +22,7 @@
 - ❌ `claimSuccess()` - V4 menggunakan `confirmReminder()`
 
 **Fix Required:**
-```typescript
+\`\`\`typescript
 // OLD (V3):
 const lockTokens = async (amount: string, deadline: number) => {
   await vaultContract.lockTokens(parsedAmount, deadline);
@@ -42,7 +42,7 @@ const createReminder = async (
     farcasterUsername
   );
 }
-```
+\`\`\`
 
 ### **2. `dashboard-client.tsx` - Placeholder Functions**
 
@@ -87,4 +87,3 @@ const createReminder = async (
 
 **Status:** ⚠️ Partial fixes applied, more work needed  
 **Last Updated:** December 22, 2025
-

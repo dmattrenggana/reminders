@@ -16,14 +16,14 @@ This document explains all environment variables needed for the CommitRemind app
 4. Copy the HTTPS endpoint URL
 
 **Example:**
-```
+\`\`\`
 https://base-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-```
+\`\`\`
 
 **Alternative (Public RPC - not recommended for production):**
-```
+\`\`\`
 https://sepolia.base.org
-```
+\`\`\`
 
 ---
 
@@ -36,9 +36,9 @@ https://sepolia.base.org
 3. Paste it here
 
 **Example:**
-```
+\`\`\`
 0x1234567890123456789012345678901234567890
-```
+\`\`\`
 
 **Status:** This variable already exists in your project but needs to be filled after contract deployment.
 
@@ -53,9 +53,9 @@ https://sepolia.base.org
 3. Paste it here
 
 **Example:**
-```
+\`\`\`
 0x0987654321098765432109876543210987654321
-```
+\`\`\`
 
 **Status:** This variable already exists in your project but needs to be filled after contract deployment.
 
@@ -75,9 +75,9 @@ https://sepolia.base.org
 - Or bridge from Ethereum Sepolia
 
 **Example:**
-```
+\`\`\`
 0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
-```
+\`\`\`
 
 **⚠️ Security:** Only use this for deployment scripts, never expose in client-side code.
 
@@ -93,9 +93,9 @@ https://sepolia.base.org
 2. If deployed: Your Vercel deployment URL (e.g., `https://your-app.vercel.app`)
 
 **Example:**
-```
+\`\`\`
 https://commitremind.vercel.app
-```
+\`\`\`
 
 ---
 
@@ -110,9 +110,9 @@ https://commitremind.vercel.app
 5. Copy the FID number
 
 **Example:**
-```
+\`\`\`
 12345
-```
+\`\`\`
 
 ---
 
@@ -125,9 +125,9 @@ https://commitremind.vercel.app
 3. **⚠️ NEVER share this or commit it to git!**
 
 **Example:**
-```
+\`\`\`
 word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12
-```
+\`\`\`
 
 **⚠️ Security:** Keep this secret and never expose it client-side.
 
@@ -149,9 +149,9 @@ word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12
 2. Not publicly available yet for all users
 
 **Example:**
-```
+\`\`\`
 neynar_api_key_1234567890abcdef
-```
+\`\`\`
 
 ---
 

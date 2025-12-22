@@ -13,7 +13,7 @@
 
 Buat atau update file `.env.local` di root project:
 
-```env
+\`\`\`env
 # Token Contract (tidak berubah)
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_TOKEN_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
@@ -37,7 +37,7 @@ CRON_SECRET=your_vercel_cron_secret_here
 # Required: For cron job wallet - auto-burn missed reminders
 # Create new wallet, fund with Base ETH for gas
 CRON_WALLET_PRIVATE_KEY=0x_your_private_key_here
-```
+\`\`\`
 
 **Cara:**
 1. Buka terminal di project root
@@ -58,7 +58,7 @@ CRON_WALLET_PRIVATE_KEY=0x_your_private_key_here
 8. Klik **Save**
 
 **Via Vercel CLI:**
-```bash
+\`\`\`bash
 # Remove old value
 vercel env rm NEXT_PUBLIC_VAULT_CONTRACT production
 vercel env rm NEXT_PUBLIC_VAULT_CONTRACT preview
@@ -70,7 +70,7 @@ vercel env add NEXT_PUBLIC_VAULT_CONTRACT production
 
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT preview
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT development
-```
+\`\`\`
 
 ---
 
@@ -78,11 +78,11 @@ vercel env add NEXT_PUBLIC_VAULT_CONTRACT development
 
 Setelah update `.env.local`:
 
-```bash
+\`\`\`bash
 # Stop server jika sedang running (Ctrl+C)
 # Then restart:
 npm run dev
-```
+\`\`\`
 
 **Verifikasi:**
 - Buka http://localhost:3000
@@ -143,13 +143,13 @@ Setelah create reminder:
 
 Semua file sudah diupdate, tapi verify:
 
-```bash
+\`\`\`bash
 # Check config file
 cat lib/contracts/config.ts | grep "REMINDER_VAULT_ABI"
 
 # Should show:
 # export const REMINDER_VAULT_ABI = REMINDER_VAULT_V4_ABI
-```
+\`\`\`
 
 ---
 
@@ -169,7 +169,7 @@ Jika ada helper yang mau test:
 
 ### **6. Deploy to Vercel** (Jika siap)
 
-```bash
+\`\`\`bash
 # Push changes to git
 git add .
 git commit -m "Update to V4 contract"
@@ -178,7 +178,7 @@ git push
 # Vercel akan auto-deploy
 # Atau manual:
 vercel --prod
-```
+\`\`\`
 
 **Setelah deploy:**
 - Verify environment variables di Vercel sudah update
@@ -252,4 +252,3 @@ vercel --prod
 
 **Status:** Ready to test! 🚀  
 **Last Updated:** December 22, 2025
-

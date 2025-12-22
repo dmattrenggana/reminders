@@ -27,14 +27,14 @@ Semua placeholder functions sudah diimplement dengan V4 contract.
 - ✅ Refreshes reminders and balance after success
 
 **V4 Contract Function:**
-```solidity
+\`\`\`solidity
 function createReminder(
     uint256 totalAmount,
     uint256 reminderTime,
     string memory description,
     string memory farcasterUsername
 ) external returns (uint256)
-```
+\`\`\`
 
 ---
 
@@ -50,9 +50,9 @@ function createReminder(
 - ✅ Refreshes reminders and balance
 
 **V4 Contract Function:**
-```solidity
+\`\`\`solidity
 function confirmReminder(uint256 reminderId) external
-```
+\`\`\`
 
 ---
 
@@ -71,9 +71,9 @@ function confirmReminder(uint256 reminderId) external
 - ✅ Refreshes reminders and balance
 
 **V4 Contract Function:**
-```solidity
+\`\`\`solidity
 function claimReward(uint256 reminderId) external
-```
+\`\`\`
 
 **Flow:**
 1. Helper clicks "Help Remind Me"
@@ -103,29 +103,29 @@ function claimReward(uint256 reminderId) external
 ## 📋 **Function Signatures**
 
 ### **createReminder:**
-```typescript
+\`\`\`typescript
 createReminder(
   desc: string,      // Description
   amt: string,       // Amount in tokens (will be converted to wei)
   dl: string         // Deadline in datetime-local format
 ): Promise<void>
-```
+\`\`\`
 
 ### **confirmReminder:**
-```typescript
+\`\`\`typescript
 confirmReminder(
   id: number         // Reminder ID
 ): Promise<void>
-```
+\`\`\`
 
 ### **helpRemind:**
-```typescript
+\`\`\`typescript
 helpRemind(
   reminder: any,     // Reminder object
   isMiniApp: boolean, // Whether in miniapp
   fid: number        // Farcaster ID
 ): Promise<void>
-```
+\`\`\`
 
 ---
 
@@ -162,9 +162,9 @@ helpRemind(
 ## 🚀 **Next Steps**
 
 ### **1. Test Locally:**
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 ### **2. Test Functions:**
 - Create a reminder
@@ -172,12 +172,12 @@ npm run dev
 - Help remind (if possible)
 
 ### **3. Deploy to Vercel:**
-```bash
+\`\`\`bash
 git add .
 git commit -m "Implement V4 contract functions"
 git push
 vercel --prod
-```
+\`\`\`
 
 ### **4. Test in Production:**
 - Test in web browser
@@ -226,4 +226,3 @@ vercel --prod
 
 **Status:** ✅ **V4 Implementation Complete!**  
 **Last Updated:** December 22, 2025
-

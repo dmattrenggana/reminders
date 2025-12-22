@@ -54,14 +54,14 @@
 ### **Update Required:**
 
 **Local Development (.env.local):**
-```env
+\`\`\`env
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_TOKEN_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_VAULT_CONTRACT=0x2e3A524912636BF456B3C19f88693087c4dAa25f
-```
+\`\`\`
 
 **Vercel Deployment:**
-```bash
+\`\`\`bash
 # Update via Vercel Dashboard:
 # Project Settings → Environment Variables → Edit NEXT_PUBLIC_VAULT_CONTRACT
 
@@ -73,7 +73,7 @@ vercel env add NEXT_PUBLIC_VAULT_CONTRACT production
 # Repeat for preview and development environments
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT preview
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT development
-```
+\`\`\`
 
 ---
 
@@ -119,17 +119,17 @@ vercel env add NEXT_PUBLIC_VAULT_CONTRACT development
 ## 🚀 **Next Steps**
 
 1. **Update Environment Variables:**
-   ```bash
+   \`\`\`bash
    # Local
    echo "NEXT_PUBLIC_VAULT_CONTRACT=0x2e3A524912636BF456B3C19f88693087c4dAa25f" >> .env.local
    
    # Vercel (via dashboard or CLI)
-   ```
+   \`\`\`
 
 2. **Restart Dev Server:**
-   ```bash
+   \`\`\`bash
    npm run dev
-   ```
+   \`\`\`
 
 3. **Test Contract Interaction:**
    - Create a reminder
@@ -185,4 +185,3 @@ vercel env add NEXT_PUBLIC_VAULT_CONTRACT development
 
 **Status:** ✅ Ready for Testing  
 **Last Updated:** December 22, 2025
-

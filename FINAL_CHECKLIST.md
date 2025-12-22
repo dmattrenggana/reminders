@@ -6,7 +6,7 @@
 
 Copy isi dari `.env.local.COMPLETE` ke `.env.local`:
 
-```env
+\`\`\`env
 # Contract Addresses
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_TOKEN_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
@@ -22,7 +22,7 @@ CRON_WALLET_PRIVATE_KEY=0x_your_private_key_here
 
 # App URL (Optional)
 NEXT_PUBLIC_APP_URL=https://remindersbase.vercel.app
-```
+\`\`\`
 
 **Action:**
 - [ ] Copy template ke `.env.local`
@@ -54,28 +54,28 @@ NEXT_PUBLIC_APP_URL=https://remindersbase.vercel.app
 ### **Steps:**
 
 1. **Create `.env.local`:**
-   ```bash
+   \`\`\`bash
    # Copy template
    cp .env.local.COMPLETE .env.local
    
    # Edit dengan values Anda
    # (atau buat manual di editor)
-   ```
+   \`\`\`
 
 2. **Install Dependencies (jika belum):**
-   ```bash
+   \`\`\`bash
    npm install
-   ```
+   \`\`\`
 
 3. **Start Dev Server:**
-   ```bash
+   \`\`\`bash
    npm run dev
-   ```
+   \`\`\`
 
 4. **Open Browser:**
-   ```
+   \`\`\`
    http://localhost:3000
-   ```
+   \`\`\`
 
 5. **Verify:**
    - ✅ No console errors
@@ -177,4 +177,3 @@ NEXT_PUBLIC_APP_URL=https://remindersbase.vercel.app
 
 **Status:** ✅ Ready for basic testing  
 **Last Updated:** December 22, 2025
-

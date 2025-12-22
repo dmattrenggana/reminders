@@ -35,14 +35,14 @@ The updated `contracts/ReminderVaultV2.sol` includes:
 8. Click "Deploy" and confirm in MetaMask
 
 **Using Hardhat:**
-```bash
+\`\`\`bash
 npx hardhat compile
-```
+\`\`\`
 
 **Using Foundry:**
-```bash
+\`\`\`bash
 forge build
-```
+\`\`\`
 
 ### 2. Deploy to Base Sepolia
 
@@ -51,7 +51,7 @@ You'll need:
 - COMMIT token address from your Vercel environment variables
 
 **Using Hardhat:**
-```javascript
+\`\`\`javascript
 // scripts/deploy.js
 const { ethers } = require("hardhat");
 
@@ -68,12 +68,12 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
-```
+\`\`\`
 
 Run:
-```bash
+\`\`\`bash
 npx hardhat run scripts/deploy.js --network base-sepolia
-```
+\`\`\`
 
 ### 3. Update Environment Variables
 
@@ -81,9 +81,9 @@ After deployment, update `NEXT_PUBLIC_REMINDER_VAULT_ADDRESS` in Vercel with you
 
 ### 4. Verify Contract (Optional)
 
-```bash
+\`\`\`bash
 npx hardhat verify --network base-sepolia <contract_address> <commit_token_address>
-```
+\`\`\`
 
 ## Testing
 

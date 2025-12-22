@@ -35,10 +35,10 @@ The manifest is located at `public/json`
 
 To generate the proper `accountAssociation` signature:
 
-```bash
+\`\`\`bash
 # Use the Farcaster CLI or use the Warpcast developer portal
 # This requires your custody private key
-```
+\`\`\`
 
 Or use Warpcast Developer Portal:
 1. Go to https://warpcast.com/~/developers

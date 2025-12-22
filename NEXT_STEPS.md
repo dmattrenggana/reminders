@@ -15,9 +15,9 @@
 
 ### **1.1. Jalankan Dev Server**
 
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 ### **1.2. Test di Browser**
 
@@ -43,12 +43,12 @@ npm run dev
 
 ### **2.1. Pastikan Semua Perubahan Sudah di-Push**
 
-```bash
+\`\`\`bash
 git status
 git add .
 git commit -m "Update: Ready for deployment"
 git push origin main
-```
+\`\`\`
 
 ### **2.2. Vercel Auto-Deploy**
 
@@ -64,7 +64,7 @@ Jika sudah terhubung dengan GitHub, Vercel akan otomatis deploy setelah push.
 
 Pastikan semua environment variables sudah di-set:
 
-```
+\`\`\`
 NEXT_PUBLIC_VAULT_CONTRACT=0x2e3A524912636BF456B3C19f88693087c4dAa25f
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_TOKEN_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
@@ -73,7 +73,7 @@ NEYNAR_API_KEY=your_neynar_api_key
 CRON_SECRET=your_cron_secret
 CRON_WALLET_PRIVATE_KEY=your_private_key
 NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
-```
+\`\`\`
 
 ---
 
@@ -97,14 +97,14 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
    - Desktop: Buka Warpcast → Navigate ke miniapp URL
 
 2. **Cek Console Log (jika bisa akses DevTools):**
-   ```
+   \`\`\`
    [Farcaster] Running in miniapp mode - initializing SDK...
    [Farcaster] SDK imported successfully
    [Farcaster] Calling sdk.actions.ready() - app is fully loaded and ready to display
    [Farcaster] ✅ ready() called successfully - splash screen should dismiss
    [Auto-Connect] ✅ Found Farcaster connector
    [Auto-Connect] ✅ Connect call executed
-   ```
+   \`\`\`
 
 3. **Test Fitur:**
    - ✅ Splash screen dismiss dengan benar
@@ -161,13 +161,13 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 
 ### **5.3. Update Dependencies**
 
-```bash
+\`\`\`bash
 # Check for updates
 npm outdated
 
 # Update (jika perlu)
 npm update
-```
+\`\`\`
 
 ---
 
@@ -206,4 +206,3 @@ Jika semua checklist sudah ✅, aplikasi siap digunakan!
 - [Vercel Deployment Guide](https://vercel.com/docs)
 - [Wagmi Documentation](https://wagmi.sh)
 - [Next.js Documentation](https://nextjs.org/docs)
-

@@ -72,9 +72,9 @@ Contract V4 yang **100% sesuai** dengan workflow yang kita diskusikan:
 ### **Step 3: Update Environment Variables**
 
 **Local (.env.local):**
-```env
+\`\`\`env
 NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_ADDRESS
-```
+\`\`\`
 
 **Vercel:**
 - Update `NEXT_PUBLIC_VAULT_CONTRACT` in dashboard
@@ -107,12 +107,12 @@ NEXT_PUBLIC_VAULT_CONTRACT=YOUR_NEW_V4_ADDRESS
 ### **1. Neynar Score Format**
 
 **V4 expects 0-100 scale:**
-```typescript
+\`\`\`typescript
 // Frontend: 0.95 (0-1 range)
 // Contract: 95 (0-100 range)
 // Multiply by 100!
 const score = Math.floor(neynarScore * 100);
-```
+\`\`\`
 
 **Already fixed in:**
 - ✅ `hooks/use-claim-callback.ts`
@@ -200,4 +200,3 @@ Semua code sudah ready:
 **Date**: December 22, 2025  
 **Network**: Base Mainnet  
 **Compiler**: Solidity 0.8.20
-

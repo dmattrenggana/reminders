@@ -14,7 +14,7 @@
 
 **File:** `contracts/ReminderVaultV4.sol` (Line 331-360)
 
-```solidity
+\`\`\`solidity
 function burnMissedReminder(uint256 reminderId) external nonReentrant {
     Reminder storage reminder = reminders[reminderId];
     
@@ -38,7 +38,7 @@ function burnMissedReminder(uint256 reminderId) external nonReentrant {
 
     emit TokensBurned(reminderId, reminder.user, reminder.commitAmount);
 }
-```
+\`\`\`
 
 **Key Points:**
 - ✅ Public function (anyone can call)
@@ -73,17 +73,17 @@ function burnMissedReminder(uint256 reminderId) external nonReentrant {
 
 **File:** `app/api/cron/process-reminders/route.ts`
 
-```typescript
+\`\`\`typescript
 // ❌ Old (V3)
 import { REMINDER_VAULT_V3_ABI } from "@/lib/contracts/config"
 
 // ✅ New (V4)
 import { VAULT_ABI } from "@/lib/contracts/config"
-```
+\`\`\`
 
 ### **Step 2: Update Contract Instance**
 
-```typescript
+\`\`\`typescript
 // ❌ Old
 const vaultContract = new ethers.Contract(
   CONTRACTS.REMINDER_VAULT, 
@@ -97,11 +97,11 @@ const vaultContract = new ethers.Contract(
   VAULT_ABI, // V4 ABI
   wallet
 )
-```
+\`\`\`
 
 ### **Step 3: Update Comment (Optional)**
 
-```typescript
+\`\`\`typescript
 // ❌ Old comment
 // Burns 50% commitment tokens to 0xdead
 // Returns 50% reward pool to user
@@ -109,7 +109,7 @@ const vaultContract = new ethers.Contract(
 // ✅ New comment
 // Burns 30% commitment tokens to 0xdead
 // Returns unclaimed 70% reward pool to user
-```
+\`\`\`
 
 ---
 
@@ -117,7 +117,7 @@ const vaultContract = new ethers.Contract(
 
 ### **Required:**
 
-```env
+\`\`\`env
 # RPC URL
 NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
 
@@ -126,7 +126,7 @@ CRON_WALLET_PRIVATE_KEY=0x...
 
 # Cron secret (for authentication)
 CRON_SECRET=your_secret_here
-```
+\`\`\`
 
 ### **Setup Cron Wallet:**
 
@@ -146,7 +146,7 @@ CRON_SECRET=your_secret_here
 
 ### **File:** `vercel.json`
 
-```json
+\`\`\`json
 {
   "crons": [
     {
@@ -155,7 +155,7 @@ CRON_SECRET=your_secret_here
     }
   ]
 }
-```
+\`\`\`
 
 **Schedule Options:**
 - `*/15 * * * *` - Every 15 minutes
@@ -171,15 +171,15 @@ CRON_SECRET=your_secret_here
 
 ### **Manual Test:**
 
-```bash
+\`\`\`bash
 # Test locally
 curl -X GET http://localhost:3000/api/cron/process-reminders \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
-```
+\`\`\`
 
 ### **Expected Response:**
 
-```json
+\`\`\`json
 {
   "success": true,
   "timestamp": "2025-12-22T10:00:00.000Z",
@@ -199,7 +199,7 @@ curl -X GET http://localhost:3000/api/cron/process-reminders \
     }
   ]
 }
-```
+\`\`\`
 
 ---
 
@@ -207,7 +207,7 @@ curl -X GET http://localhost:3000/api/cron/process-reminders \
 
 ### **Flow:**
 
-```
+\`\`\`
 1. Cron job triggered (every 15 min)
    ↓
 2. Authenticate with CRON_SECRET
@@ -225,11 +225,11 @@ curl -X GET http://localhost:3000/api/cron/process-reminders \
 8. Call burnMissedReminder() for each
    ↓
 9. Return results
-```
+\`\`\`
 
 ### **Safety Checks:**
 
-```solidity
+\`\`\`solidity
 // In contract
 require(!reminder.confirmed, "Reminder was confirmed"); // ✅ Skip if confirmed
 require(!reminder.burned, "Already burned");            // ✅ Skip if already burned
@@ -237,7 +237,7 @@ require(
     block.timestamp > reminder.confirmationDeadline,    // ✅ Only if expired
     "Deadline not passed yet"
 );
-```
+\`\`\`
 
 **Safe to run multiple times!** Contract has checks to prevent double-burning.
 
@@ -328,4 +328,3 @@ require(
 **Last Updated**: December 22, 2025  
 **Status**: Ready for V4 deployment  
 **Contract**: ReminderVaultV4
-

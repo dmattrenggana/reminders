@@ -41,4 +41,3 @@ export async function detectEnvironment(): Promise<'miniapp' | 'web'> {
 export function getEnvironmentName(): string {
   return isMiniApp() ? 'Farcaster Miniapp' : 'Web Browser';
 }
-

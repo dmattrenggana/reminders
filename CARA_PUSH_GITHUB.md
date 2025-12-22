@@ -10,7 +10,7 @@ Repository Anda sudah connected ke GitHub (`origin/main`). Tinggal commit & push
 
 ### **Step 1: Add Semua Changes**
 
-```bash
+\`\`\`bash
 # Add semua file yang berubah
 git add .
 
@@ -19,7 +19,7 @@ git add components/
 git add hooks/
 git add lib/
 # ... dst
-```
+\`\`\`
 
 **Note:** File `.env.local` tidak akan di-add karena sudah di `.gitignore` (aman!)
 
@@ -27,13 +27,13 @@ git add lib/
 
 ### **Step 2: Commit Changes**
 
-```bash
+\`\`\`bash
 # Commit dengan message yang jelas
 git commit -m "Implement V4 contract functions and update to V4 address"
-```
+\`\`\`
 
 **Atau message yang lebih detail:**
-```bash
+\`\`\`bash
 git commit -m "Deploy V4 contract integration
 
 - Implement V4 contract functions (createReminder, confirmReminder, helpRemind)
@@ -41,19 +41,19 @@ git commit -m "Deploy V4 contract integration
 - Fix import errors and update ABI to V4
 - Add comprehensive documentation
 - Update Node.js version requirement to 22.11.0"
-```
+\`\`\`
 
 ---
 
 ### **Step 3: Push ke GitHub**
 
-```bash
+\`\`\`bash
 # Push ke branch main
 git push origin main
 
 # Atau jika sudah set upstream
 git push
-```
+\`\`\`
 
 ---
 
@@ -61,7 +61,7 @@ git push
 
 **Copy-paste semua ini:**
 
-```bash
+\`\`\`bash
 # 1. Add semua changes
 git add .
 
@@ -70,7 +70,7 @@ git commit -m "Deploy V4 contract integration - Ready for production"
 
 # 3. Push
 git push origin main
-```
+\`\`\`
 
 ---
 
@@ -79,14 +79,14 @@ git push origin main
 ### **Error: "Please tell me who you are"**
 
 **Fix:**
-```bash
+\`\`\`bash
 # Set git config
 git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
 
 # Lalu commit lagi
 git commit -m "Deploy V4 contract integration"
-```
+\`\`\`
 
 ### **Error: "Permission denied"**
 
@@ -98,30 +98,30 @@ git commit -m "Deploy V4 contract integration"
 ### **Error: "Updates were rejected"**
 
 **Fix:**
-```bash
+\`\`\`bash
 # Pull dulu, lalu push
 git pull origin main
 git push origin main
-```
+\`\`\`
 
 ---
 
 ## 🔍 **Check Status**
 
 **Sebelum push, check status:**
-```bash
+\`\`\`bash
 git status
-```
+\`\`\`
 
 **Lihat apa yang akan di-push:**
-```bash
+\`\`\`bash
 git log --oneline -5
-```
+\`\`\`
 
 **Lihat changes:**
-```bash
+\`\`\`bash
 git diff
-```
+\`\`\`
 
 ---
 
@@ -142,7 +142,7 @@ git diff
 
 ### **Commands:**
 
-```bash
+\`\`\`bash
 # Check status
 git status
 
@@ -157,7 +157,7 @@ git push origin main
 
 # Check remote
 git remote -v
-```
+\`\`\`
 
 ### **GitHub URLs:**
 
@@ -172,18 +172,18 @@ git remote -v
 ### **Commit Messages:**
 
 ✅ **Good:**
-```
+\`\`\`
 "Implement V4 contract functions"
 "Update to V4 contract address"
 "Fix import errors"
-```
+\`\`\`
 
 ❌ **Bad:**
-```
+\`\`\`
 "update"
 "fix"
 "changes"
-```
+\`\`\`
 
 ### **Commit Frequency:**
 
@@ -195,7 +195,7 @@ git remote -v
 
 ## 🚀 **Complete Workflow**
 
-```bash
+\`\`\`bash
 # 1. Check what changed
 git status
 
@@ -210,7 +210,7 @@ git push origin main
 
 # 5. Verify (buka GitHub)
 # 6. Deploy (Vercel auto atau manual)
-```
+\`\`\`
 
 ---
 
@@ -232,4 +232,3 @@ git push origin main
 **Siap push! 🚀**
 
 **Last Updated:** December 22, 2025
-

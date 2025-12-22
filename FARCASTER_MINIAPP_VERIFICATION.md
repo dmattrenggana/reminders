@@ -22,7 +22,7 @@ App sudah dikonfigurasi untuk berjalan di **Farcaster Miniapp** dengan **hybrid 
 - ✅ Fallback ke web browser mode
 
 **Code:**
-```typescript
+\`\`\`typescript
 // ✅ Correct: Miniapp SDK
 const { sdk } = await import("@farcaster/miniapp-sdk");
 
@@ -35,7 +35,7 @@ if (isInMiniApp) {
 } else {
   // Web browser mode
 }
-```
+\`\`\`
 
 ---
 
@@ -49,7 +49,7 @@ if (isInMiniApp) {
 - ✅ Injected connector untuk web browser fallback
 
 **Code:**
-```typescript
+\`\`\`typescript
 // ✅ Correct: Miniapp connector
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 
@@ -57,7 +57,7 @@ connectors: [
   farcasterMiniApp(), // ✅ For Farcaster client
   injected(),         // ✅ For web browser
 ]
-```
+\`\`\`
 
 ---
 
@@ -71,7 +71,7 @@ connectors: [
 - ✅ Configured untuk miniapp embedding
 
 **Code:**
-```json
+\`\`\`json
 {
   "headers": [
     {
@@ -80,7 +80,7 @@ connectors: [
     }
   ]
 }
-```
+\`\`\`
 
 ---
 
@@ -122,7 +122,7 @@ App bisa berjalan di:
 - ✅ **Base App** (jika diintegrasikan)
 
 **Detection Logic:**
-```typescript
+\`\`\`typescript
 // Detects environment automatically
 const isInMiniApp = typeof window !== 'undefined' && 'Farcaster' in window;
 
@@ -135,7 +135,7 @@ if (isInMiniApp) {
   // Use injected connector
   // Manual connect
 }
-```
+\`\`\`
 
 ---
 
@@ -220,7 +220,7 @@ if (isInMiniApp) {
 
 ### **1. Deploy to Vercel**
 
-```bash
+\`\`\`bash
 # Push to git
 git add .
 git commit -m "Ready for miniapp"
@@ -228,16 +228,16 @@ git push
 
 # Deploy
 vercel --prod
-```
+\`\`\`
 
 ### **2. Verify Manifest**
 
-```bash
+\`\`\`bash
 # Check manifest accessible
 curl https://your-domain.vercel.app/.well-known/farcaster.json
 
 # Should redirect to hosted manifest
-```
+\`\`\`
 
 ### **3. Test in Warpcast**
 
@@ -283,4 +283,3 @@ Semua komponen sudah dikonfigurasi dengan benar:
 
 **Last Updated:** December 22, 2025  
 **Status:** ✅ Ready for Production
-

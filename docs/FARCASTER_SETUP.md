@@ -28,14 +28,14 @@ Frames are interactive mini-apps within Farcaster that display:
 
 ### 3. Notification Flow
 
-```
+\`\`\`
 1. User creates reminder with Farcaster account linked
 2. Cron job checks every 10 minutes for reminders needing notifications
 3. When notification window starts, send Frame to user's Farcaster feed
 4. User sees Frame and can interact within Farcaster
 5. User clicks "Confirm" → redirected to app for on-chain transaction
 6. On-chain confirmation reclaims tokens
-```
+\`\`\`
 
 ## Implementation
 
@@ -47,17 +47,17 @@ Frames are interactive mini-apps within Farcaster that display:
 
 ### Environment Variables
 
-```env
+\`\`\`env
 NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 FARCASTER_API_KEY=your_farcaster_api_key
 CRON_SECRET=your_cron_secret_for_vercel
-```
+\`\`\`
 
 ### Vercel Cron Jobs
 
 The \`vercel.json\` file configures a cron job that runs hourly to check for reminders needing notifications:
 
-```json
+\`\`\`json
 {
   "crons": [
     {
@@ -66,7 +66,7 @@ The \`vercel.json\` file configures a cron job that runs hourly to check for rem
     }
   ]
 }
-```
+\`\`\`
 
 **Note:** The current configuration runs hourly to comply with Vercel Hobby plan limits (daily cron maximum). For the full experience with 10-minute notification intervals as originally designed, upgrade to a Vercel Pro plan and change the schedule to `*/10 * * * *`.
 
@@ -84,10 +84,10 @@ https://warpcast.com/~/developers/frames
 ### 3. Test Notifications
 
 Call the notification endpoint:
-```bash
+\`\`\`bash
 curl -X GET http://localhost:3000/api/notifications/send \\
   -H "Authorization: Bearer YOUR_CRON_SECRET"
-```
+\`\`\`
 
 ## Production Deployment
 

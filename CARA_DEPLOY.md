@@ -14,7 +14,7 @@ Ada 2 cara deploy:
 
 **Jika belum ada Git repository:**
 
-```bash
+\`\`\`bash
 # Initialize git (jika belum)
 git init
 
@@ -28,15 +28,15 @@ git commit -m "Initial commit - V4 contract integration"
 # Lalu push:
 git remote add origin https://github.com/username/reminders-1.git
 git push -u origin main
-```
+\`\`\`
 
 **Jika sudah ada repository:**
-```bash
+\`\`\`bash
 # Commit changes
 git add .
 git commit -m "Deploy V4 contract integration"
 git push
-```
+\`\`\`
 
 ---
 
@@ -63,7 +63,7 @@ git push
    - Klik **"Environment Variables"** section
    - Tambahkan semua variables:
 
-   ```
+   \`\`\`
    NEXT_PUBLIC_VAULT_CONTRACT = 0x2e3A524912636BF456B3C19f88693087c4dAa25f
    NEXT_PUBLIC_CONTRACT_ADDRESS = 0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
    NEXT_PUBLIC_TOKEN_ADDRESS = 0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
@@ -72,7 +72,7 @@ git push
    CRON_SECRET = (your secret)
    CRON_WALLET_PRIVATE_KEY = (your private key)
    NEXT_PUBLIC_APP_URL = https://your-app.vercel.app
-   ```
+   \`\`\`
 
    **Untuk setiap variable:**
    - Klik **"Add"**
@@ -109,32 +109,32 @@ git push
 
 ### **Step 1: Install Vercel CLI**
 
-```bash
+\`\`\`bash
 # Install globally
 npm install -g vercel
 
 # Atau install locally
 npm install vercel --save-dev
-```
+\`\`\`
 
 ### **Step 2: Login**
 
-```bash
+\`\`\`bash
 vercel login
-```
+\`\`\`
 
 - Akan membuka browser untuk login
 - Authorize Vercel CLI
 
 ### **Step 3: Deploy**
 
-```bash
+\`\`\`bash
 # Deploy ke preview (testing)
 vercel
 
 # Deploy ke production
 vercel --prod
-```
+\`\`\`
 
 **First time deploy:**
 - Vercel akan bertanya beberapa pertanyaan:
@@ -147,7 +147,7 @@ vercel --prod
 
 ### **Step 4: Set Environment Variables**
 
-```bash
+\`\`\`bash
 # Add environment variables
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT
 # Paste: 0x2e3A524912636BF456B3C19f88693087c4dAa25f
@@ -172,14 +172,14 @@ vercel env add CRON_SECRET
 vercel env add CRON_WALLET_PRIVATE_KEY
 # Paste: 0x_your_private_key
 # Select: Production, Preview, Development
-```
+\`\`\`
 
 ### **Step 5: Redeploy dengan Env Vars**
 
-```bash
+\`\`\`bash
 # Redeploy setelah set env vars
 vercel --prod
-```
+\`\`\`
 
 ---
 
@@ -243,12 +243,12 @@ vercel --prod
 - Build command works locally
 
 **Fix:**
-```bash
+\`\`\`bash
 # Test build locally
 npm run build
 
 # Jika error, fix dulu sebelum deploy
-```
+\`\`\`
 
 ### **Error: Environment Variables Missing**
 
@@ -269,7 +269,7 @@ npm run build
 
 ### **Deploy Commands:**
 
-```bash
+\`\`\`bash
 # Build check
 npm run build
 
@@ -284,7 +284,7 @@ vercel ls
 
 # View logs
 vercel logs
-```
+\`\`\`
 
 ### **Vercel Dashboard:**
 - **URL:** https://vercel.com/dashboard
@@ -329,4 +329,3 @@ vercel logs
 **Pilih metode yang paling nyaman untuk Anda! 🚀**
 
 **Last Updated:** December 22, 2025
-

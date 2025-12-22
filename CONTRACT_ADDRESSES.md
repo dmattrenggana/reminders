@@ -48,14 +48,14 @@
 ## 🔧 **Environment Variables**
 
 ### **For Local Development (.env.local):**
-```env
+\`\`\`env
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_TOKEN_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_VAULT_CONTRACT=0x2e3A524912636BF456B3C19f88693087c4dAa25f
-```
+\`\`\`
 
 ### **For Vercel Deployment:**
-```bash
+\`\`\`bash
 # Via Vercel Dashboard:
 # Project Settings → Environment Variables → Add:
 
@@ -72,53 +72,53 @@ vercel env add NEXT_PUBLIC_TOKEN_ADDRESS
 
 vercel env add NEXT_PUBLIC_VAULT_CONTRACT
 # When prompted, enter: 0x2e3A524912636BF456B3C19f88693087c4dAa25f
-```
+\`\`\`
 
 ---
 
 ## 📊 **Contract Interaction Flow**
 
 ### **1. Creating a Reminder:**
-```
+\`\`\`
 User → Token.approve(vault, amount)
      → Vault.createReminder(amount, time, description, username)
      → Token locked in Vault
-```
+\`\`\`
 
 ### **2. Confirming a Reminder:**
-```
+\`\`\`
 User → Vault.confirmReminder(reminderId)
      → Tokens returned to user
-```
+\`\`\`
 
 ### **3. Missing a Reminder:**
-```
+\`\`\`
 Anyone → Vault.burnMissedReminder(reminderId)
         → Tokens burned to 0xdead
-```
+\`\`\`
 
 ---
 
 ## 🔍 **Verification**
 
 ### **Check Token Balance:**
-```javascript
+\`\`\`javascript
 const balance = await tokenContract.balanceOf(userAddress)
 const symbol = await tokenContract.symbol()
 console.log(`Balance: ${balance} ${symbol}`)
-```
+\`\`\`
 
 ### **Check Vault:**
-```javascript
+\`\`\`javascript
 const reminder = await vaultContract.reminders(reminderId)
 console.log('Reminder:', reminder)
-```
+\`\`\`
 
 ### **Check User Reminders:**
-```javascript
+\`\`\`javascript
 const reminderIds = await vaultContract.getUserReminders(userAddress)
 console.log('Your reminders:', reminderIds)
-```
+\`\`\`
 
 ---
 
@@ -156,4 +156,3 @@ console.log('Your reminders:', reminderIds)
 **Status:** ✅ Production Contracts  
 **Network:** Base Mainnet  
 **Last Verified:** December 22, 2025
-

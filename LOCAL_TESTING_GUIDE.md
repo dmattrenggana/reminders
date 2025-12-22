@@ -17,17 +17,17 @@ Sebelum mulai, pastikan Anda punya:
 
 Di root project, buat file baru bernama `.env.local` (persis tanpa typo):
 
-```bash
+\`\`\`bash
 # Di terminal:
 touch .env.local
 
 # Atau di Windows PowerShell:
 New-Item .env.local -ItemType File
-```
+\`\`\`
 
 ### **1.2. Copy isi ini ke `.env.local`:**
 
-```env
+\`\`\`env
 # Contract Addresses (Base Mainnet)
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
 NEXT_PUBLIC_TOKEN_ADDRESS=0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
@@ -35,7 +35,7 @@ NEXT_PUBLIC_VAULT_CONTRACT=0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6
 
 # RPC URL (Optional - has fallback)
 NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
-```
+\`\`\`
 
 **⚠️ PENTING:** File harus bernama `.env.local` (dengan titik di depan!)
 
@@ -43,44 +43,44 @@ NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://mainnet.base.org
 
 ## 📦 **Step 2: Install Dependencies**
 
-```bash
+\`\`\`bash
 # Install dependencies
 npm install
 
 # Atau jika pakai pnpm:
 pnpm install
-```
+\`\`\`
 
 **Expected output:**
-```
+\`\`\`
 added XXX packages in XXs
-```
+\`\`\`
 
 **Jika ada error:**
-```bash
+\`\`\`bash
 # Hapus node_modules dan lock file
 rm -rf node_modules package-lock.json
 
 # Install ulang
 npm install
-```
+\`\`\`
 
 ---
 
 ## 🏃 **Step 3: Run Development Server**
 
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 **Expected output:**
-```
+\`\`\`
 ▲ Next.js 15.0.7
 - Local:        http://localhost:3000
 - Network:      http://192.168.x.x:3000
 
 ✓ Ready in 2.5s
-```
+\`\`\`
 
 **Buka browser:** http://localhost:3000
 
@@ -111,11 +111,11 @@ npm run dev
    - Atau wallet extension lain yang terinstall
    
 3. **Connect wallet dan switch to Base Mainnet:**
-   ```
+   \`\`\`
    Network: Base Mainnet
    Chain ID: 8453
    RPC: https://mainnet.base.org
-   ```
+   \`\`\`
 
 4. **After connection:**
    - ✅ Address Anda muncul di header
@@ -128,7 +128,7 @@ npm run dev
 
 **Open Browser Console (F12 → Console):**
 
-```javascript
+\`\`\`javascript
 // Check environment
 console.log('Is MiniApp?', window.Farcaster !== undefined)
 // Should show: false (karena di browser biasa)
@@ -136,7 +136,7 @@ console.log('Is MiniApp?', window.Farcaster !== undefined)
 // Check available connectors (setelah connect)
 // Akan muncul di console log otomatis:
 // "Using injected connector for web"
-```
+\`\`\`
 
 ---
 
@@ -146,11 +146,11 @@ console.log('Is MiniApp?', window.Farcaster !== undefined)
 
 Open console dan test:
 
-```javascript
+\`\`\`javascript
 // Should show contract addresses
 console.log('Token:', '0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07')
 console.log('Vault:', '0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6')
-```
+\`\`\`
 
 #### **4.4.2. Check Token Balance**
 
@@ -158,10 +158,10 @@ console.log('Vault:', '0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6')
 - ✅ Symbol should show "RMNDtest" or "CMIT"
 
 **To verify manually:**
-```javascript
+\`\`\`javascript
 // Open console
 // Token balance akan otomatis fetch dan display
-```
+\`\`\`
 
 ---
 
@@ -179,7 +179,7 @@ console.log('Vault:', '0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6')
 3. **Click "Lock & Commit"**
 
 4. **Expected flow:**
-   ```
+   \`\`\`
    Step 1: Approve transaction (jika belum approve)
    → MetaMask popup: "Approve CMIT spending"
    → Confirm
@@ -191,7 +191,7 @@ console.log('Vault:', '0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6')
    Step 3: Success!
    → Reminder muncul di dashboard
    → Token balance berkurang
-   ```
+   \`\`\`
 
 5. **Verify:**
    - ✅ Reminder muncul di "My Feed" tab
@@ -204,12 +204,12 @@ console.log('Vault:', '0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6')
 
 ### **5.1. Test dengan Browser Console**
 
-```javascript
+\`\`\`javascript
 // Check contract imports (di console DevTools)
 // Ini akan error karena module, tapi cukup untuk verify setup
 
 // Alternative: Add console.log in code
-```
+\`\`\`
 
 ### **5.2. Verify Reminders Loading**
 
@@ -233,11 +233,11 @@ console.log('Vault:', '0xAE774199149c906A0B8bFDc87a1Dd80ca274cEa6')
 **Cause:** Dependencies not installed
 
 **Solution:**
-```bash
+\`\`\`bash
 rm -rf node_modules package-lock.json
 npm install
 npm run dev
-```
+\`\`\`
 
 ---
 
@@ -246,13 +246,13 @@ npm run dev
 **Cause:** `.env.local` not loaded
 
 **Check:**
-```bash
+\`\`\`bash
 # Verify file exists
 ls -la | grep .env.local
 
 # Should show:
 # .env.local
-```
+\`\`\`
 
 **Solution:**
 1. Make sure file is named `.env.local` (with dot!)
@@ -282,10 +282,10 @@ ls -la | grep .env.local
 **Cause:** `sdk.actions.ready()` not called (tapi ini sudah fixed di refactoring)
 
 **Check:**
-```typescript
+\`\`\`typescript
 // Should exist in farcaster-provider.tsx
 await sdk.actions.ready({});
-```
+\`\`\`
 
 **Already fixed!** ✅
 
@@ -305,9 +305,9 @@ await sdk.actions.ready({});
 2. **Get tokens** (ask token contract owner to mint)
 
 3. **Verify contract address:**
-   ```
+   \`\`\`
    Token: 0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07
-   ```
+   \`\`\`
 
 ---
 
@@ -342,10 +342,10 @@ await sdk.actions.ready({});
 ### **✅ Success Indicators:**
 
 1. **In Terminal:**
-   ```
+   \`\`\`
    ✓ Compiled successfully
    ✓ Ready in XXms
-   ```
+   \`\`\`
 
 2. **In Browser:**
    - Dashboard loads
@@ -353,37 +353,37 @@ await sdk.actions.ready({});
    - Connect wallet works
 
 3. **In Console:**
-   ```
+   \`\`\`
    Environment: Web
    Using injected connector for web
-   ```
+   \`\`\`
 
 ### **❌ Error Indicators:**
 
 1. **In Terminal:**
-   ```
+   \`\`\`
    ✗ Module not found
    ✗ Cannot find name 'process'
-   ```
+   \`\`\`
    → Run: `npm install`
 
 2. **In Browser Console:**
-   ```
+   \`\`\`
    Error: Contract addresses not configured
-   ```
+   \`\`\`
    → Check `.env.local` file
 
 3. **Network Errors:**
-   ```
+   \`\`\`
    Failed to fetch reminders
-   ```
+   \`\`\`
    → Check RPC URL or network connection
 
 ---
 
 ## 🔄 **Reset Everything (if stuck)**
 
-```bash
+\`\`\`bash
 # Stop dev server (Ctrl+C)
 
 # Clear everything
@@ -396,7 +396,7 @@ npm install
 
 # Restart
 npm run dev
-```
+\`\`\`
 
 ---
 
@@ -470,4 +470,3 @@ Once local testing passes:
 **Last Updated:** December 22, 2025  
 **Tested On:** Windows 11, Node.js 22.11.0  
 **Status:** ✅ Ready for local testing
-

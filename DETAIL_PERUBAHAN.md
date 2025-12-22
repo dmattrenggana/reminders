@@ -3,9 +3,9 @@
 ## 🎯 **Tujuan Perubahan**
 
 **Masalah:** Error TypeScript saat build di Vercel
-```
+\`\`\`
 Type error: Property 'address' does not exist on type 'ReminderCardProps'
-```
+\`\`\`
 
 **Solusi:** Menghapus props yang tidak digunakan dari `ReminderCard` component
 
@@ -20,14 +20,14 @@ Type error: Property 'address' does not exist on type 'ReminderCardProps'
 ## 🔍 **1. Perubahan Interface `ReminderListProps`**
 
 ### **SEBELUM (Error):**
-```typescript
+\`\`\`typescript
 interface ReminderListProps {
   items: any[];                    // ✅ Digunakan - list reminders
   onHelp: (reminder: any) => void; // ❌ TIDAK digunakan
   onConfirm: (id: number) => void; // ❌ TIDAK digunakan
   address?: string;                 // ❌ TIDAK digunakan
 }
-```
+\`\`\`
 
 **Penjelasan:**
 - `items`: ✅ **DIGUNAKAN** - Array reminder yang akan ditampilkan
@@ -36,11 +36,11 @@ interface ReminderListProps {
 - `address`: ❌ **TIDAK DIGUNAKAN** - Wallet address, tapi `ReminderCard` tidak menerima prop ini
 
 ### **SESUDAH (Fixed):**
-```typescript
+\`\`\`typescript
 interface ReminderListProps {
   items: any[];  // ✅ Hanya props yang benar-benar digunakan
 }
-```
+\`\`\`
 
 **Penjelasan:**
 - Hanya menyimpan props yang **benar-benar digunakan**
@@ -51,7 +51,7 @@ interface ReminderListProps {
 ## 🔍 **2. Perubahan Function `ReminderList`**
 
 ### **SEBELUM (Error):**
-```typescript
+\`\`\`typescript
 function ReminderList({ items, onHelp, onConfirm, address }: ReminderListProps) {
   // ...
   return (
@@ -68,7 +68,7 @@ function ReminderList({ items, onHelp, onConfirm, address }: ReminderListProps) 
     </div>
   );
 }
-```
+\`\`\`
 
 **Masalah:**
 - `ReminderCard` component **hanya menerima 1 prop**: `reminder`
@@ -76,7 +76,7 @@ function ReminderList({ items, onHelp, onConfirm, address }: ReminderListProps) 
 - TypeScript error karena **type mismatch**
 
 ### **SESUDAH (Fixed):**
-```typescript
+\`\`\`typescript
 function ReminderList({ items }: ReminderListProps) {
   // ...
   return (
@@ -90,7 +90,7 @@ function ReminderList({ items }: ReminderListProps) {
     </div>
   );
 }
-```
+\`\`\`
 
 **Penjelasan:**
 - Hanya pass prop `reminder` yang **diperlukan** oleh `ReminderCard`
@@ -101,7 +101,7 @@ function ReminderList({ items }: ReminderListProps) {
 ## 🔍 **3. Perubahan Pemanggilan `ReminderList`**
 
 ### **SEBELUM (Error):**
-```typescript
+\`\`\`typescript
 // Di Public Feed Tab
 <TabsContent value="public">
   <ReminderList 
@@ -121,10 +121,10 @@ function ReminderList({ items }: ReminderListProps) {
     address={address}              // ❌ TIDAK digunakan
   />
 </TabsContent>
-```
+\`\`\`
 
 ### **SESUDAH (Fixed):**
-```typescript
+\`\`\`typescript
 // Di Public Feed Tab
 <TabsContent value="public">
   <ReminderList 
@@ -138,7 +138,7 @@ function ReminderList({ items }: ReminderListProps) {
     items={stats.myFeed}  // ✅ Hanya prop yang diperlukan
   />
 </TabsContent>
-```
+\`\`\`
 
 **Penjelasan:**
 - Hanya pass prop `items` yang **diperlukan**
@@ -156,7 +156,7 @@ function ReminderList({ items }: ReminderListProps) {
    - **Tidak perlu** props dari parent untuk actions
 
 2. **Cara Kerja `ReminderCard`:**
-   ```typescript
+   \`\`\`typescript
    // Di dalam ReminderCard component
    const service = useReminderService()  // ✅ Get service dari hook
    
@@ -165,7 +165,7 @@ function ReminderList({ items }: ReminderListProps) {
      () => service!.confirmReminder(reminder.id),  // ✅ Gunakan service internal
      "Success! Stake reclaimed."
    )}
-   ```
+   \`\`\`
 
 3. **Tidak Perlu Props dari Parent:**
    - `onHelp` - ❌ Tidak diperlukan, `ReminderCard` handle sendiri
@@ -232,7 +232,7 @@ function ReminderList({ items }: ReminderListProps) {
 
 ### **SEBELUM (Dengan Props yang Tidak Digunakan):**
 
-```
+\`\`\`
 dashboard-client.tsx
   ├─ handleHelpRemindMe() ──┐
   ├─ confirmReminder() ──────┤
@@ -251,11 +251,11 @@ dashboard-client.tsx
                               ├─ address={address}              ❌ ERROR: Tidak ada di props
                               ├─ onHelp={onHelp}                ❌ ERROR: Tidak ada di props
                               └─ onConfirm={onConfirm}           ❌ ERROR: Tidak ada di props
-```
+\`\`\`
 
 ### **SESUDAH (Tanpa Props yang Tidak Digunakan):**
 
-```
+\`\`\`
 dashboard-client.tsx
   └─ stats.publicFeed / stats.myFeed
                               │
@@ -274,7 +274,7 @@ dashboard-client.tsx
                                     └─ confirmReminder()        ✅ Handle sendiri
                                     └─ burnMissedReminder()     ✅ Handle sendiri
                                     └─ withdrawUnclaimed()      ✅ Handle sendiri
-```
+\`\`\`
 
 ---
 
@@ -330,4 +330,3 @@ dashboard-client.tsx
 ---
 
 **Last Updated:** December 22, 2025
-

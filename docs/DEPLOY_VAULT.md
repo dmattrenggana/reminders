@@ -16,9 +16,9 @@ Since you already have your token deployed at `0x9e4F3d07B469ECA25055366913cC3F6
 
 Run the deployment script:
 
-```bash
+\`\`\`bash
 npx ts-node scripts/deploy-vault-only.ts
-```
+\`\`\`
 
 ## After Deployment
 
