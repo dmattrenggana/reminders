@@ -50,7 +50,9 @@ export function validateContractConfig(): { isValid: boolean; errors: string[] }
   }
 }
 
-export const COMMIT_TOKEN_ABI = [
+import { parseAbi } from "viem";
+
+export const COMMIT_TOKEN_ABI = parseAbi([
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
@@ -61,7 +63,7 @@ export const COMMIT_TOKEN_ABI = [
   "function allowance(address owner, address spender) view returns (uint256)",
   "function mint(address to, uint256 amount)",
   "function burn(address from, uint256 amount)",
-] as const
+])
 
 export const REMINDER_VAULT_V2_ABI = [
   "function createReminder(uint256 tokenAmount, uint256 reminderTime, string memory description, string memory farcasterUsername) returns (uint256)",
