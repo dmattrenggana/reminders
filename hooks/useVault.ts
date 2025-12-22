@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { VAULT_ABI, VAULT_ADDRESS, TOKEN_ADDRESS, COMMIT_TOKEN_ABI } from "@/lib/contracts/config";
+import { VAULT_ABI, VAULT_ADDRESS, CONTRACTS, COMMIT_TOKEN_ABI } from "@/lib/contracts/config";
 
 // Use centralized ERC20 ABI from config
 const ERC20_ABI = COMMIT_TOKEN_ABI;
@@ -15,7 +15,7 @@ export const useVault = (signer: ethers.Signer | null) => {
 
   // Inisialisasi kontrak
   const vaultContract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
-  const tokenContract = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
+  const tokenContract = new ethers.Contract(CONTRACTS.COMMIT_TOKEN, ERC20_ABI, signer);
 
   /**
    * Mengunci token dengan pengecekan Approval otomatis
