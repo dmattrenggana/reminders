@@ -31,21 +31,31 @@ export function useReminders() {
       const promises = [];
       for (let i = 0; i < count; i++) {
         promises.push(
-          contract.reminders(i).then((r) => ({
-            id: i,
-            creator: r.user, // V4 uses 'user' not 'creator'
-            rewardPool: ethers.formatUnits(r.rewardPoolAmount, 18), // V4 uses 'rewardPoolAmount'
-            deadline: Number(r.reminderTime), // V4 uses 'reminderTime'
-            isResolved: r.confirmed || r.burned, // V4: resolved if confirmed or burned
-            isCompleted: r.confirmed, // V4: completed if confirmed
-            description: r.description,
-            farcasterUsername: r.farcasterUsername,
-            commitAmount: ethers.formatUnits(r.commitAmount, 18),
-            confirmationDeadline: Number(r.confirmationDeadline),
-            totalReminders: Number(r.totalReminders),
-            rewardsClaimed: ethers.formatUnits(r.rewardsClaimed, 18),
-          })).catch(e => {
-            console.error(`Error fetching ID ${i}:`, e);
+          contract.reminders(i).then((r) => {
+            // Check if reminder exists (user is not zero address)
+            if (r.user === ethers.ZeroAddress || !r.user) {
+              return null; // Skip non-existent reminders
+            }
+            return {
+              id: i,
+              creator: r.user, // V4 uses 'user' not 'creator'
+              rewardPool: ethers.formatUnits(r.rewardPoolAmount, 18), // V4 uses 'rewardPoolAmount'
+              deadline: Number(r.reminderTime), // V4 uses 'reminderTime'
+              isResolved: r.confirmed || r.burned, // V4: resolved if confirmed or burned
+              isCompleted: r.confirmed, // V4: completed if confirmed
+              description: r.description,
+              farcasterUsername: r.farcasterUsername,
+              commitAmount: ethers.formatUnits(r.commitAmount, 18),
+              confirmationDeadline: Number(r.confirmationDeadline),
+              totalReminders: Number(r.totalReminders),
+              rewardsClaimed: ethers.formatUnits(r.rewardsClaimed, 18),
+            };
+          }).catch(e => {
+            // Silently skip errors for non-existent reminders
+            // Only log if it's not a "missing revert data" error (which means reminder doesn't exist)
+            if (!e.message?.includes("missing revert data") && !e.message?.includes("CALL_EXCEPTION")) {
+              console.warn(`Error fetching reminder ID ${i}:`, e.message || e);
+            }
             return null;
           })
         );
