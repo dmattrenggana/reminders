@@ -68,12 +68,8 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
               console.warn("[Farcaster] Context fetch error (non-critical):", contextError?.message || contextError);
             }
             
-            // Store SDK instance - ready() will be called after interface is loaded
-            // According to Farcaster docs: "Call ready when your interface is ready to be displayed"
-            // "Call ready as soon as possible while avoiding jitter and content reflows"
-            // We'll call ready() in a separate useEffect after children are rendered
-            
             // Set loaded to true after SDK is initialized
+            // ready() will be called in separate useEffect after interface is ready
             setIsLoaded(true);
           } catch (importError: any) {
             console.error("[Farcaster] SDK import error:", importError?.message || importError);
@@ -96,23 +92,35 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Call ready() after interface is loaded (per Farcaster docs)
+  // Per documentation: "After your app is fully loaded and ready to display"
+  // "After your app loads, you must call sdk.actions.ready() to hide the splash screen"
   // This useEffect runs after children are rendered, ensuring interface is ready
   useEffect(() => {
     if (isMiniApp && isLoaded && typeof window !== 'undefined' && (window as any).__farcasterSDK) {
       const sdk = (window as any).__farcasterSDK;
       
-      // Small delay to ensure DOM is fully rendered and avoid jitter
-      // Per Farcaster docs: "Don't call ready until your interface has loaded"
-      const timer = setTimeout(() => {
-        console.log('[Farcaster] Calling sdk.actions.ready() - interface is ready');
-        sdk.actions.ready({}).then(() => {
+      // Per Farcaster docs: "After your app is fully loaded and ready to display"
+      // We use requestAnimationFrame to ensure DOM is fully rendered
+      // This is better than setTimeout as it waits for browser paint cycle
+      const callReady = async () => {
+        try {
+          console.log('[Farcaster] Calling sdk.actions.ready() - app is fully loaded and ready to display');
+          // Per docs: "await sdk.actions.ready()"
+          await sdk.actions.ready({});
           console.log('[Farcaster] ✅ ready() called successfully - splash screen should dismiss');
-        }).catch((err: any) => {
+        } catch (err: any) {
           console.error("[Farcaster] ❌ Ready call failed:", err);
-        });
-      }, 100); // Small delay to ensure DOM is ready
+        }
+      };
       
-      return () => clearTimeout(timer);
+      // Use requestAnimationFrame to ensure DOM is painted before calling ready()
+      // This avoids jitter and content reflows per Farcaster docs
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Double RAF ensures we're after the next paint
+          callReady();
+        });
+      });
     }
   }, [isMiniApp, isLoaded]); // Only run when miniapp is detected and SDK is loaded
 
