@@ -43,10 +43,6 @@ export function ReminderDashboard() {
                 <span className="text-sm">Feed</span>
               </Button>
             </Link>
-            <Button onClick={() => setIsCreateOpen(true)} size="default" className="flex-1 sm:flex-none">
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="text-sm">New Reminder</span>
-            </Button>
           </div>
         </div>
 
@@ -54,14 +50,12 @@ export function ReminderDashboard() {
         <ReminderList key={`list-${refreshKey}`} />
       </div>
 
-      {/* Use FloatingCreate instead of deleted CreateReminderDialog */}
-      {isCreateOpen && (
-        <FloatingCreate 
-          symbol="RMND"
-          isSubmitting={false}
-          onConfirm={createReminder}
-        />
-      )}
+      {/* Use FloatingCreate - it has its own open/close state */}
+      <FloatingCreate 
+        symbol="RMND"
+        isSubmitting={false}
+        onConfirm={createReminder}
+      />
     </div>
   )
 }
