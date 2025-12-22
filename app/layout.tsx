@@ -43,6 +43,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content="frame-ancestors 'self' https://*.warpcast.com https://*.farcaster.xyz https://farcaster.xyz; connect-src 'self' https://*.warpcast.com https://*.farcaster.xyz https://farcaster.xyz https://client.farcaster.xyz https://warpcast.com https://client.warpcast.com https://wrpcd.net https://*.wrpcd.net https://privy.farcaster.xyz https://privy.warpcast.com https://auth.privy.io https://*.rpc.privy.systems https://mainnet.base.org https://base.llamarpc.com https://base-rpc.publicnode.com https://explorer-api.walletconnect.com https://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.org wss://*.walletconnect.com https://cloudflareinsights.com;"
+        />
+      </head>
       <body className={inter.className}>
         <Providers>
           {children}
