@@ -8,18 +8,37 @@ import { injected } from "wagmi/connectors";
 import { useState, useEffect } from "react";
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 
+// Initialize connectors with better error handling
+let farcasterConnector: any;
+try {
+  farcasterConnector = farcasterMiniApp();
+  console.log('[Wagmi Config] ✅ Farcaster miniapp connector initialized');
+} catch (error: any) {
+  console.error('[Wagmi Config] ❌ Failed to initialize Farcaster connector:', error);
+  farcasterConnector = null;
+}
+
 export const config = createConfig({
   chains: [base],
   // MATIKAN discovery otomatis agar tidak memicu error CSP di Warpcast
   multiInjectedProviderDiscovery: false, 
   connectors: [
-    farcasterMiniApp() as any, // Miniapp connector untuk Farcaster client
+    ...(farcasterConnector ? [farcasterConnector] : []), // Only add if successfully initialized
     injected(), // Injected untuk web browser (MetaMask, etc)
   ],
   transports: {
     [base.id]: http("https://mainnet.base.org"), 
   },
 });
+
+// Log connector info after config creation
+if (typeof window !== 'undefined') {
+  console.log('[Wagmi Config] Connectors configured:', config.connectors.map(c => ({
+    id: c.id,
+    name: c.name,
+    type: c.type
+  })));
+}
 
 const queryClient = new QueryClient();
 

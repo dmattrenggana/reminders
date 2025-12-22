@@ -26,7 +26,19 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
     const init = async () => {
       try {
         // Check if running in Farcaster miniapp environment
-        const isInMiniApp = typeof window !== 'undefined' && 'Farcaster' in window;
+        // Multiple checks to ensure we detect miniapp correctly
+        const hasFarcasterGlobal = typeof window !== 'undefined' && 'Farcaster' in window;
+        const hasFarcasterWindow = typeof window !== 'undefined' && (window as any).Farcaster;
+        
+        const isInMiniApp = hasFarcasterGlobal || hasFarcasterWindow;
+        
+        console.log('[Farcaster] Environment detection:', {
+          hasFarcasterGlobal,
+          hasFarcasterWindow,
+          isInMiniApp,
+          userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A'
+        });
+        
         setIsMiniApp(isInMiniApp);
 
         if (isInMiniApp) {
