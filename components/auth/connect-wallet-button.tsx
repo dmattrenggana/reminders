@@ -12,17 +12,35 @@ export function ConnectWalletButton() {
   const { disconnect } = useDisconnect();
 
   const handleConnect = () => {
-    // Cari konektor khusus Farcaster Miniapp
-    const fcConnector = connectors.find((c) => 
-      c.id === "farcasterMiniApp" || c.id === "io.farcaster.miniapp"
+    console.log("[ConnectWallet] Available connectors:", 
+      connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
     );
+    
+    // Cari konektor khusus Farcaster Miniapp - coba berbagai kemungkinan ID
+    const fcConnector = connectors.find((c) => {
+      const id = c.id?.toLowerCase();
+      const name = c.name?.toLowerCase() || '';
+      return (
+        id === "farcasterminiapp" ||
+        id === "io.farcaster.miniapp" ||
+        id === "farcaster" ||
+        name.includes("farcaster") ||
+        name.includes("miniapp")
+      );
+    });
+    
     if (fcConnector) {
-      console.log("Using Farcaster Miniapp connector");
+      console.log("[ConnectWallet] ✅ Found Farcaster connector:", {
+        id: fcConnector.id,
+        name: fcConnector.name,
+        type: fcConnector.type
+      });
       connect({ connector: fcConnector });
     } else {
       // Fallback untuk web browser (Injected/MetaMask)
-      console.log("Using injected connector for web");
-      connect({ connector: connectors[0] });
+      console.log("[ConnectWallet] Farcaster connector not found, using first available connector");
+      const injectedConnector = connectors.find((c) => c.id === "injected");
+      connect({ connector: injectedConnector || connectors[0] });
     }
   };
 

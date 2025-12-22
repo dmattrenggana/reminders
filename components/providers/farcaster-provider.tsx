@@ -108,8 +108,13 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
           // Per docs: "await sdk.actions.ready()"
           await sdk.actions.ready({});
           console.log('[Farcaster] ✅ ready() called successfully - splash screen should dismiss');
+          
+          // Store ready state so auto-connect knows when to proceed
+          (window as any).__farcasterReady = true;
         } catch (err: any) {
           console.error("[Farcaster] ❌ Ready call failed:", err);
+          // Still mark as ready even if call failed, so app can continue
+          (window as any).__farcasterReady = true;
         }
       };
       

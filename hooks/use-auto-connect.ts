@@ -35,11 +35,21 @@ export function useAutoConnect({
       isConnected,
       isLoaded,
       mounted,
-      connectorCount: connectors.length
+      connectorCount: connectors.length,
+      farcasterReady: typeof window !== 'undefined' ? (window as any).__farcasterReady : false
     });
     
-    // Add delay to ensure connectors are ready
-    const timer = setTimeout(() => {
+    // Wait for both SDK ready and connectors to be available
+    const checkAndConnect = () => {
+      // In miniapp, wait for ready() to be called first
+      const isReady = !isMiniApp || (typeof window !== 'undefined' && (window as any).__farcasterReady);
+      
+      if (!isReady) {
+        console.log("[Auto-Connect] Waiting for sdk.actions.ready() to complete...");
+        setTimeout(checkAndConnect, 200);
+        return;
+      }
+      
       if (isMiniApp && !isConnected) {
         console.log("[Auto-Connect] Detected Farcaster Miniapp, attempting auto-connect...");
         console.log("[Auto-Connect] Available connectors:", 
@@ -89,7 +99,10 @@ export function useAutoConnect({
           connect({ connector: injectedConnector });
         }
       }
-    }, 1500); // Increased delay to ensure SDK and connectors are fully ready
+    };
+    
+    // Start checking after a short delay to ensure everything is initialized
+    const timer = setTimeout(checkAndConnect, 500);
     
     return () => clearTimeout(timer);
   }, [mounted, isMiniApp, isConnected, isLoaded, connect, connectors]);
