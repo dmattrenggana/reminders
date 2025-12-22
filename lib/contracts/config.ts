@@ -131,3 +131,4 @@ export const REMINDER_VAULT_V4_ABI_EXPORT = REMINDER_VAULT_V4_ABI
 // Export aliases for backward compatibility
 export const VAULT_ABI = REMINDER_VAULT_ABI
 export const VAULT_ADDRESS = CONTRACTS.REMINDER_VAULT
+export const TOKEN_ADDRESS = CONTRACTS.COMMIT_TOKEN
