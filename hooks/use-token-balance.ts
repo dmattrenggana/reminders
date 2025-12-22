@@ -24,6 +24,13 @@ export function useTokenBalance() {
   
   // Alamat Kontrak RMNDtest kamu di Base
   const TOKEN_CONTRACT = "0x6ee85c2cfab33678de10a5e1634d86abb5eebb07";
+  
+  // Log address for debugging
+  useEffect(() => {
+    if (address) {
+      console.log("[TokenBalance] Using address:", address);
+    }
+  }, [address]);
 
   const { data, refetch, isLoading, error } = useReadContracts({
     contracts: [

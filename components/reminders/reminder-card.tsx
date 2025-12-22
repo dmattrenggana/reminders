@@ -97,14 +97,40 @@ export function ReminderCard({ reminder }: ReminderCardProps) {
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Target Time</p>
           <p className="text-xs font-semibold text-slate-600 flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            {formatDistanceToNow(new Date(reminder.reminderTime), { addSuffix: true })}
+            {(() => {
+              try {
+                const date = reminder.reminderTime instanceof Date 
+                  ? reminder.reminderTime 
+                  : new Date(typeof reminder.reminderTime === 'number' ? reminder.reminderTime * 1000 : reminder.reminderTime);
+                if (isNaN(date.getTime())) {
+                  return "Invalid date";
+                }
+                return formatDistanceToNow(date, { addSuffix: true });
+              } catch (error) {
+                console.error("[ReminderCard] Error formatting reminderTime:", error, reminder);
+                return "Invalid date";
+              }
+            })()}
           </p>
         </div>
-        {reminder.status === "active" && (
+        {reminder.status === "active" && reminder.confirmationDeadline && (
           <div className="space-y-0.5 text-right">
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Deadline</p>
             <p className="text-xs font-semibold text-red-500">
-              {formatDistanceToNow(new Date(reminder.confirmationDeadline), { addSuffix: true })}
+              {(() => {
+                try {
+                  const date = reminder.confirmationDeadline instanceof Date 
+                    ? reminder.confirmationDeadline 
+                    : new Date(typeof reminder.confirmationDeadline === 'number' ? reminder.confirmationDeadline * 1000 : reminder.confirmationDeadline);
+                  if (isNaN(date.getTime())) {
+                    return "Invalid date";
+                  }
+                  return formatDistanceToNow(date, { addSuffix: true });
+                } catch (error) {
+                  console.error("[ReminderCard] Error formatting confirmationDeadline:", error, reminder);
+                  return "Invalid date";
+                }
+              })()}
             </p>
           </div>
         )}
