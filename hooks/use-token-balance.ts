@@ -25,16 +25,16 @@ export function useTokenBalance() {
   // Alamat Kontrak RMNDtest kamu di Base
   const TOKEN_CONTRACT = "0x6ee85c2cfab33678de10a5e1634d86abb5eebb07";
 
-  const { data, refetch, isLoading } = useReadContracts({
+  const { data, refetch, isLoading, error } = useReadContracts({
     contracts: [
       {
-        address: TOKEN_CONTRACT,
+        address: TOKEN_CONTRACT as `0x${string}`,
         abi: erc20Abi,
         functionName: "balanceOf",
         args: address ? [address] : undefined,
       },
       {
-        address: TOKEN_CONTRACT,
+        address: TOKEN_CONTRACT as `0x${string}`,
         abi: erc20Abi,
         functionName: "symbol",
       },
@@ -43,8 +43,14 @@ export function useTokenBalance() {
       enabled: !!address && isConnected,
       refetchInterval: 10000, // Refresh every 10 seconds
       staleTime: 5000, // Consider data stale after 5 seconds
+      retry: 3, // Retry 3 times on failure
     }
   });
+
+  // Log errors for debugging
+  if (error) {
+    console.warn("[TokenBalance] Error fetching balance:", error);
+  }
 
   return {
     // Menggunakan BigInt(0) agar lolos build Vercel

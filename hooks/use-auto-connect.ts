@@ -39,9 +39,11 @@ export function useAutoConnect({
         
         if (fcConnector) {
           console.log("[Auto-Connect] Using Farcaster Miniapp connector:", fcConnector.id);
-          connect({ connector: fcConnector }).catch((err) => {
+          try {
+            connect({ connector: fcConnector });
+          } catch (err) {
             console.warn("[Auto-Connect] Connection failed (user may need to connect manually):", err);
-          });
+          }
         } else {
           console.warn("[Auto-Connect] Farcaster connector not found. Available connectors:", 
             connectors.map(c => ({ id: c.id, name: c.name }))
