@@ -323,12 +323,39 @@ export default function DashboardClient() {
     }
     if (typeof balance === 'bigint') {
       try {
+        // Convert from wei (18 decimals) to token units
         const num = Number(formatUnits(balance, 18));
+        
+        // Log for debugging
+        console.log("[Dashboard] Formatting balance:", {
+          raw: balance.toString(),
+          formatted: num,
+          address
+        });
+        
+        // Format with 2 decimal places, but show more if needed
+        if (num === 0) {
+          return "0.00";
+        }
+        if (num < 0.01) {
+          return num.toFixed(6); // Show more decimals for very small amounts
+        }
         return num.toFixed(2);
       } catch (error) {
-        console.warn("[Dashboard] Error formatting balance:", error);
+        console.error("[Dashboard] Error formatting balance:", error, {
+          balance,
+          balanceType: typeof balance,
+          address
+        });
         return "0.00";
       }
+    }
+    if (balance !== undefined && balance !== null) {
+      console.warn("[Dashboard] Balance is not bigint:", {
+        balance,
+        type: typeof balance,
+        address
+      });
     }
     return "0.00";
   }, [balance, isConnected, address]);
