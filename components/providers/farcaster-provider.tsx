@@ -101,10 +101,11 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
             // Mark as ready anyway to prevent infinite splash screen
             (window as any).__farcasterReady = true;
           }
-            
-            // Get context and user data (non-blocking, can happen after ready())
-            // Note: Some Farcaster SDK internal API calls may fail (e.g., /~api/v2/unseen)
-            // These errors are harmless and don't affect functionality
+          
+          // Get context and user data (non-blocking, can happen after ready())
+          // Note: Some Farcaster SDK internal API calls may fail (e.g., /~api/v2/unseen)
+          // These errors are harmless and don't affect functionality
+          if (sdk) {
             try {
               console.log('[Farcaster] Fetching context...');
               const context = await sdk.context;
@@ -133,14 +134,10 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
               // (e.g., unseen notifications API) but this doesn't affect core functionality
               console.warn("[Farcaster] Context fetch error (non-critical, SDK internal API may be unavailable):", contextError?.message || contextError);
             }
-            
-            // Set loaded to true after SDK is initialized
-            setIsLoaded(true);
-          } catch (importError: any) {
-            console.error("[Farcaster] SDK import error:", importError?.message || importError);
-            setError("Failed to load Farcaster SDK");
-            setIsLoaded(true); // Still allow app to load
           }
+          
+          // Set loaded to true after SDK is initialized
+          setIsLoaded(true);
         } else {
           // Web browser mode - no Farcaster SDK needed
           console.log('[Farcaster] Running in web browser mode');
