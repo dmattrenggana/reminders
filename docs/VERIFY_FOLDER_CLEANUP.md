@@ -13,17 +13,17 @@ Folder `app/verify/` sudah dihapus karena:
 ## 🔍 **Analisis Folder `/verify`**
 
 ### **Sebelum Cleanup:**
-```
+\`\`\`
 app/
   verify/
     page.tsx  ← Sudah dihapus
-```
+\`\`\`
 
 ### **Setelah Cleanup:**
-```
+\`\`\`
 app/
   (verify folder dihapus)
-```
+\`\`\`
 
 ---
 
@@ -60,4 +60,3 @@ app/
 ---
 
 **Last Updated:** December 2024
-

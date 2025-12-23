@@ -31,24 +31,24 @@
 
 Setelah refactoring, koneksi wallet menggunakan struktur modular:
 
-```
+\`\`\`
 lib/utils/farcaster-connector.ts  ← Utility functions terpusat
     ↓
 components/auth/connect-wallet-button.tsx  ← UI Component
 hooks/use-auto-connect.ts  ← Auto-connect hook
-```
+\`\`\`
 
 ### **2. Flow Koneksi**
 
 #### **A. Auto-Connect (Otomatis)**
 
-```typescript
+\`\`\`typescript
 // 1. App loads
 // 2. FarcasterProvider initialize SDK
 // 3. useAutoConnect hook runs
 // 4. Connector auto-connects (jika user sudah punya wallet)
 // 5. isConnected = true
-```
+\`\`\`
 
 **File:** `hooks/use-auto-connect.ts`
 - Otomatis connect jika user sudah punya wallet
@@ -57,7 +57,7 @@ hooks/use-auto-connect.ts  ← Auto-connect hook
 
 #### **B. Manual Connect (User Click Button)**
 
-```typescript
+\`\`\`typescript
 // 1. User klik "Connect Wallet" button
 // 2. handleConnect() dipanggil
 // 3. findFarcasterConnector() mencari connector
@@ -65,7 +65,7 @@ hooks/use-auto-connect.ts  ← Auto-connect hook
 // 5. Farcaster client handle wallet selection
 // 6. User approve connection
 // 7. isConnected = true
-```
+\`\`\`
 
 **File:** `components/auth/connect-wallet-button.tsx`
 
@@ -75,7 +75,7 @@ hooks/use-auto-connect.ts  ← Auto-connect hook
 
 ### **1. Di Component (Manual Connect)**
 
-```typescript
+\`\`\`typescript
 import { ConnectWalletButton } from "@/components/auth/connect-wallet-button";
 
 export function MyComponent() {
@@ -85,7 +85,7 @@ export function MyComponent() {
     </div>
   );
 }
-```
+\`\`\`
 
 **Cara Kerja:**
 - Button otomatis detect apakah sudah connected
@@ -94,7 +94,7 @@ export function MyComponent() {
 
 ### **2. Auto-Connect (Otomatis)**
 
-```typescript
+\`\`\`typescript
 import { useAutoConnect } from "@/hooks/use-auto-connect";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { useAccount } from "wagmi";
@@ -115,7 +115,7 @@ export function MyComponent() {
 
   // Rest of component...
 }
-```
+\`\`\`
 
 **Cara Kerja:**
 - Hook otomatis detect environment (miniapp atau web)
@@ -124,7 +124,7 @@ export function MyComponent() {
 
 ### **3. Menggunakan Utility Function Langsung**
 
-```typescript
+\`\`\`typescript
 import { findFarcasterConnector, isFarcasterMiniApp } from "@/lib/utils/farcaster-connector";
 import { useConnect } from "wagmi";
 
@@ -143,28 +143,28 @@ export function MyCustomComponent() {
 
   return <button onClick={handleConnect}>Connect</button>;
 }
-```
+\`\`\`
 
 ---
 
 ## 🔍 **Perbedaan Sebelum vs Sesudah**
 
 ### **Sebelum Refactoring:**
-```typescript
+\`\`\`typescript
 // ❌ Duplikasi code di setiap component
 const fcConnector = connectors.find((c) => {
   const id = c.id?.toLowerCase();
   return id === "farcasterminiapp" || id.includes("farcaster");
 });
-```
+\`\`\`
 
 ### **Sesudah Refactoring:**
-```typescript
+\`\`\`typescript
 // ✅ Centralized utility function
 import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
 
 const fcConnector = findFarcasterConnector(connectors);
-```
+\`\`\`
 
 **Manfaat:**
 - ✅ Tidak ada duplikasi code
@@ -176,7 +176,7 @@ const fcConnector = findFarcasterConnector(connectors);
 
 ## 📁 **File Structure**
 
-```
+\`\`\`
 lib/
   utils/
     farcaster-connector.ts  ← Utility functions (NEW)
@@ -196,7 +196,7 @@ components/
 
 hooks/
   use-auto-connect.ts  ← Auto-connect hook (UPDATED)
-```
+\`\`\`
 
 ---
 
@@ -212,4 +212,3 @@ hooks/
 ---
 
 **Last Updated:** December 2024
-

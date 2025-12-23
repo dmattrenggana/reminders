@@ -45,7 +45,7 @@ Halaman `/verify` adalah **tool untuk developer/admin** untuk memverifikasi stat
 
 ## 📁 **Struktur File Setelah Fix**
 
-```
+\`\`\`
 app/
   page.tsx              ← Homepage (Dashboard)
   verify/
@@ -54,7 +54,7 @@ app/
     page.tsx            ← Config Page (Lain lagi)
   deploy/
     page.tsx            ← Deploy Page (Lain lagi)
-```
+\`\`\`
 
 **Perbedaan:**
 - `/` (homepage) → Dashboard dengan floating create button
@@ -120,4 +120,3 @@ app/
 ---
 
 **Last Updated:** December 2024
-

@@ -86,4 +86,3 @@ Semua implementasi sudah benar dan siap untuk testing di Farcaster miniapp.
 ---
 
 **Last Updated:** December 2024
-

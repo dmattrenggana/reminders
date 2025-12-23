@@ -41,11 +41,11 @@
 
 Jika ada file yang masih import button yang dihapus:
 
-```typescript
+\`\`\`typescript
 // ❌ ERROR: File tidak ada lagi
 import { UnifiedConnectButton } from "@/components/auth/unified-connect-button";
 import { ConnectFarcasterButton } from "@/components/auth/connect-farcaster-button";
-```
+\`\`\`
 
 **Gejala:**
 - Build error atau runtime error
@@ -80,10 +80,10 @@ import { ConnectFarcasterButton } from "@/components/auth/connect-farcaster-butt
 
 ### **1. Cek Apakah Ada Import Error**
 
-```bash
+\`\`\`bash
 # Cek apakah ada file yang masih import button yang dihapus
 grep -r "UnifiedConnectButton\|ConnectFarcasterButton" .
-```
+\`\`\`
 
 **Jika ada hasil:**
 - Ganti import dengan `ConnectWalletButton`
@@ -98,9 +98,9 @@ Buka browser console dan cek:
 
 ### **3. Cek Build Logs**
 
-```bash
+\`\`\`bash
 npm run build
-```
+\`\`\`
 
 Cek apakah ada error atau warning.
 
@@ -111,13 +111,13 @@ Cek apakah ada error atau warning.
 ### **Jika Masih Menggunakan Button yang Dihapus:**
 
 **Ganti dengan:**
-```typescript
+\`\`\`typescript
 // ❌ LAMA (tidak ada lagi)
 import { UnifiedConnectButton } from "@/components/auth/unified-connect-button";
 
 // ✅ BARU (gunakan ini)
 import { ConnectWalletButton } from "@/components/auth/connect-wallet-button";
-```
+\`\`\`
 
 ### **Jika Tampilan Berbeda:**
 
@@ -157,4 +157,3 @@ import { ConnectWalletButton } from "@/components/auth/connect-wallet-button";
 ---
 
 **Last Updated:** December 2024
-

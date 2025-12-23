@@ -54,7 +54,7 @@ Karena workflow sudah berubah dari notification via Farcaster Frames ke helper-b
 
 ## 📁 **Struktur File Setelah Refactoring**
 
-```
+\`\`\`
 lib/
   utils/
     farcaster-connector.ts  ← NEW: Centralized connector utilities
@@ -82,7 +82,7 @@ app/
       score/route.ts  ← KEEP: Masih digunakan untuk helper score
     cron/
       process-reminders/route.ts  ← KEEP: Masih digunakan untuk burn
-```
+\`\`\`
 
 ## 🔧 **Manfaat Refactoring**
 
@@ -135,4 +135,3 @@ app/
 **Status:** ✅ **Refactoring Complete**  
 **Date:** December 2024  
 **Impact:** Reduced code duplication, improved modularity, cleaner codebase
-

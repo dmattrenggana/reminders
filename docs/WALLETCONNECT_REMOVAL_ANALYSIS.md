@@ -32,13 +32,13 @@
 ### **1. Connectors yang Digunakan**
 
 **File: `app/providers.tsx`**
-```typescript
+\`\`\`typescript
 connectors: [
   farcasterConnector,  // ✅ Untuk Farcaster miniapp
   injected(),          // ✅ Untuk web browser (MetaMask, dll)
   // ❌ TIDAK ada WalletConnect connector
 ]
-```
+\`\`\`
 
 **Kesimpulan:** WalletConnect TIDAK digunakan sebagai connector.
 
@@ -47,9 +47,9 @@ connectors: [
 ### **2. Sumber Error WalletConnect**
 
 **Error:**
-```
+\`\`\`
 Connecting to 'https://explorer-api.walletconnect.com/v3/wallets?projectId=...'
-```
+\`\`\`
 
 **Sumber:**
 - Privy (dependency transitif dari `@farcaster/miniapp-wagmi-connector`)
@@ -162,14 +162,14 @@ Connecting to 'https://explorer-api.walletconnect.com/v3/wallets?projectId=...'
 ### **File: `vercel.json`**
 
 **BEFORE:**
-```json
+\`\`\`json
 "connect-src 'self' ... https://explorer-api.walletconnect.com https://*.walletconnect.com ..."
-```
+\`\`\`
 
 **AFTER:**
-```json
+\`\`\`json
 "connect-src 'self' ... (remove semua walletconnect domains)"
-```
+\`\`\`
 
 **Perubahan:**
 - Remove: `https://explorer-api.walletconnect.com`
@@ -204,4 +204,3 @@ Connecting to 'https://explorer-api.walletconnect.com/v3/wallets?projectId=...'
 - `docs/CSP_WALLETCONNECT_ERROR.md`
 - `docs/CONSOLE_ERRORS_EXPLANATION.md`
 - `app/providers.tsx`
-

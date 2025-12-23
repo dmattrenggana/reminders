@@ -28,9 +28,9 @@
 
 ### **3. Race Condition dengan Mounted State** ⚠️
 **Masalah:** Di `app/providers.tsx`, ada `mounted` state yang menunda render:
-```typescript
+\`\`\`typescript
 {mounted ? children : null}
-```
+\`\`\`
 
 **Impact:** Jika `ready()` dipanggil sebelum children mount, mungkin tidak efektif.
 
@@ -47,7 +47,7 @@
 - ✅ Tidak menunggu React atau component mount
 
 **Code:**
-```typescript
+\`\`\`typescript
 <head>
   <script
     dangerouslySetInnerHTML={{
@@ -77,7 +77,7 @@
     }}
   />
 </head>
-```
+\`\`\`
 
 **Keuntungan:**
 - ✅ Call `ready()` **SEBELUM** React mount
@@ -95,7 +95,7 @@
 - ✅ Prevent duplicate calls dengan flag `__farcasterReady`
 
 **Code:**
-```typescript
+\`\`\`typescript
 // Check if ready() was already called from layout script
 const alreadyCalled = typeof window !== 'undefined' && (window as any).__farcasterReady;
 
@@ -108,7 +108,7 @@ if (!alreadyCalled) {
 } else {
   console.log('[Farcaster] ✅ ready() already called from layout script, skipping duplicate call');
 }
-```
+\`\`\`
 
 **Keuntungan:**
 - ✅ Backup jika layout script tidak jalan
@@ -120,20 +120,20 @@ if (!alreadyCalled) {
 ## 📊 **Flow Diagram**
 
 ### **BEFORE (Masalah):**
-```
+\`\`\`
 Page Load → React Mount → useEffect → Import SDK → Call ready()
                                     ↑
                               Terlambat! Splash screen masih muncul
-```
+\`\`\`
 
 ### **AFTER (Fixed):**
-```
+\`\`\`
 Page Load → Layout Script → Call ready() IMMEDIATELY ✅
          ↓
     React Mount → useEffect → Import SDK → Check if already called
                                          ↓
                                     Skip (already called)
-```
+\`\`\`
 
 ---
 
@@ -201,4 +201,3 @@ Page Load → Layout Script → Call ready() IMMEDIATELY ✅
 
 - [Farcaster Miniapp Docs - Ready()](https://miniapps.farcaster.xyz/docs/sdk/actions/ready)
 - [Next.js Script Tag](https://nextjs.org/docs/pages/api-reference/components/script)
-

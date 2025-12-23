@@ -84,9 +84,9 @@ Halaman `/verify` adalah **developer tool** untuk:
 - ✅ Tidak ada impact ke fungsionalitas
 
 **Cara:**
-```bash
+\`\`\`bash
 rm -rf app/verify
-```
+\`\`\`
 
 ### **Opsi 2: Keep (Jika masih berguna untuk debugging)**
 - ✅ Quick diagnostic tool
@@ -117,4 +117,3 @@ rm -rf app/verify
 ---
 
 **Last Updated:** December 2024
-

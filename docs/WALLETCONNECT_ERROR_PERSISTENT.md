@@ -4,11 +4,11 @@
 
 Error WalletConnect masih muncul di console meskipun sudah dihapus dari CSP:
 
-```
+\`\`\`
 Connecting to 'https://explorer-api.walletconnect.com/v3/wallets?projectId=...' 
 violates the following Content Security Policy directive: 
 "connect-src 'self' https://farcaster.xyz ... https://privy.farcaster.xyz ... https://cloudflareinsights.com"
-```
+\`\`\`
 
 ## 🔍 **Root Cause**
 
@@ -20,14 +20,14 @@ violates the following Content Security Policy directive:
 - Tapi Vercel deployment masih menggunakan CSP yang lama
 
 **CSP di Error (LAMA):**
-```
+\`\`\`
 connect-src 'self' ... https://privy.farcaster.xyz ... https://cloudflareinsights.com
-```
+\`\`\`
 
 **CSP di vercel.json (BARU):**
-```
+\`\`\`
 connect-src 'self' ... (tanpa Privy/WalletConnect/Cloudflare)
-```
+\`\`\`
 
 ### **2. Privy Masih Mencoba Connect ke WalletConnect** ⚠️
 
@@ -68,7 +68,7 @@ connect-src 'self' ... (tanpa Privy/WalletConnect/Cloudflare)
 Tambahkan error handler untuk suppress WalletConnect errors:
 
 **File: `app/layout.tsx`**
-```typescript
+\`\`\`typescript
 // Di script tag, tambahkan:
 window.addEventListener('error', (event) => {
   // Suppress WalletConnect CSP errors (harmless - dari Privy dependency)
@@ -79,7 +79,7 @@ window.addEventListener('error', (event) => {
     return false;
   }
 }, true);
-```
+\`\`\`
 
 ---
 
@@ -89,9 +89,9 @@ window.addEventListener('error', (event) => {
 
 Bisa tambahkan WalletConnect kembali ke CSP (tapi ini tidak direkomendasikan karena kita tidak menggunakannya):
 
-```json
+\`\`\`json
 "connect-src ... https://explorer-api.walletconnect.com https://*.walletconnect.com ..."
-```
+\`\`\`
 
 **Note:** Ini akan menghilangkan error, tapi tidak direkomendasikan karena kita tidak menggunakan WalletConnect.
 
@@ -168,4 +168,3 @@ Bisa tambahkan WalletConnect kembali ke CSP (tapi ini tidak direkomendasikan kar
 
 **Last Updated:** After WalletConnect/Privy/Cloudflare removal
 **Status:** ⚠️ Waiting for Vercel deployment update
-

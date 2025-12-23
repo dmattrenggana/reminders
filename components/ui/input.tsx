@@ -21,4 +21,3 @@ function Input({
 }
 
 export { Input }
-

@@ -27,7 +27,7 @@ Berdasarkan [Farcaster Mini Apps Documentation](https://miniapps.farcaster.xyz/d
 - Script mencoba call `ready()` tapi SDK belum ada
 
 **Code Saat Ini:**
-```typescript
+\`\`\`typescript
 // app/layout.tsx - Script di <head>
 const sdk = window.Farcaster?.sdk || window.__farcasterSDK;
 if (sdk && sdk.actions && sdk.actions.ready) {
@@ -35,7 +35,7 @@ if (sdk && sdk.actions && sdk.actions.ready) {
 } else {
   // SDK not available yet - akan dipanggil dari FarcasterProvider
 }
-```
+\`\`\`
 
 **Problem:**
 - Script jalan terlalu cepat
@@ -84,7 +84,7 @@ if (sdk && sdk.actions && sdk.actions.ready) {
 ## 📝 **Implementasi yang Diperbaiki**
 
 ### **Layout Script (Early Attempt):**
-```typescript
+\`\`\`typescript
 // Poll untuk SDK dengan timeout
 (function() {
   let attempts = 0;
@@ -116,10 +116,10 @@ if (sdk && sdk.actions && sdk.actions.ready) {
     }
   }, 100); // Check every 100ms
 })();
-```
+\`\`\`
 
 ### **FarcasterProvider (Primary Caller):**
-```typescript
+\`\`\`typescript
 // Setelah SDK import, call ready() immediately
 const sdkModule = await import("@farcaster/miniapp-sdk");
 sdk = sdkModule.sdk;
@@ -135,7 +135,7 @@ if (sdk && sdk.actions && sdk.actions.ready) {
     window.__farcasterReady = true; // Set immediately
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -191,4 +191,3 @@ if (sdk && sdk.actions && sdk.actions.ready) {
 **References:**
 - [Farcaster Mini Apps - Sharing Guide](https://miniapps.farcaster.xyz/docs/guides/sharing)
 - [Farcaster Mini Apps - Loading Guide](https://miniapps.farcaster.xyz/docs/guides/loading)
-

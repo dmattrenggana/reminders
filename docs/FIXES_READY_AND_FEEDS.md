@@ -11,7 +11,7 @@
 - ✅ Set `__farcasterReady` flag immediately untuk prevent blocking
 
 **Perubahan:**
-```typescript
+\`\`\`typescript
 // BEFORE: await sdk.actions.ready({})
 // AFTER: Non-blocking call dengan multiple fallbacks
 sdk.actions.ready({}).then(() => {
@@ -22,7 +22,7 @@ sdk.actions.ready({}).then(() => {
   (window as any).__farcasterReady = true; // Mark as ready anyway
 });
 (window as any).__farcasterReady = true; // Set immediately
-```
+\`\`\`
 
 ---
 
@@ -35,7 +35,7 @@ sdk.actions.ready({}).then(() => {
 - ✅ My Feed: Semua reminder yang dibuat oleh user (resolved atau belum)
 
 **Perubahan di `dashboard-client.tsx`:**
-```typescript
+\`\`\`typescript
 const stats = useMemo(() => {
   const safeReminders = Array.isArray(reminders) ? reminders : [];
   
@@ -57,7 +57,7 @@ const stats = useMemo(() => {
     myFeed
   };
 }, [reminders, address]);
-```
+\`\`\`
 
 ---
 
@@ -79,17 +79,17 @@ const stats = useMemo(() => {
 **Perubahan di `reminder-card.tsx`:**
 
 1. **Added props untuk feed type:**
-```typescript
+\`\`\`typescript
 interface ReminderCardProps {
   reminder: Reminder
   feedType?: "public" | "my"
   onHelpRemind?: (reminder: Reminder) => void
   onConfirm?: (reminderId: number) => void
 }
-```
+\`\`\`
 
 2. **Added logic untuk T-1 hour window:**
-```typescript
+\`\`\`typescript
 const canInteract = useMemo(() => {
   if (reminder.isResolved) return false
   
@@ -102,10 +102,10 @@ const canInteract = useMemo(() => {
   
   return now >= oneHourBefore && now <= confirmationDeadline
 }, [reminder])
-```
+\`\`\`
 
 3. **Updated button rendering:**
-```typescript
+\`\`\`typescript
 {/* Public Feed: Help Remind Me button */}
 {actualFeedType === "public" && !reminder.isResolved && (
   <button
@@ -144,10 +144,10 @@ const canInteract = useMemo(() => {
     {canInteract ? "Confirm Reminder" : "Confirm Reminder (Available T-1 hour)"}
   </button>
 )}
-```
+\`\`\`
 
 4. **Updated ReminderList di dashboard:**
-```typescript
+\`\`\`typescript
 <TabsContent value="public">
   <ReminderList 
     items={stats.publicFeed}
@@ -171,7 +171,7 @@ const canInteract = useMemo(() => {
     onConfirm={confirmReminder}
   />
 </TabsContent>
-```
+\`\`\`
 
 ---
 
@@ -225,4 +225,3 @@ const canInteract = useMemo(() => {
 - [ ] Button disabled berwarna abu-abu
 - [ ] Stats calculation konsisten
 - [ ] Dashboard tidak menunjukkan inkonsistensi jumlah reminder
-

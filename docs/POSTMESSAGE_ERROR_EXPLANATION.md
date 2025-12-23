@@ -2,11 +2,11 @@
 
 ## 📋 **Error yang Terlihat**
 
-```
+\`\`\`
 Failed to execute 'postMessage' on 'DOMWindow': 
 The target origin provided ('https://wallet.farcaster.xyz') 
 does not match the recipient window's origin ('https://farcaster.xyz').
-```
+\`\`\`
 
 **File:** `index-Dfh4Ario.js:104` (bundle dari library eksternal)
 
@@ -47,7 +47,7 @@ does not match the recipient window's origin ('https://farcaster.xyz').
 ### **Opsi 1: Suppress Error (Recommended)**
 Tambahkan error handler untuk suppress postMessage errors:
 
-```typescript
+\`\`\`typescript
 // Di app/layout.tsx atau app/providers.tsx
 useEffect(() => {
   // Suppress postMessage errors from Farcaster wallet connector
@@ -69,16 +69,16 @@ useEffect(() => {
     window.onerror = originalError;
   };
 }, []);
-```
+\`\`\`
 
 ### **Opsi 2: Update CSP (Jika Perlu)**
 Pastikan CSP mengizinkan komunikasi dengan wallet subdomain:
 
-```json
+\`\`\`json
 {
   "connect-src": "... https://wallet.farcaster.xyz https://*.farcaster.xyz ..."
 }
-```
+\`\`\`
 
 **Note:** CSP sudah include `https://*.farcaster.xyz` di `vercel.json`, jadi ini bukan masalah CSP.
 
@@ -139,4 +139,3 @@ Pastikan CSP mengizinkan komunikasi dengan wallet subdomain:
 ---
 
 **Last Updated:** December 2024
-

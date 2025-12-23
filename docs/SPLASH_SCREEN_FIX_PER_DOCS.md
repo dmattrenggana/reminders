@@ -34,11 +34,11 @@ Berdasarkan [Farcaster Mini Apps - Loading Guide](https://miniapps.farcaster.xyz
 - Per docs: "Don't call ready until your interface has loaded"
 
 **Current Implementation:**
-```typescript
+\`\`\`typescript
 // app/layout.tsx - Script di <head>
 // Polling untuk SDK dan call ready() segera setelah ditemukan
 // ❌ Tapi interface belum ready!
-```
+\`\`\`
 
 **Per Docs:**
 > "Call ready when your interface is ready to be displayed"
@@ -79,7 +79,7 @@ Berdasarkan [Farcaster Mini Apps - Loading Guide](https://miniapps.farcaster.xyz
 > "If you're using React, call `ready` inside a `useEffect` hook"
 
 **Implementation:**
-```typescript
+\`\`\`typescript
 // components/providers/farcaster-provider.tsx
 useEffect(() => {
   const init = async () => {
@@ -99,7 +99,7 @@ useEffect(() => {
   };
   init();
 }, []); // Run once on mount
-```
+\`\`\`
 
 **Keuntungan:**
 - ✅ Menggunakan `useEffect` seperti yang direkomendasikan docs
@@ -117,12 +117,12 @@ useEffect(() => {
 - Layout script hanya backup jika FarcasterProvider tidak jalan
 
 **Implementation:**
-```typescript
+\`\`\`typescript
 // app/layout.tsx - Early attempt (optional)
 // Poll untuk SDK, tapi FarcasterProvider adalah primary
 // Jika SDK ditemukan early, call ready() untuk faster dismiss
 // Jika tidak, FarcasterProvider akan handle
-```
+\`\`\`
 
 ---
 
@@ -135,11 +135,11 @@ useEffect(() => {
   3. ✅ Tidak ada jitter (setelah initial render)
 
 **Flow:**
-```
+\`\`\`
 Page Load → React Mount → useEffect → Import SDK → Interface Ready → Call ready()
                                                                     ↑
                                                           PERFECT TIMING!
-```
+\`\`\`
 
 ---
 
@@ -183,7 +183,7 @@ Page Load → React Mount → useEffect → Import SDK → Interface Ready → C
 ## 📝 **Implementasi yang Diperbaiki**
 
 ### **FarcasterProvider (PRIMARY - Per Docs):**
-```typescript
+\`\`\`typescript
 useEffect(() => {
   const init = async () => {
     // ... environment detection ...
@@ -211,14 +211,14 @@ useEffect(() => {
   };
   init();
 }, []); // Run once on mount - per React docs
-```
+\`\`\`
 
 ### **Layout Script (EARLY ATTEMPT - Optional):**
-```typescript
+\`\`\`typescript
 // Early attempt untuk faster dismiss
 // Tapi FarcasterProvider adalah PRIMARY caller
 // Per docs: React apps should use useEffect
-```
+\`\`\`
 
 ---
 
@@ -242,4 +242,3 @@ useEffect(() => {
 **References:**
 - [Farcaster Mini Apps - Loading Guide](https://miniapps.farcaster.xyz/docs/guides/loading)
 - [Farcaster Mini Apps - Agents Checklist](https://miniapps.farcaster.xyz/docs/guides/agents-checklist)
-

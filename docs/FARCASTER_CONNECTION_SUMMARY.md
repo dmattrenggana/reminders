@@ -88,4 +88,3 @@ Semua komponen konektivitas Farcaster miniapp sudah diverifikasi dan **SESUAI** 
 ---
 
 **Last Updated:** December 2024
-

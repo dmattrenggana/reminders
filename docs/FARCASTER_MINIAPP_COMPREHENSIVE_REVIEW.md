@@ -43,11 +43,11 @@ Berdasarkan [Farcaster Mini Apps Documentation](https://miniapps.farcaster.xyz/d
 - Per docs: "Call ready when your interface is ready to be displayed"
 
 **Current Implementation:**
-```typescript
+\`\`\`typescript
 // app/layout.tsx - Script di <head>
 // Polling untuk SDK dan call ready() segera setelah ditemukan
 // ❌ Tapi interface belum ready!
-```
+\`\`\`
 
 **Per Dokumentasi:**
 > "Call ready when your interface is ready to be displayed"
@@ -67,7 +67,7 @@ Berdasarkan [Farcaster Mini Apps Documentation](https://miniapps.farcaster.xyz/d
 - `ready()` dipanggil di FarcasterProvider, tapi children belum render
 
 **Current Implementation:**
-```typescript
+\`\`\`typescript
 // app/providers.tsx
 const [mounted, setMounted] = useState(false);
 
@@ -80,7 +80,7 @@ return (
     {mounted ? children : null}  // ⚠️ Delay render
   </FarcasterProvider>
 );
-```
+\`\`\`
 
 **Impact:**
 - `ready()` dipanggil sebelum interface ready
@@ -96,10 +96,10 @@ return (
 - Tidak ada `farcaster.json` di root
 
 **Current Structure:**
-```
+\`\`\`
 app/manifest.json  ✅ (ada)
 farcaster.json    ❌ (tidak ada)
-```
+\`\`\`
 
 **Per Dokumentasi:**
 - Manifest bisa di root atau sesuai konfigurasi
@@ -131,21 +131,21 @@ farcaster.json    ❌ (tidak ada)
 - Atau call `ready()` setelah `mounted = true`
 
 **Current:**
-```typescript
+\`\`\`typescript
 const [mounted, setMounted] = useState(false);
 useEffect(() => { setMounted(true); }, []);
 return <FarcasterProvider>{mounted ? children : null}</FarcasterProvider>;
-```
+\`\`\`
 
 **Fixed:**
-```typescript
+\`\`\`typescript
 // Option 1: Remove mounted state
 return <FarcasterProvider>{children}</FarcasterProvider>;
 
 // Option 2: Set mounted immediately
 const [mounted, setMounted] = useState(true); // Set to true immediately
 return <FarcasterProvider>{mounted ? children : null}</FarcasterProvider>;
-```
+\`\`\`
 
 **Rekomendasi:** **Option 1** - Remove mounted state, tidak perlu delay render
 
@@ -201,7 +201,7 @@ return <FarcasterProvider>{mounted ? children : null}</FarcasterProvider>;
 ### **1. Remove Layout Script (Recommended)**
 
 **File: `app/layout.tsx`**
-```typescript
+\`\`\`typescript
 // BEFORE: Script tag dengan polling untuk SDK
 <script dangerouslySetInnerHTML={{ __html: `...` }} />
 
@@ -216,12 +216,12 @@ return <FarcasterProvider>{mounted ? children : null}</FarcasterProvider>;
     `,
   }}
 />
-```
+\`\`\`
 
 ### **2. Fix Providers Mounted State**
 
 **File: `app/providers.tsx`**
-```typescript
+\`\`\`typescript
 // BEFORE:
 const [mounted, setMounted] = useState(false);
 useEffect(() => { setMounted(true); }, []);
@@ -233,12 +233,12 @@ return <FarcasterProvider>{children}</FarcasterProvider>;
 // AFTER (Option 2 - If needed):
 const [mounted] = useState(true); // Set immediately
 return <FarcasterProvider>{mounted ? children : null}</FarcasterProvider>;
-```
+\`\`\`
 
 ### **3. Ensure Ready() Called After Interface Ready**
 
 **File: `components/providers/farcaster-provider.tsx`**
-```typescript
+\`\`\`typescript
 // Current implementation is GOOD
 // Just ensure ready() is called AFTER children render
 // Add check for document.readyState if needed
@@ -264,7 +264,7 @@ useEffect(() => {
   };
   init();
 }, []);
-```
+\`\`\`
 
 ---
 
@@ -292,4 +292,3 @@ useEffect(() => {
 **References:**
 - [Farcaster Mini Apps - Loading Guide](https://miniapps.farcaster.xyz/docs/guides/loading)
 - [Farcaster Mini Apps - Agents Checklist](https://miniapps.farcaster.xyz/docs/guides/agents-checklist)
-

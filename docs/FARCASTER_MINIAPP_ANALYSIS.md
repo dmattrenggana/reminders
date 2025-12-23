@@ -12,24 +12,24 @@ Berdasarkan dokumentasi resmi dari [miniapps.farcaster.xyz](https://miniapps.far
 **Requirement:** Node.js 22.11.0 or higher (LTS recommended)
 
 **Status Kita:**
-```json
+\`\`\`json
 // package.json
 "engines": {
   "node": ">=22.11.0"
 }
-```
+\`\`\`
 ✅ **PASS** - Sudah sesuai requirement
 
 ### **2. Package Installation** ✅
 **Requirement:** Install `@farcaster/miniapp-sdk`
 
 **Status Kita:**
-```json
+\`\`\`json
 "dependencies": {
   "@farcaster/miniapp-sdk": "latest",
   "@farcaster/miniapp-wagmi-connector": "latest"
 }
-```
+\`\`\`
 ✅ **PASS** - Sudah terinstall dengan benar
 
 ---
@@ -42,14 +42,14 @@ Berdasarkan dokumentasi resmi dari [miniapps.farcaster.xyz](https://miniapps.far
 > "After your app loads, you must call `sdk.actions.ready()` to hide the splash screen"
 
 **Implementasi Kita:**
-```typescript
+\`\`\`typescript
 // components/providers/farcaster-provider.tsx
 const sdkModule = await import("@farcaster/miniapp-sdk");
 sdk = sdkModule.sdk;
 
 // CRITICAL: Call ready() IMMEDIATELY
 await sdk.actions.ready({});
-```
+\`\`\`
 
 ✅ **PASS** - Sudah sesuai dengan dokumentasi
 - ✅ Dynamic import untuk code splitting
@@ -65,7 +65,7 @@ await sdk.actions.ready({});
 > Mini apps detect environment via `'Farcaster' in window`
 
 **Implementasi Kita:**
-```typescript
+\`\`\`typescript
 // lib/utils/farcaster-connector.ts
 export function isFarcasterMiniApp(): boolean {
   if (typeof window === 'undefined') return false;
@@ -73,7 +73,7 @@ export function isFarcasterMiniApp(): boolean {
   const hasFarcasterWindow = !!(window as any).Farcaster;
   return hasFarcasterGlobal || hasFarcasterWindow;
 }
-```
+\`\`\`
 
 ✅ **PASS** - Sudah sesuai dengan dokumentasi
 - ✅ Check `'Farcaster' in window`
@@ -86,12 +86,12 @@ export function isFarcasterMiniApp(): boolean {
 > Use `@farcaster/miniapp-wagmi-connector` for Ethereum wallet integration
 
 **Implementasi Kita:**
-```typescript
+\`\`\`typescript
 // app/providers.tsx
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 
 let farcasterConnector = farcasterMiniApp();
-```
+\`\`\`
 
 ✅ **PASS** - Sudah sesuai dengan dokumentasi
 - ✅ Menggunakan official connector
@@ -143,7 +143,7 @@ let farcasterConnector = farcasterMiniApp();
 ## 🔧 **Potential Improvements**
 
 ### **1. Add Timeout untuk ready()**
-```typescript
+\`\`\`typescript
 // Bisa tambahkan timeout
 const readyPromise = Promise.race([
   sdk.actions.ready({}),
@@ -151,22 +151,22 @@ const readyPromise = Promise.race([
     setTimeout(() => reject(new Error('Ready timeout')), 5000)
   )
 ]);
-```
+\`\`\`
 
 ### **2. Better Error Messages**
-```typescript
+\`\`\`typescript
 // Bisa improve error messages untuk user
 if (!sdk) {
   console.error('[Farcaster] SDK not available');
   // Show user-friendly error message
 }
-```
+\`\`\`
 
 ### **3. SDK Version Check**
-```typescript
+\`\`\`typescript
 // Bisa check SDK version compatibility
 console.log('[Farcaster] SDK version:', sdk?.version);
-```
+\`\`\`
 
 ---
 
@@ -197,4 +197,3 @@ Semua requirement dan best practices dari dokumentasi Farcaster Mini Apps sudah 
 
 **Last Updated:** December 2024  
 **Documentation Source:** https://miniapps.farcaster.xyz/docs/getting-started
-

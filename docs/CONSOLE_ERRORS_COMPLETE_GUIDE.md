@@ -42,10 +42,10 @@
 #### **A. Contract Error - Vault Not Responding** 🔴 **CRITICAL**
 
 **Error:**
-```
+\`\`\`
 Vault contract not responding at 0x2e3A524912636BF456B3C19f88693087c4dAa25f
 Verify it's deployed on Base Mainnet.
-```
+\`\`\`
 
 **Status:** 🔴 **CRITICAL** - Mempengaruhi fungsionalitas
 **Impact:** 
@@ -81,9 +81,9 @@ Verify it's deployed on Base Mainnet.
 #### **B. 429 Too Many Requests** 🟡 **WARNING**
 
 **Error:**
-```
+\`\`\`
 POST https://mainnet.base.org/ 429 (Too Many Requests)
-```
+\`\`\`
 
 **Status:** 🟡 **WARNING** - Mungkin mempengaruhi fungsionalitas
 **Impact:** 
@@ -111,10 +111,10 @@ POST https://mainnet.base.org/ 429 (Too Many Requests)
 #### **C. X-Frame-Options Deny** 🟡 **WARNING**
 
 **Error:**
-```
+\`\`\`
 Refused to display 'https://v0-farcaster-reminders-git-...vercel.app/' in a frame 
 because it set 'X-Frame-Options' to 'deny'.
-```
+\`\`\`
 
 **Status:** 🟡 **WARNING** - Hanya di preview deployment
 **Impact:** 
@@ -136,9 +136,9 @@ because it set 'X-Frame-Options' to 'deny'.
 #### **D. Alert() Sandboxed** 🟡 **WARNING**
 
 **Error:**
-```
+\`\`\`
 Ignored call to 'alert()'. The document is sandboxed, and the 'allow-modals' keyword is not set.
-```
+\`\`\`
 
 **Status:** 🟡 **WARNING** - UX issue
 **Impact:** 
@@ -215,4 +215,3 @@ Ignored call to 'alert()'. The document is sandboxed, and the 'allow-modals' key
 
 **Last Updated:** After complete error suppression implementation
 **Status:** ✅ Harmless errors suppressed, ⚠️ Critical errors need user action
-

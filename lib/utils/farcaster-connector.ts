@@ -42,4 +42,3 @@ export function isFarcasterMiniApp(): boolean {
   
   return hasFarcasterGlobal || hasFarcasterWindow;
 }
-
