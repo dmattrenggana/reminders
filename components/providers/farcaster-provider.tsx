@@ -62,22 +62,25 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
             }
           }
           
-          // CRITICAL: Call ready() IMMEDIATELY after SDK is available to dismiss splash screen
-          // Per Farcaster docs: "After your app loads, you must call sdk.actions.ready() to hide the splash screen"
-          // This MUST be called or splash screen will persist
-          // NOTE: ready() may have been called from layout.tsx script tag, but we call it here too as backup
+          // CRITICAL: Call ready() when interface is ready to be displayed
+          // Per Farcaster Loading Guide: "Call ready when your interface is ready to be displayed"
+          // Per Farcaster Loading Guide: "If you're using React, call ready inside a useEffect hook"
+          // Per Farcaster Loading Guide: "You should call ready as soon as possible while avoiding jitter and content reflows"
+          // This is the PRIMARY caller per React best practices (useEffect)
+          // NOTE: ready() may have been called from layout.tsx script tag (early attempt), but we call it here as PRIMARY
           if (sdk && sdk.actions && sdk.actions.ready) {
-            // Check if ready() was already called from layout script
+            // Check if ready() was already called from layout script (early attempt)
             const alreadyCalled = typeof window !== 'undefined' && (window as any).__farcasterReady;
             
             if (!alreadyCalled) {
-              console.log('[Farcaster] ⚡⚡⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY to dismiss splash screen...');
+              console.log('[Farcaster] ⚡⚡⚡ PRIMARY: Calling sdk.actions.ready() (per React useEffect best practices)...');
               try {
                 // Call ready() with empty object as per Farcaster docs
                 // IMPORTANT: Don't await - call it and let it run in background
                 // This ensures ready() is called even if there are errors later
+                // Per docs: "Call ready when your interface is ready to be displayed"
                 sdk.actions.ready({}).then(() => {
-                  console.log('[Farcaster] ✅✅✅✅✅ ready() called successfully - splash screen should dismiss NOW');
+                  console.log('[Farcaster] ✅✅✅ ready() called successfully (PRIMARY - per React docs) - splash screen should dismiss NOW');
                   (window as any).__farcasterReady = true;
                 }).catch((readyError: any) => {
                   console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", {
@@ -104,13 +107,14 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
                 (window as any).__farcasterReady = true;
               }
             } else {
-              console.log('[Farcaster] ✅ ready() already called from layout script, skipping duplicate call');
+              console.log('[Farcaster] ✅ ready() already called from layout script (early attempt), skipping duplicate call');
             }
           } else {
             console.error("[Farcaster] ❌❌❌ SDK or sdk.actions.ready() not available!");
             console.error("[Farcaster] SDK object:", sdk);
             console.error("[Farcaster] sdk.actions:", sdk?.actions);
             // Mark as ready anyway to prevent infinite splash screen
+            // Per Agents Checklist: "Ensure the app calls ready() after initialization"
             (window as any).__farcasterReady = true;
           }
           
