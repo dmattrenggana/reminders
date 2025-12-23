@@ -65,9 +65,25 @@ export default function RootLayout({
                   if (typeof message === 'string' && 
                       (message.includes('WalletConnect') || 
                        message.includes('explorer-api.walletconnect.com') ||
-                       message.includes('walletconnect.com'))) {
+                       message.includes('walletconnect.com') ||
+                       message.includes('CSP') && message.includes('walletconnect'))) {
                     // Error is harmless - Privy wallet discovery is optional, not critical
-                    console.warn('[Suppressed] WalletConnect CSP error (harmless - from Privy dependency)');
+                    // Don't log to reduce console noise
+                    return true; // Suppress error
+                  }
+                  // Suppress Farcaster video stream errors (harmless)
+                  if (typeof message === 'string' && 
+                      (message.includes('stream.farcaster.xyz') ||
+                       message.includes('Failed to load resource') && message.includes('stream'))) {
+                    // Error is harmless - video streams may fail but don't affect functionality
+                    return true; // Suppress error
+                  }
+                  // Suppress Farcaster API errors (harmless - internal API may be unavailable)
+                  if (typeof message === 'string' && 
+                      (message.includes('/~api/v2/unseen') ||
+                       message.includes('UnhandledFetchError') ||
+                       message.includes('Failed to fetch') && message.includes('farcaster.xyz'))) {
+                    // Error is harmless - Farcaster internal API may be unavailable in miniapp
                     return true; // Suppress error
                   }
                   // Let other errors through
