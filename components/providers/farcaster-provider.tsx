@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { isFarcasterMiniApp } from "@/lib/utils/farcaster-connector";
 
 interface FarcasterContextType {
   user: any;
@@ -25,16 +26,10 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        // Check if running in Farcaster miniapp environment
-        // Multiple checks to ensure we detect miniapp correctly
-        const hasFarcasterGlobal = typeof window !== 'undefined' && 'Farcaster' in window;
-        const hasFarcasterWindow = typeof window !== 'undefined' && (window as any).Farcaster;
-        
-        const isInMiniApp = hasFarcasterGlobal || hasFarcasterWindow;
+        // Use centralized utility to detect Farcaster miniapp environment
+        const isInMiniApp = isFarcasterMiniApp();
         
         console.log('[Farcaster] Environment detection:', {
-          hasFarcasterGlobal,
-          hasFarcasterWindow,
           isInMiniApp,
           userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A'
         });

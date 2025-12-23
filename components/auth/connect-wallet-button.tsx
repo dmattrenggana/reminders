@@ -4,6 +4,7 @@ import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { Button } from "@/components/ui/button";
 import { Loader2, Wallet } from "lucide-react";
+import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
 
 export function ConnectWalletButton() {
   const { user, isLoaded } = useFarcaster();
@@ -25,19 +26,8 @@ export function ConnectWalletButton() {
       connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
     );
     
-    // Find Farcaster miniapp connector first
-    // Per Farcaster docs: connector should be available in miniapp
-    const fcConnector = connectors.find((c) => {
-      const id = c.id?.toLowerCase();
-      const name = c.name?.toLowerCase() || '';
-      return (
-        id === "farcasterminiapp" ||
-        id === "io.farcaster.miniapp" ||
-        id === "farcaster" ||
-        name.includes("farcaster") ||
-        name.includes("miniapp")
-      );
-    });
+    // Use centralized utility to find Farcaster connector
+    const fcConnector = findFarcasterConnector(connectors);
     
     if (fcConnector) {
       console.log("[ConnectWallet] ✅ Found Farcaster connector:", {

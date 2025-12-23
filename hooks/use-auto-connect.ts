@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useConnect } from "wagmi";
+import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
 
 interface UseAutoConnectProps {
   isMiniApp: boolean;
@@ -89,31 +90,8 @@ export function useAutoConnect({
           connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
         );
         
-        // Find Farcaster miniapp connector - try multiple possible IDs
-        // Per Farcaster docs: connector should be available in miniapp
-        const fcConnector = connectors.find((c) => {
-          const id = c.id?.toLowerCase();
-          const name = c.name?.toLowerCase() || '';
-          const type = c.type?.toLowerCase() || '';
-          
-          const matches = (
-            id === "farcasterminiapp" ||
-            id === "io.farcaster.miniapp" ||
-            id === "farcaster" ||
-            id?.includes("farcaster") ||
-            id?.includes("miniapp") ||
-            name.includes("farcaster") ||
-            name.includes("miniapp") ||
-            type.includes("farcaster") ||
-            type.includes("miniapp")
-          );
-          
-          if (matches) {
-            console.log("[Auto-Connect] 🔎 Found potential Farcaster connector:", { id, name, type });
-          }
-          
-          return matches;
-        });
+        // Use centralized utility to find Farcaster connector
+        const fcConnector = findFarcasterConnector(connectors);
         
         if (fcConnector) {
           console.log("[Auto-Connect] ✅ Found Farcaster connector:", {
