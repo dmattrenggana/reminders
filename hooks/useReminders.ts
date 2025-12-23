@@ -117,10 +117,10 @@ export function useReminders() {
       const allResults = [...cachedReminders, ...fetchedResults];
 
       // Filter data valid dan tambahkan metadata workflow
-      const items = results
+      const items = allResults
         .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
         .map((r: any) => {
-          const timeLeft = r.deadline - now;
+          const timeLeft = r.deadline - nowTimestamp;
           
           // Logika Workflow: Danger Zone adalah -1 jam (3600 detik) sebelum deadline
           const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
