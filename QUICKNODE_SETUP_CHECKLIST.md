@@ -170,22 +170,6 @@ Jika Anda ingin setup cepat, ikuti langkah ini:
 - Cek QuickNode Dashboard untuk API key status
 - Pastikan account memiliki permission untuk create endpoint
 
-### Error: "401 Unauthorized" dari QuickNode Endpoint ⚠️
-
-**Penyebab**:
-- API key tidak valid atau expired
-- Endpoint di-pause atau tidak aktif
-- Format URL salah
-
-**Solusi**:
-1. Cek endpoint status di QuickNode Dashboard (harus Active)
-2. Verifikasi HTTP URL di Vercel sama dengan di Dashboard
-3. Pastikan URL memiliki trailing slash `/`
-4. Test endpoint manual dengan curl
-5. Jika endpoint tidak valid, create endpoint baru
-
-**Dokumentasi lengkap**: `docs/QUICKNODE_401_ERROR_FIX.md`
-
 ### Masih Error 429
 - Pastikan `NEXT_PUBLIC_BASE_MAINNET_RPC_URL` sudah di-set dengan QuickNode endpoint URL
 - Pastikan sudah redeploy setelah set env var
