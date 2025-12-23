@@ -13,11 +13,18 @@ Jika Anda masih mengalami error 429 setelah menggunakan RPC gratis, solusi terba
 - **TIDAK BISA**: Query contract state, execute transactions
 - **Rate Limit**: 5 requests/second (free tier)
 - **Link**: https://etherscan.io/apidashboard
+- **API Key**: Bisa digunakan untuk data tambahan (bukan RPC)
+
+**Catatan Penting**: 
+- Etherscan API key **TIDAK BISA** digunakan sebagai RPC endpoint
+- API key ini hanya untuk membaca data dari explorer (transaction history, events, dll)
+- Untuk RPC calls, Anda tetap perlu provider seperti Alchemy/Infura
 
 ### ✅ **RPC Endpoint** (Yang kita butuhkan)
 - **Fungsi**: Query contract state, execute transactions
 - **Contoh**: `contract.reminders(id)`, `contract.nextReminderId()`
 - **Rate Limit**: Tergantung provider (premium = unlimited/higher limits)
+- **Provider**: Alchemy, Infura, QuickNode (bukan Etherscan)
 
 **Kesimpulan**: Etherscan API tidak bisa menggantikan RPC endpoint untuk kebutuhan kita.
 
@@ -157,6 +164,32 @@ Setelah setup, cek di browser console:
 - **Infura**: https://www.infura.io/
 - **QuickNode**: https://www.quicknode.com/
 - **Basescan API** (untuk data tambahan): https://basescan.org/apis
+- **Etherscan API Docs**: https://docs.etherscan.io/
+
+---
+
+## ⚠️ **Catatan tentang Etherscan API Key**
+
+Jika Anda sudah punya Etherscan API key (seperti `AV1B6NTY8FNTUZ3V5D2NKMP32EEUS8BBIB`):
+
+### ✅ **Bisa digunakan untuk:**
+- Membaca transaction history
+- Membaca contract events
+- Membaca token balances
+- Data analytics dari blockchain explorer
+
+### ❌ **TIDAK bisa digunakan untuk:**
+- RPC endpoint (query contract state)
+- Execute transactions
+- Real-time contract calls
+
+### 💡 **Solusi:**
+Untuk RPC endpoint, Anda tetap perlu:
+1. **Alchemy** (recommended) - https://www.alchemy.com/
+2. **Infura** - https://www.infura.io/
+3. **QuickNode** - https://www.quicknode.com/
+
+Etherscan API key bisa digunakan untuk fitur tambahan (jika diperlukan), tapi tidak untuk RPC calls.
 
 ---
 
