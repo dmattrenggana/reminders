@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react"
 import { Clock, CheckCircle2, Flame, Lock, AlertCircle, Info, Coins, Bell } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
-import { useReminderService } from "@/hooks/use-reminder-service"
 import { useAccount } from "wagmi"
 import { useFarcaster } from "@/components/providers/farcaster-provider"
 import { TOKEN_SYMBOL } from "@/lib/contracts/config"
@@ -42,7 +41,6 @@ interface ReminderCardProps {
 
 export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onConfirm }: ReminderCardProps) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
-  const service = useReminderService()
   const { address } = useAccount()
   const { user: providerUser, isMiniApp } = useFarcaster()
   const { toast } = useToast()
@@ -128,50 +126,37 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   }
 
   const handleHelpRemindMe = async () => {
-    if (!onHelpRemind) {
-      // Fallback to service if no callback provided
-      if (!service) {
-        toast({
-          variant: "destructive",
-          title: "Wallet Not Connected",
-          description: "Please connect your wallet first",
-        })
-        return
-      }
-      setLoadingAction("help")
-      try {
-        // This would need to be implemented in service
-        toast({
-          variant: "destructive",
-          title: "Not Implemented",
-          description: "Help remind functionality - please implement",
-        })
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Failed to Help Remind",
-          description: error.message || "Failed to help remind",
-        })
-      } finally {
-        setLoadingAction(null)
-      }
+    if (onHelpRemind) {
+      onHelpRemind(reminder);
     } else {
-      onHelpRemind(reminder)
+      toast({
+        variant: "destructive",
+        title: "Action Not Available",
+        description: "Help remind functionality requires callback",
+      });
     }
   }
 
   const handleConfirmReminder = async () => {
     if (onConfirm) {
-      setLoadingAction("confirm")
+      setLoadingAction("confirm");
       try {
-        await onConfirm(reminder.id)
+        await onConfirm(reminder.id);
       } catch (error: any) {
-        alert(error.message || "Failed to confirm reminder")
+        toast({
+          variant: "destructive",
+          title: "Failed to Confirm",
+          description: error.message || "Failed to confirm reminder",
+        });
       } finally {
-        setLoadingAction(null)
+        setLoadingAction(null);
       }
-    } else if (service) {
-      handleAction("confirm", () => service!.confirmReminder(reminder.id), "Success! Stake reclaimed.")
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Action Not Available",
+        description: "Confirm functionality requires callback",
+      });
     }
   }
 

@@ -92,10 +92,10 @@ export class ReminderService {
         await this.vaultContract.nextReminderId()
         console.log("[v0] ✅ Vault contract verified and responding")
       } catch (verifyError) {
-        console.error("[v0] ❌ Vault contract verification failed:", verifyError)
-        throw new Error(
-          `Vault contract not responding at ${CONTRACTS.REMINDER_VAULT}. Verify it's deployed on Base Mainnet.`,
-        )
+        console.warn("[v0] ⚠️ Vault contract verification failed (non-critical):", verifyError)
+        // Don't throw - contract verification will be done at transaction time via Wagmi
+        // This allows the app to load even if contract is not immediately reachable
+        console.log("[v0] App will continue - contract calls via Wagmi hooks")
       }
     } catch (error) {
       console.error("[v0] Contract initialization error:", error)
