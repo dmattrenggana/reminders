@@ -77,6 +77,22 @@ export default function DashboardClient() {
   useEffect(() => {
     setMounted(true);
   }, []);
+  
+  useEffect(() => {
+    const initializeMiniApp = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log("Farcaster MiniApp SDK initialized successfully");
+      } catch (error) {
+        console.error("Failed to initialize Farcaster MiniApp:", error);
+        
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      initializeMiniApp();
+    }
+  }, []);
 
   // Computed values
   const username = providerUser?.username;
