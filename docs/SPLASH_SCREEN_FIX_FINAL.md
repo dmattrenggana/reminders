@@ -20,7 +20,7 @@
    - Adds unnecessary complexity
 
 ### **Timeline BEFORE Fix:**
-```
+\`\`\`
 0ms:    App loads
 0-50ms: Layout script starts polling
 50ms:   React mounts
@@ -30,7 +30,7 @@
 250ms:  Document ready check
 300ms:  Wait for DOMContentLoaded OR 1s timeout
 1300ms: Ready() FINALLY called ❌ TOO LATE!
-```
+\`\`\`
 
 ---
 
@@ -46,7 +46,7 @@
 - ❌ Defensive checks that delay ready() call
 
 **SIMPLIFIED TO:**
-```typescript
+\`\`\`typescript
 // Call ready() IMMEDIATELY after SDK import
 if (sdk && sdk.actions && sdk.actions.ready) {
   const alreadyCalled = window.__farcasterReady;
@@ -64,7 +64,7 @@ if (sdk && sdk.actions && sdk.actions.ready) {
     }
   }
 }
-```
+\`\`\`
 
 **Benefits:**
 - ✅ Calls ready() IMMEDIATELY after SDK import
@@ -82,7 +82,7 @@ if (sdk && sdk.actions && sdk.actions.ready) {
 - ❌ Race condition with FarcasterProvider
 
 **SIMPLIFIED TO:**
-```typescript
+\`\`\`typescript
 // Early attempt - single check without polling
 if (typeof window !== 'undefined') {
   const checkSDK = function() {
@@ -106,7 +106,7 @@ if (typeof window !== 'undefined') {
   // Also try after 50ms (fast fallback)
   setTimeout(checkSDK, 50);
 }
-```
+\`\`\`
 
 **Benefits:**
 - ✅ No polling overhead
@@ -118,7 +118,7 @@ if (typeof window !== 'undefined') {
 
 ## 📊 **Timeline AFTER Fix:**
 
-```
+\`\`\`
 0ms:    App loads
 0ms:    Layout script checks for SDK (immediate)
 0ms:    SDK available? Call ready() ✅ (if available)
@@ -128,7 +128,7 @@ if (typeof window !== 'undefined') {
 100ms:  FarcasterProvider useEffect runs
 150ms:  SDK import completes
 150ms:  Call ready() IMMEDIATELY ✅ (no delays)
-```
+\`\`\`
 
 **Result:** ready() called within **0-150ms** instead of 1+ second! 🚀
 
@@ -259,4 +259,3 @@ After deployment, verify:
 **Last Updated:** After final splash screen fix implementation
 **Commit:** Fix splash screen - simplify ready() call logic
 **Status:** ✅ **READY FOR TESTING**
-

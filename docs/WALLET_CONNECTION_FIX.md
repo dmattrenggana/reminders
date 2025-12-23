@@ -15,7 +15,7 @@ The `ReminderService` class was not able to find a valid ethers signer because:
 ### 1. Update `useReminderService` Hook
 Convert Wagmi's `WalletClient` to an ethers signer:
 
-```typescript
+\`\`\`typescript
 // hooks/use-reminder-service.ts
 const { data: walletClient } = useWalletClient()
 
@@ -42,12 +42,12 @@ useEffect(() => {
 
   createService()
 }, [isConnected, walletClient])
-```
+\`\`\`
 
 ### 2. Update `ensureContracts` in ReminderService
 Add check for `__wagmiSigner` as **Priority 1**:
 
-```typescript
+\`\`\`typescript
 // lib/contracts/reminder-service.ts
 private async ensureContracts() {
   let activeSigner = this.signer
@@ -78,7 +78,7 @@ private async ensureContracts() {
     throw new Error("Wallet not connected. Please connect your wallet to perform transactions.")
   }
 }
-```
+\`\`\`
 
 ## Architecture
 
@@ -88,7 +88,7 @@ private async ensureContracts() {
 3. **Web Wallet Signer** (`__webSigner`) - For browser wallet (MetaMask, etc.)
 
 ### Flow Diagram
-```
+\`\`\`
 User clicks "Connect Wallet"
     ↓
 Wagmi connects via Farcaster connector
@@ -100,7 +100,7 @@ useReminderService converts WalletClient → ethers signer
 Store signer in window.__wagmiSigner
     ↓
 ReminderService uses signer for transactions
-```
+\`\`\`
 
 ## Benefits
 1. ✅ **Proper Wagmi Integration** - Works with Wagmi v2's WalletClient
@@ -124,4 +124,3 @@ After deployment:
 
 ## Date
 December 23, 2025
-

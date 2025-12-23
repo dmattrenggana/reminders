@@ -29,7 +29,7 @@
 **Dua Tempat Memanggil ready():**
 
 #### **A. Layout Script (Early Attempt):**
-```typescript
+\`\`\`typescript
 // app/layout.tsx lines 114-163
 if (typeof window !== 'undefined') {
   let attempts = 0;
@@ -62,7 +62,7 @@ if (typeof window !== 'undefined') {
     }
   }, 100); // Check every 100ms
 }
-```
+\`\`\`
 
 **Status:** ⚠️ **MASALAH DITEMUKAN**
 - Polling every 100ms for 3 seconds
@@ -72,7 +72,7 @@ if (typeof window !== 'undefined') {
 ---
 
 #### **B. FarcasterProvider (Primary Caller):**
-```typescript
+\`\`\`typescript
 // components/providers/farcaster-provider.tsx lines 26-221
 useEffect(() => {
   const init = async () => {
@@ -110,7 +110,7 @@ useEffect(() => {
   };
   init();
 }, []);
-```
+\`\`\`
 
 **Status:** ⚠️ **MASALAH DITEMUKAN**
 - Async SDK import delays ready() call
@@ -136,7 +136,7 @@ useEffect(() => {
 - Too many guards prevent immediate ready() call
 
 #### **C. Timing Issue:** 🔴
-```
+\`\`\`
 Timeline:
 0ms:    App loads
 0-50ms: Layout script starts polling
@@ -147,14 +147,14 @@ Timeline:
 250ms:  Document ready check
 300ms:  Wait for DOMContentLoaded OR 1s timeout
 1300ms: Ready() FINALLY called ❌ TOO LATE!
-```
+\`\`\`
 
 **Expected Timeline:**
-```
+\`\`\`
 0ms:    App loads
 0ms:    SDK should be available (injected by Farcaster)
 0ms:    ready() should be called IMMEDIATELY ✅
-```
+\`\`\`
 
 ---
 
@@ -187,7 +187,7 @@ Timeline:
 #### **A. Simplify FarcasterProvider** ✅
 
 **Remove Over-defensive Checks:**
-```typescript
+\`\`\`typescript
 useEffect(() => {
   const init = async () => {
     const isInMiniApp = isFarcasterMiniApp();
@@ -230,7 +230,7 @@ useEffect(() => {
   };
   init();
 }, []);
-```
+\`\`\`
 
 **Benefits:**
 - ✅ Calls ready() immediately after SDK import
@@ -248,7 +248,7 @@ useEffect(() => {
 - Simpler code
 
 **Option 2: Simplify (Keep as Early Attempt)**
-```typescript
+\`\`\`typescript
 // Simplified early attempt - no polling, just check once
 if (typeof window !== 'undefined' && ('Farcaster' in window || window.Farcaster)) {
   // SDK might be available immediately (injected by Farcaster)
@@ -262,7 +262,7 @@ if (typeof window !== 'undefined' && ('Farcaster' in window || window.Farcaster)
     }
   }
 }
-```
+\`\`\`
 
 **Benefits:**
 - ✅ No polling overhead
@@ -316,4 +316,3 @@ if (typeof window !== 'undefined' && ('Farcaster' in window || window.Farcaster)
 ---
 
 **Status:** 🔍 **ROOT CAUSES IDENTIFIED - SOLUTION READY**
-

@@ -170,9 +170,9 @@ Di Vercel Dashboard:
 3. **Save**
 
 **Contoh untuk QuickNode**:
-```
+\`\`\`
 NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://your-endpoint-name.base.quiknode.pro/abc123def456/
-```
+\`\`\`
 
 ### **Step 3: Redeploy**
 
@@ -275,4 +275,3 @@ Etherscan API key bisa digunakan untuk fitur tambahan (jika diperlukan), tapi ti
 
 **Status**: ✅ Ready to use  
 **Last Updated**: December 22, 2025
-

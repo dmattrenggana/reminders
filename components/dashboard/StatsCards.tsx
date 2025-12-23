@@ -61,4 +61,3 @@ export function StatsCards({ stats, symbol }: StatsCardsProps) {
     </div>
   );
 }
-

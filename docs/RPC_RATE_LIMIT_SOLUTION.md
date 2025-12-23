@@ -96,7 +96,7 @@
 ## 📊 **Perbandingan Sebelum vs Sesudah**
 
 ### **Sebelum:**
-```typescript
+\`\`\`typescript
 // Hardcoded RPC URL
 const rpcUrl = "https://mainnet.base.org";
 const provider = new ethers.JsonRpcProvider(rpcUrl);
@@ -107,7 +107,7 @@ for (let i = 0; i < count; i++) {
   promises.push(contract.reminders(i));
 }
 const results = await Promise.all(promises);
-```
+\`\`\`
 
 **Masalah:**
 - ❌ Single RPC endpoint (no fallback)
@@ -119,7 +119,7 @@ const results = await Promise.all(promises);
 ---
 
 ### **Sesudah:**
-```typescript
+\`\`\`typescript
 // RPC with fallback and retry
 const nextId = await executeRpcCall(async (provider) => {
   const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider);
@@ -139,7 +139,7 @@ const cached = reminderCache.get(i);
 if (cached && now - cached.timestamp < CACHE_DURATION) {
   // Use cached data
 }
-```
+\`\`\`
 
 **Benefits:**
 - ✅ Multiple RPC endpoints dengan automatic fallback
@@ -177,23 +177,23 @@ if (cached && now - cached.timestamp < CACHE_DURATION) {
 ## 🔧 **Configuration**
 
 ### **Cache Settings:**
-```typescript
+\`\`\`typescript
 const CACHE_DURATION = 30000; // 30 seconds
 const MIN_FETCH_INTERVAL = 10000; // 10 seconds minimum between fetches
-```
+\`\`\`
 
 ### **Batch Settings:**
-```typescript
+\`\`\`typescript
 batchSize: 5, // Process 5 reminders at a time
 batchDelay: 200, // 200ms delay between batches
-```
+\`\`\`
 
 ### **Retry Settings:**
-```typescript
+\`\`\`typescript
 maxRetries: 3, // 3 attempts per endpoint
 retryDelay: 1000, // 1 second initial delay (exponential backoff)
 timeout: 30000, // 30 seconds timeout
-```
+\`\`\`
 
 ---
 
@@ -228,4 +228,3 @@ timeout: 30000, // 30 seconds timeout
 
 **Last Updated:** After RPC rate limit solution implementation
 **Status:** ✅ Complete - Ready for testing
-

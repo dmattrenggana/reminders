@@ -6,7 +6,7 @@ User reported inconsistent data display on dashboard. The issue was **NOT** RPC 
 
 ### **What Was Wrong:**
 
-```typescript
+\`\`\`typescript
 // ❌ BEFORE: Stats menghitung SEMUA data dari SEMUA user
 return {
   locked: safeReminders
@@ -17,7 +17,7 @@ return {
   publicFeed,
   myFeed
 };
-```
+\`\`\`
 
 **Result:** Stats showed global data (all users), not personal data.
 
@@ -25,7 +25,7 @@ return {
 
 ## ✅ **Solution: Filter Stats by Current User**
 
-```typescript
+\`\`\`typescript
 // ✅ AFTER: Stats hanya untuk user yang sedang terkoneksi
 const myFeed = safeReminders.filter(
   r => address && r.creator?.toLowerCase() === address.toLowerCase()
@@ -52,7 +52,7 @@ return {
   publicFeed,
   myFeed
 };
-```
+\`\`\`
 
 ---
 
@@ -61,10 +61,10 @@ return {
 ### **1. Public Feed**
 **Requirement:** Menampilkan semua reminder dari semua user (termasuk user yang sedang login)
 
-```typescript
+\`\`\`typescript
 // ✅ CORRECT
 const publicFeed = safeReminders.filter(r => !r.isResolved);
-```
+\`\`\`
 
 **Displays:**
 - All unresolved reminders from ALL users
@@ -76,12 +76,12 @@ const publicFeed = safeReminders.filter(r => !r.isResolved);
 ### **2. My Feed**
 **Requirement:** Hanya menampilkan reminder yang dibuat oleh user yang sedang terkoneksi
 
-```typescript
+\`\`\`typescript
 // ✅ CORRECT
 const myFeed = safeReminders.filter(
   r => address && r.creator?.toLowerCase() === address.toLowerCase()
 );
-```
+\`\`\`
 
 **Displays:**
 - Only reminders created by current user
@@ -100,7 +100,7 @@ const myFeed = safeReminders.filter(
 | **Burned** | Count of user's missed/burned reminders | `2` |
 | **Total Tasks** | Count of ALL user's reminders (any status) | `10` |
 
-```typescript
+\`\`\`typescript
 // ✅ All filtered by current user
 const myFeed = safeReminders.filter(
   r => address && r.creator?.toLowerCase() === address.toLowerCase()
@@ -111,7 +111,7 @@ const locked = myActiveReminders.reduce((acc, curr) => acc + Number(curr.rewardP
 const completed = myFeed.filter(r => r.isResolved && r.isCompleted).length;
 const burned = myFeed.filter(r => r.isResolved && !r.isCompleted).length;
 const totalTasks = myFeed.length;
-```
+\`\`\`
 
 ---
 
@@ -146,7 +146,7 @@ const totalTasks = myFeed.length;
 2. ⚠️ RPC rate limits (already mitigated with caching + fallback)
 
 **Current RPC Strategy is sufficient:**
-```typescript
+\`\`\`typescript
 // hooks/useReminders.ts
 const CACHE_DURATION = 60000; // 60 seconds
 const MIN_FETCH_INTERVAL = 15000; // 15 seconds
@@ -156,7 +156,7 @@ const MIN_FETCH_INTERVAL = 15000; // 15 seconds
 - Exponential backoff retry
 - Batch processing (5 per batch, 200ms delay)
 - Client-side caching
-```
+\`\`\`
 
 **When would we need a custom indexer/API?**
 - ✅ If we have 1000+ reminders (current: probably <100)
@@ -231,4 +231,3 @@ After deployment:
 
 **Date:** December 24, 2025
 **Status:** ✅ Fixed and Ready to Deploy
-

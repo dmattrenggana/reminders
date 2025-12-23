@@ -22,7 +22,7 @@
 
 Most Farcaster miniapps call `ready()` in **`app/page.tsx`** or root component:
 
-```typescript
+\`\`\`typescript
 // Example from other miniapps
 "use client";
 import { useEffect } from "react";
@@ -36,7 +36,7 @@ export default function HomePage() {
 
   return <div>...</div>;
 }
-```
+\`\`\`
 
 ---
 
@@ -126,7 +126,7 @@ The current implementation provides **more value** than just calling `ready()`. 
 
 If we must move `ready()` to `page.tsx` for consistency with other miniapps:
 
-```typescript
+\`\`\`typescript
 // app/page.tsx
 "use client";
 import { useEffect } from "react";
@@ -150,7 +150,7 @@ export default function HomePage() {
 
   return <DashboardClient />;
 }
-```
+\`\`\`
 
 **BUT:** This would **duplicate logic** already in FarcasterProvider and provide no additional benefit.
 
@@ -165,4 +165,3 @@ Current implementation is:
 - ✅ Follows React best practices (Provider pattern)
 
 **Date:** December 23, 2025
-

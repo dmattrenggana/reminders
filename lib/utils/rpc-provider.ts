@@ -201,4 +201,3 @@ export async function batchRpcCalls<T>(
   // Filter out null results and return valid results
   return results.filter((r): r is T => r !== null);
 }
-

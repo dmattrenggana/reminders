@@ -51,14 +51,14 @@ Toast adalah non-blocking notification yang muncul di corner screen:
 ## 📊 **Alert() Replacements**
 
 ### **Before (alert()):**
-```typescript
+\`\`\`typescript
 alert("Please connect wallet first");
 alert("✅ Reminder created successfully!");
 alert("❌ Transaction cancelled by user");
-```
+\`\`\`
 
 ### **After (toast()):**
-```typescript
+\`\`\`typescript
 // Error toast
 toast({
   variant: "destructive",
@@ -79,37 +79,37 @@ toast({
   title: "Transaction Cancelled",
   description: "Transaction cancelled by user",
 });
-```
+\`\`\`
 
 ---
 
 ## 🎨 **Toast Variants**
 
 ### **1. Success Toast:**
-```typescript
+\`\`\`typescript
 toast({
   variant: "success",
   title: "Success!",
   description: "Operation completed successfully",
 });
-```
+\`\`\`
 
 ### **2. Destructive Toast (Error):**
-```typescript
+\`\`\`typescript
 toast({
   variant: "destructive",
   title: "Error",
   description: "Something went wrong",
 });
-```
+\`\`\`
 
 ### **3. Default Toast:**
-```typescript
+\`\`\`typescript
 toast({
   title: "Info",
   description: "Information message",
 });
-```
+\`\`\`
 
 ---
 
@@ -153,7 +153,7 @@ toast({
 ## 🎯 **Usage Example**
 
 ### **In Component:**
-```typescript
+\`\`\`typescript
 import { useToast } from "@/components/ui/use-toast";
 
 function MyComponent() {
@@ -176,7 +176,7 @@ function MyComponent() {
     }
   };
 }
-```
+\`\`\`
 
 ---
 
@@ -192,4 +192,3 @@ function MyComponent() {
 
 **Last Updated:** After complete alert() to toast migration
 **Status:** ✅ Complete - All alert() calls replaced with toast()
-

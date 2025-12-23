@@ -4,10 +4,10 @@
 
 Console errors when opening Farcaster miniapp:
 
-```
+\`\`\`
 [v0] Contract initialization error: Error: Vault contract not responding at 0x2e3A524912636BF456B3C19f88693087c4dAa25f
 [v0] ❌ Vault contract verification failed: Error: missing revert data
-```
+\`\`\`
 
 ### **Root Cause:**
 
@@ -37,7 +37,7 @@ Console errors when opening Farcaster miniapp:
 **File:** `lib/contracts/reminder-service.ts`
 
 **Before:**
-```typescript
+\`\`\`typescript
 try {
   await this.vaultContract.nextReminderId()
   console.log("[v0] ✅ Vault contract verified and responding")
@@ -47,10 +47,10 @@ try {
     `Vault contract not responding at ${CONTRACTS.REMINDER_VAULT}. Verify it's deployed on Base Mainnet.`,
   )
 }
-```
+\`\`\`
 
 **After:**
-```typescript
+\`\`\`typescript
 try {
   await this.vaultContract.nextReminderId()
   console.log("[v0] ✅ Vault contract verified and responding")
@@ -60,7 +60,7 @@ try {
   // This allows the app to load even if contract is not immediately reachable
   console.log("[v0] App will continue - contract calls via Wagmi hooks")
 }
-```
+\`\`\`
 
 **Benefits:**
 - ✅ App loads even if contract verification fails
@@ -75,7 +75,7 @@ try {
 **File:** `components/reminders/reminder-card.tsx`
 
 **Before:**
-```typescript
+\`\`\`typescript
 import { useReminderService } from "@/hooks/use-reminder-service"
 
 export function ReminderCard({ reminder, feedType, onHelpRemind, onConfirm }) {
@@ -90,10 +90,10 @@ export function ReminderCard({ reminder, feedType, onHelpRemind, onConfirm }) {
     }
   }
 }
-```
+\`\`\`
 
 **After:**
-```typescript
+\`\`\`typescript
 // ✅ No ReminderService import
 
 export function ReminderCard({ reminder, feedType, onHelpRemind, onConfirm }) {
@@ -111,7 +111,7 @@ export function ReminderCard({ reminder, feedType, onHelpRemind, onConfirm }) {
     }
   }
 }
-```
+\`\`\`
 
 **Benefits:**
 - ✅ No unnecessary contract verification on component mount
@@ -125,7 +125,7 @@ export function ReminderCard({ reminder, feedType, onHelpRemind, onConfirm }) {
 
 ### **Transaction Flow (After Fix):**
 
-```
+\`\`\`
 User clicks "Confirm Reminder"
     ↓
 ReminderCard calls onConfirm(id)
@@ -137,7 +137,7 @@ useReminderActions hook
 Wagmi writeContractAsync()
     ↓
 Contract verification at transaction time ✅
-```
+\`\`\`
 
 **No premature contract verification!**
 
@@ -203,4 +203,3 @@ After deployment:
 ---
 
 **Date:** December 23, 2025
-

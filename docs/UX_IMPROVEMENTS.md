@@ -10,7 +10,7 @@
 
 **Solution:** `components/dashboard/Header.tsx`
 
-```typescript
+\`\`\`typescript
 // Before: Generic "Connect Wallet"
 <Button>Connect Wallet</Button>
 
@@ -37,7 +37,7 @@
     </div>
   )}
 </Button>
-```
+\`\`\`
 
 **Benefits:**
 - ✅ User dapat melihat username mereka
@@ -56,7 +56,7 @@
 
 **Solution:** `hooks/useReminders.ts`
 
-```typescript
+\`\`\`typescript
 // Before:
 const CACHE_DURATION = 30000; // 30 seconds
 const MIN_FETCH_INTERVAL = 10000; // 10 seconds
@@ -64,7 +64,7 @@ const MIN_FETCH_INTERVAL = 10000; // 10 seconds
 // After:
 const CACHE_DURATION = 60000; // 60 seconds (2x longer)
 const MIN_FETCH_INTERVAL = 15000; // 15 seconds (1.5x longer)
-```
+\`\`\`
 
 **Benefits:**
 - ✅ **Fewer RPC calls** - Reduces rate limit errors
@@ -88,7 +88,7 @@ const MIN_FETCH_INTERVAL = 15000; // 15 seconds (1.5x longer)
 
 **Solution:** `components/reminders/reminder-card.tsx`
 
-```typescript
+\`\`\`typescript
 {/* Time Left Display */}
 {!reminder.isResolved && reminder.timeLeft !== undefined && (
   <div className={`mt-2 px-3 py-1.5 rounded-lg text-[10px] font-bold ${
@@ -106,7 +106,7 @@ const MIN_FETCH_INTERVAL = 15000; // 15 seconds (1.5x longer)
     }
   </div>
 )}
-```
+\`\`\`
 
 **Visual States:**
 
@@ -156,7 +156,7 @@ const MIN_FETCH_INTERVAL = 15000; // 15 seconds (1.5x longer)
 ## 🔧 **Technical Details**
 
 ### **Cache Strategy:**
-```
+\`\`\`
 User opens app
   ↓
 Fetch reminders (RPC call)
@@ -166,10 +166,10 @@ Cache for 60 seconds
 If user refreshes within 60s → Use cache (no RPC)
   ↓
 After 60s → Fetch again (RPC call)
-```
+\`\`\`
 
 ### **Throttle Strategy:**
-```
+\`\`\`
 User clicks refresh
   ↓
 Check last fetch time
@@ -177,7 +177,7 @@ Check last fetch time
 If <15s ago → Use cache (skip RPC)
   ↓
 If ≥15s ago → Allow fetch (RPC call)
-```
+\`\`\`
 
 ---
 
@@ -215,4 +215,3 @@ After deployment:
 ---
 
 **Date:** December 24, 2025
-

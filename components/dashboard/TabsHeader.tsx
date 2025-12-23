@@ -49,4 +49,3 @@ export function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
     </div>
   );
 }
-
