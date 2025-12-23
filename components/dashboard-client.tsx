@@ -378,16 +378,23 @@ export default function DashboardClient() {
   // Stats calculation
   const stats = useMemo(() => {
     const safeReminders = Array.isArray(reminders) ? reminders : [];
+    
+    // Public Feed: semua reminder yang belum resolved (termasuk milik kita)
+    const publicFeed = safeReminders.filter(r => !r.isResolved);
+    
+    // My Feed: semua reminder yang dibuat oleh user (resolved atau belum)
+    const myFeed = safeReminders.filter(
+      r => address && r.creator?.toLowerCase() === address.toLowerCase()
+    );
+    
     return {
       locked: safeReminders
         .filter(r => !r.isResolved)
         .reduce((acc, curr) => acc + Number(curr.rewardPool || 0), 0),
       completed: safeReminders.filter(r => r.isResolved && r.isCompleted).length,
       burned: safeReminders.filter(r => r.isResolved && !r.isCompleted).length,
-      publicFeed: safeReminders.filter(r => !r.isResolved),
-      myFeed: safeReminders.filter(
-        r => r.creator?.toLowerCase() === address?.toLowerCase()
-      )
+      publicFeed,
+      myFeed
     };
   }, [reminders, address]);
 
@@ -455,13 +462,25 @@ export default function DashboardClient() {
 
           <TabsContent value="public">
             <ReminderList 
-              items={stats.publicFeed} 
+              items={stats.publicFeed}
+              feedType="public"
+              address={address}
+              onHelpRemind={(reminder) => {
+                if (providerUser?.fid) {
+                  helpRemind(reminder, isMiniApp, providerUser.fid);
+                } else {
+                  alert("Farcaster user not available");
+                }
+              }}
             />
           </TabsContent>
 
           <TabsContent value="my">
             <ReminderList 
-              items={stats.myFeed} 
+              items={stats.myFeed}
+              feedType="my"
+              address={address}
+              onConfirm={confirmReminder}
             />
           </TabsContent>
         </Tabs>
@@ -706,9 +725,13 @@ function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
 
 interface ReminderListProps {
   items: any[];
+  feedType?: "public" | "my";
+  address?: string;
+  onHelpRemind?: (reminder: any) => void;
+  onConfirm?: (reminderId: number) => void;
 }
 
-function ReminderList({ items }: ReminderListProps) {
+function ReminderList({ items, feedType = "public", address, onHelpRemind, onConfirm }: ReminderListProps) {
   if (!items || items.length === 0) {
     return (
       <div className="
@@ -731,6 +754,9 @@ function ReminderList({ items }: ReminderListProps) {
         <ReminderCard
           key={reminder.id}
           reminder={reminder}
+          feedType={feedType}
+          onHelpRemind={onHelpRemind}
+          onConfirm={onConfirm}
         />
       ))}
     </div>
