@@ -67,7 +67,7 @@ connectors: [
 
 **Status:** ✅ **CORRECT**
 - ✅ `frame-ancestors` allows Warpcast domains
-- ✅ `connect-src` allows Base RPC and WalletConnect
+- ✅ `connect-src` allows Base RPC (WalletConnect dan Privy sudah dihapus - tidak digunakan)
 - ✅ Configured untuk miniapp embedding
 
 **Code:**

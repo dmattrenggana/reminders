@@ -140,9 +140,9 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 ### **Issue: CSP Errors**
 
 **Note:**
-- CSP errors untuk WalletConnect adalah warning saja
-- Tidak mempengaruhi fungsionalitas
-- Bisa diabaikan (sudah didokumentasikan di `docs/CSP_WALLETCONNECT_ERROR.md`)
+- CSP errors untuk WalletConnect sudah dihapus dari CSP (tidak digunakan)
+- Privy domains juga sudah dihapus (tidak digunakan langsung)
+- Semua fungsionalitas tetap bekerja dengan Farcaster dan Injected connectors
 
 ---
 
