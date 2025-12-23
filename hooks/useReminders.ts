@@ -5,13 +5,13 @@ import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
 
 // Cache untuk mengurangi RPC calls
 const reminderCache = new Map<number, { data: any; timestamp: number }>();
-const CACHE_DURATION = 30000; // 30 seconds cache
+const CACHE_DURATION = 60000; // 60 seconds cache (increased from 30s for stability)
 
 export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 10000; // Minimum 10 seconds between fetches
+  const MIN_FETCH_INTERVAL = 15000; // Minimum 15 seconds between fetches (increased from 10s)
 
   const fetchReminders = useCallback(async () => {
     try {

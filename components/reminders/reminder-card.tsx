@@ -202,6 +202,24 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
             <span>{reminder.rewardPool || reminder.tokenAmount || 0} {TOKEN_SYMBOL}</span>
           </div>
         </div>
+
+        {/* Time Left Display */}
+        {!reminder.isResolved && reminder.timeLeft !== undefined && (
+          <div className={`mt-2 px-3 py-1.5 rounded-lg text-[10px] font-bold text-center ${
+            reminder.isDangerZone 
+              ? "bg-orange-50 text-orange-700 border border-orange-200"
+              : reminder.isExpired
+                ? "bg-red-50 text-red-700 border border-red-200"
+                : "bg-blue-50 text-blue-700 border border-blue-200"
+          }`}>
+            {reminder.isExpired 
+              ? "⏰ Expired" 
+              : reminder.isDangerZone
+                ? `⚡ ${Math.floor(reminder.timeLeft / 60)} mins left`
+                : `⏳ ${Math.floor(reminder.timeLeft / 3600)}h ${Math.floor((reminder.timeLeft % 3600) / 60)}m left`
+            }
+          </div>
+        )}
       </div>
 
       {/* Body - Action buttons */}

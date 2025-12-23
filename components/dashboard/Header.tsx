@@ -125,21 +125,28 @@ export function Header({
               text-white h-12 px-8 shadow-lg transition-all active:scale-95
             "
           >
-            {isMiniApp && providerUser ? (
+            {isMiniApp && providerUser && username ? (
               <div className="flex items-center gap-2">
-                {pfpUrl && !pfpError && (
+                {pfpUrl && !pfpError ? (
                   <img 
                     src={pfpUrl} 
-                    alt="PFP" 
-                    className="w-6 h-6 rounded-full object-cover" 
+                    alt={username} 
+                    className="w-6 h-6 rounded-full object-cover ring-2 ring-white/30" 
                     referrerPolicy="no-referrer"
                     onError={handlePfpError}
                   />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-indigo-300 flex items-center justify-center text-xs font-bold">
+                    {username.charAt(0).toUpperCase()}
+                  </div>
                 )}
-                <span>@{username}</span>
+                <span>Connect @{username}</span>
               </div>
             ) : (
-              "Connect Wallet"
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                <span>Connect Wallet</span>
+              </div>
             )}
           </Button>
         )}
