@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Wallet, LogOut } from "lucide-react";
 import { createImageErrorHandler } from "@/lib/utils/image-error-handler";
@@ -32,21 +32,6 @@ export function HeaderWallet({
 }: HeaderWalletProps) {
   const [pfpError, setPfpError] = useState(false);
   const handlePfpError = createImageErrorHandler(setPfpError, { suppressConsole: true });
-
-  // Debug logging for user info
-  useEffect(() => {
-    if (isMiniApp && providerUser) {
-      console.log("[HeaderWallet] User info:", {
-        isMiniApp,
-        hasProviderUser: !!providerUser,
-        username,
-        pfpUrl,
-        displayName: providerUser?.displayName,
-        providerUserKeys: providerUser ? Object.keys(providerUser) : [],
-        fullUser: providerUser
-      });
-    }
-  }, [isMiniApp, providerUser, username, pfpUrl]);
 
   if (isConnected) {
     return (

@@ -94,9 +94,24 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // Computed values - prioritize Farcaster user info
+  // Computed values - prioritize Farcaster user info from provider (already fetched via Neynar in farcaster-provider.tsx)
   const username = providerUser?.username || providerUser?.displayName;
   const pfpUrl = providerUser?.pfpUrl || providerUser?.pfp;
+
+  // Debug logging for user info (moved from HeaderWallet)
+  useEffect(() => {
+    if (isMiniApp && providerUser) {
+      console.log("[DashboardClient] User info computed:", {
+        isMiniApp,
+        hasProviderUser: !!providerUser,
+        username,
+        pfpUrl,
+        displayName: providerUser?.displayName,
+        providerUserKeys: providerUser ? Object.keys(providerUser) : [],
+        fullUser: providerUser
+      });
+    }
+  }, [isMiniApp, providerUser, username, pfpUrl]);
   
   // Format balance with proper handling (memoized to prevent re-renders)
   const formattedBalance = useMemo(() => {
