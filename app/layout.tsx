@@ -111,55 +111,33 @@ export default function RootLayout({
                   }
                 };
                 
-                // Poll for SDK availability with timeout
-                // Per Farcaster docs: Call ready() after SDK is available and interface is ready
+                // Early attempt to call ready() if SDK is already available
+                // Simplified: Single check without polling
+                // FarcasterProvider is the PRIMARY caller if this fails
                 if (typeof window !== 'undefined') {
-                  let attempts = 0;
-                  const maxAttempts = 30; // 3 seconds max (30 * 100ms)
-                  
-                  const tryReady = setInterval(function() {
-                    attempts++;
-                    
-                    // Check if Farcaster environment
+                  // Check once if SDK is immediately available (injected by Farcaster)
+                  const checkSDK = function() {
                     const isFarcasterEnv = 'Farcaster' in window || window.Farcaster;
-                    if (!isFarcasterEnv) {
-                      if (attempts >= maxAttempts) {
-                        clearInterval(tryReady);
-                        console.log('[Layout Script] Not in Farcaster miniapp environment');
-                      }
-                      return;
-                    }
-                    
-                    // Try to get SDK
-                    const sdk = window.Farcaster?.sdk || window.__farcasterSDK;
-                    if (sdk && sdk.actions && sdk.actions.ready) {
-                      clearInterval(tryReady);
-                      console.log('[Layout Script] ✅ SDK found, calling ready()...');
-                      
-                      try {
-                        // Call ready() immediately - per Farcaster docs: call as soon as possible
-                        sdk.actions.ready({}).then(function() {
-                          console.log('[Layout Script] ✅✅✅ ready() called successfully from layout');
+                    if (isFarcasterEnv) {
+                      const sdk = window.Farcaster?.sdk || window.__farcasterSDK;
+                      if (sdk && sdk.actions && sdk.actions.ready) {
+                        console.log('[Layout Script] ✅ SDK available, calling ready()...');
+                        try {
+                          sdk.actions.ready({});
                           window.__farcasterReady = true;
-                        }).catch(function(error) {
-                          console.error('[Layout Script] ❌ ready() call failed:', error);
-                          window.__farcasterReady = true; // Mark as ready anyway
-                        });
-                        window.__farcasterReady = true; // Set immediately
-                      } catch (error) {
-                        console.error('[Layout Script] Error calling ready():', error);
-                        window.__farcasterReady = true; // Mark as ready anyway
+                          console.log('[Layout Script] ✅ ready() called');
+                        } catch (error) {
+                          console.log('[Layout Script] ready() failed, FarcasterProvider will handle');
+                        }
                       }
-                      return;
                     }
-                    
-                    // Timeout after max attempts
-                    if (attempts >= maxAttempts) {
-                      clearInterval(tryReady);
-                      console.log('[Layout Script] ⏱️ Timeout waiting for SDK, will call from FarcasterProvider');
-                      // Don't set __farcasterReady here - let FarcasterProvider handle it
-                    }
-                  }, 100); // Check every 100ms
+                  };
+                  
+                  // Try immediately
+                  checkSDK();
+                  
+                  // Also try after a short delay (50ms) in case SDK loads very quickly
+                  setTimeout(checkSDK, 50);
                 }
               })();
             `,
