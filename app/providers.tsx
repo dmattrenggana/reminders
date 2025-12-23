@@ -7,6 +7,7 @@ import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { injected } from "wagmi/connectors";
 // Removed unused imports after removing mounted state
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 /**
  * Initialize Farcaster Miniapp Connector
@@ -99,6 +100,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <FarcasterProvider>
           {children}
+          <Toaster />
         </FarcasterProvider>
       </QueryClientProvider>
     </WagmiProvider>

@@ -7,6 +7,7 @@ import { useReminderService } from "@/hooks/use-reminder-service"
 import { useAccount } from "wagmi"
 import { useFarcaster } from "@/components/providers/farcaster-provider"
 import { TOKEN_SYMBOL } from "@/lib/contracts/config"
+import { useToast } from "@/components/ui/use-toast"
 
 interface Reminder {
   id: number
@@ -44,6 +45,7 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   const service = useReminderService()
   const { address } = useAccount()
   const { user: providerUser, isMiniApp } = useFarcaster()
+  const { toast } = useToast()
 
   // Calculate if reminder is in T-1 hour window (can be helped/confirmed)
   const canInteract = useMemo(() => {
@@ -97,17 +99,29 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
 
   const handleAction = async (actionType: string, actionFn: () => Promise<void>, successMsg: string) => {
     if (!service) {
-      alert("Please connect your wallet first")
+      toast({
+        variant: "destructive",
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet first",
+      })
       return
     }
     setLoadingAction(actionType)
     try {
       await actionFn()
-      alert(successMsg)
+      toast({
+        variant: "success",
+        title: "Success!",
+        description: successMsg,
+      })
       window.location.reload()
     } catch (error: any) {
       console.error(`Error during ${actionType}:`, error)
-      alert(error.message || `Failed to ${actionType}`)
+      toast({
+        variant: "destructive",
+        title: `Failed to ${actionType}`,
+        description: error.message || `Failed to ${actionType}`,
+      })
     } finally {
       setLoadingAction(null)
     }
@@ -117,15 +131,27 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
     if (!onHelpRemind) {
       // Fallback to service if no callback provided
       if (!service) {
-        alert("Please connect your wallet first")
+        toast({
+          variant: "destructive",
+          title: "Wallet Not Connected",
+          description: "Please connect your wallet first",
+        })
         return
       }
       setLoadingAction("help")
       try {
         // This would need to be implemented in service
-        alert("Help remind functionality - please implement")
+        toast({
+          variant: "destructive",
+          title: "Not Implemented",
+          description: "Help remind functionality - please implement",
+        })
       } catch (error: any) {
-        alert(error.message || "Failed to help remind")
+        toast({
+          variant: "destructive",
+          title: "Failed to Help Remind",
+          description: error.message || "Failed to help remind",
+        })
       } finally {
         setLoadingAction(null)
       }

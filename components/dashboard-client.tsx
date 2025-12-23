@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FloatingCreate } from "@/components/floating-create";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReminderCard } from "@/components/reminders/reminder-card";
+import { useToast } from "@/components/ui/use-toast";
 
 // Icons
 import { Bell, Loader2, Wallet, RefreshCw, LogOut } from "lucide-react";
@@ -62,16 +63,25 @@ export default function DashboardClient() {
   // State for submission and transaction tracking
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txStatus, setTxStatus] = useState<string>("");
+  const { toast } = useToast();
 
   // Create reminder function (V4)
   const createReminder = async (desc: string, amt: string, dl: string) => {
     if (!isConnected || !address) {
-      alert("Please connect wallet first");
+      toast({
+        variant: "destructive",
+        title: "Wallet Not Connected",
+        description: "Please connect wallet first",
+      });
       return;
     }
 
     if (!desc || !amt || !dl) {
-      alert("Please fill in all fields");
+      toast({
+        variant: "destructive",
+        title: "Missing Fields",
+        description: "Please fill in all fields",
+      });
       return;
     }
 
@@ -85,7 +95,11 @@ export default function DashboardClient() {
 
       // Check if current time is valid
       if (deadlineTimestamp <= Math.floor(Date.now() / 1000)) {
-        alert("Deadline must be in the future");
+        toast({
+          variant: "destructive",
+          title: "Invalid Deadline",
+          description: "Deadline must be in the future",
+        });
         setIsSubmitting(false);
         setTxStatus("");
         return;
@@ -153,7 +167,11 @@ export default function DashboardClient() {
       
       if (createReceipt.status === "success") {
         setTxStatus("");
-        alert("✅ Reminder created successfully! Transaction confirmed.");
+        toast({
+          variant: "success",
+          title: "Success!",
+          description: "Reminder created successfully! Transaction confirmed.",
+        });
         
         // Immediately refresh balance (may need to wait for block confirmation)
         refreshBalance();
@@ -187,13 +205,29 @@ export default function DashboardClient() {
       
       // Better error messages
       if (error.message?.includes("User rejected") || error.code === 4001 || error.message?.includes("cancelled")) {
-        alert("❌ Transaction cancelled by user");
+        toast({
+          variant: "destructive",
+          title: "Transaction Cancelled",
+          description: "Transaction cancelled by user",
+        });
       } else if (error.message?.includes("insufficient funds")) {
-        alert("❌ Insufficient funds for gas or tokens");
+        toast({
+          variant: "destructive",
+          title: "Insufficient Funds",
+          description: "Insufficient funds for gas or tokens",
+        });
       } else if (error.message?.includes("reverted") || error.shortMessage?.includes("reverted")) {
-        alert("❌ Transaction reverted. Please check:\n- Token balance is sufficient\n- Deadline is in the future\n- Contract address is correct");
+        toast({
+          variant: "destructive",
+          title: "Transaction Reverted",
+          description: "Transaction reverted. Please check: Token balance is sufficient, Deadline is in the future, Contract address is correct",
+        });
       } else {
-        alert(`❌ Failed to create reminder: ${error.shortMessage || error.message || "Unknown error"}`);
+        toast({
+          variant: "destructive",
+          title: "Failed to Create Reminder",
+          description: error.shortMessage || error.message || "Unknown error",
+        });
       }
     }
   };
@@ -201,7 +235,11 @@ export default function DashboardClient() {
   // Confirm reminder function (V4)
   const confirmReminder = async (id: number) => {
     if (!isConnected || !address) {
-      alert("Please connect wallet first");
+      toast({
+        variant: "destructive",
+        title: "Wallet Not Connected",
+        description: "Please connect wallet first",
+      });
       return;
     }
 
@@ -226,7 +264,11 @@ export default function DashboardClient() {
 
       if (receipt.status === "success") {
         setTxStatus("");
-        alert("✅ Reminder confirmed! Tokens returned.");
+        toast({
+          variant: "success",
+          title: "Success!",
+          description: "Reminder confirmed! Tokens returned.",
+        });
         refreshReminders();
         refreshBalance();
       } else {
@@ -236,9 +278,17 @@ export default function DashboardClient() {
       console.error("Confirm reminder error:", error);
       setTxStatus("");
       if (error.message?.includes("User rejected") || error.code === 4001) {
-        alert("❌ Transaction cancelled by user");
+        toast({
+          variant: "destructive",
+          title: "Transaction Cancelled",
+          description: "Transaction cancelled by user",
+        });
       } else {
-        alert(error.shortMessage || error.message || "Failed to confirm reminder");
+        toast({
+          variant: "destructive",
+          title: "Failed to Confirm Reminder",
+          description: error.shortMessage || error.message || "Failed to confirm reminder",
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -248,7 +298,11 @@ export default function DashboardClient() {
   // Help remind function (V4)
   const helpRemind = async (reminder: any, isMiniApp: boolean, fid: number) => {
     if (!isConnected || !address) {
-      alert("Please connect wallet first");
+      toast({
+        variant: "destructive",
+        title: "Wallet Not Connected",
+        description: "Please connect wallet first",
+      });
       return;
     }
 
@@ -267,7 +321,11 @@ export default function DashboardClient() {
       const data = await response.json();
       
       if (!data.success) {
-        alert(data.error || "Failed to record reminder");
+        toast({
+          variant: "destructive",
+          title: "Failed to Record Reminder",
+          description: data.error || "Failed to record reminder",
+        });
         return;
       }
 
@@ -293,7 +351,11 @@ export default function DashboardClient() {
 
         if (receipt.status === "success") {
           setTxStatus("");
-          alert(`✅ Reward claimed! You earned ${data.data?.estimatedReward || "tokens"}`);
+          toast({
+            variant: "success",
+            title: "Reward Claimed!",
+            description: `You earned ${data.data?.estimatedReward || "tokens"}`,
+          });
           refreshReminders();
           refreshBalance();
         } else {
@@ -303,16 +365,28 @@ export default function DashboardClient() {
         console.error("Claim reward error:", error);
         setTxStatus("");
         if (error.message?.includes("User rejected") || error.code === 4001) {
-          alert("❌ Transaction cancelled by user");
+          toast({
+            variant: "destructive",
+            title: "Transaction Cancelled",
+            description: "Transaction cancelled by user",
+          });
         } else {
-          alert(error.shortMessage || error.message || "Failed to claim reward");
+          toast({
+            variant: "destructive",
+            title: "Failed to Claim Reward",
+            description: error.shortMessage || error.message || "Failed to claim reward",
+          });
         }
       } finally {
         setIsSubmitting(false);
       }
     } catch (error: any) {
       console.error("Help remind error:", error);
-      alert(error.message || "Failed to help remind");
+      toast({
+        variant: "destructive",
+        title: "Failed to Help Remind",
+        description: error.message || "Failed to help remind",
+      });
     }
   };
 
@@ -469,7 +543,11 @@ export default function DashboardClient() {
                 if (providerUser?.fid) {
                   helpRemind(reminder, isMiniApp, providerUser.fid);
                 } else {
-                  alert("Farcaster user not available");
+                  toast({
+                    variant: "destructive",
+                    title: "Farcaster User Not Available",
+                    description: "Farcaster user not available",
+                  });
                 }
               }}
             />
