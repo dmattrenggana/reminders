@@ -64,22 +64,94 @@ Jika Anda masih mengalami error 429 setelah menggunakan RPC gratis, solusi terba
 
 ---
 
-### **Option 3: QuickNode**
+### **Option 3: QuickNode (Recommended for Production)**
 
 1. **Daftar**: https://www.quicknode.com/
-2. **Create Endpoint**: Pilih "Base" network
-3. **Get HTTP URL**: Copy endpoint URL
+2. **Login**: Masuk ke QuickNode Dashboard
+3. **Create Endpoint**:
+   - Klik "Create Endpoint" atau "Add Endpoint"
+   - Pilih **"Base"** network (Chain ID: 8453)
+   - Pilih plan (Free, Build, atau Scale)
+   - Klik "Create Endpoint"
+4. **Get HTTP URL**:
+   - Setelah endpoint dibuat, copy **HTTP URL**
+   - Format: `https://YOUR-ENDPOINT-NAME.base.quiknode.pro/YOUR-API-KEY/`
+   - Contoh: `https://your-endpoint-name.base.quiknode.pro/abc123def456/`
+5. **API Key**:
+   - API key ada di akhir URL (setelah `/`)
+   - Atau bisa dilihat di QuickNode Dashboard → Endpoints → Your Endpoint → API Key
 
 **Pricing**:
 - **Free Tier**: 10M requests/month
 - **Build**: $49/month (100M requests)
 - **Scale**: $299/month (1B requests)
 
-**Link**: https://www.quicknode.com/pricing
+**Link**: 
+- **Dashboard**: https://www.quicknode.com/dashboard
+- **Pricing**: https://www.quicknode.com/pricing
+- **Docs**: https://www.quicknode.com/docs/console-api
+
+**Keuntungan QuickNode**:
+- ✅ Global distribution (multiple regions)
+- ✅ High reliability (99.9% uptime)
+- ✅ Fast response times
+- ✅ Good for production apps
 
 ---
 
-## ⚙️ **Setup di Vercel**
+## ⚙️ **Setup QuickNode (Step-by-Step)**
+
+### **Step 1: Login ke QuickNode Dashboard**
+
+1. Buka: https://www.quicknode.com/
+2. Login atau Sign Up (jika belum punya akun)
+3. Setelah login, Anda akan masuk ke Dashboard
+
+### **Step 2: Create Endpoint untuk Base**
+
+1. Di Dashboard, klik **"Create Endpoint"** atau **"Add Endpoint"**
+2. Pilih **"Base"** network (Chain ID: 8453)
+3. Pilih plan:
+   - **Free**: 10M requests/month (cukup untuk testing)
+   - **Build**: $49/month (100M requests) - recommended untuk production
+   - **Scale**: $299/month (1B requests) - untuk high traffic
+4. Klik **"Create Endpoint"**
+
+### **Step 3: Copy HTTP URL**
+
+Setelah endpoint dibuat:
+1. Di Dashboard, klik endpoint yang baru dibuat
+2. Copy **HTTP URL** (format: `https://YOUR-ENDPOINT-NAME.base.quiknode.pro/YOUR-API-KEY/`)
+3. **Contoh**: `https://your-endpoint-name.base.quiknode.pro/abc123def456/`
+
+**Catatan**: 
+- URL sudah termasuk API key di akhir
+- Simpan URL ini dengan aman (jangan share publicly)
+
+### **Step 4: Set di Vercel**
+
+1. Buka Vercel Dashboard → Project Settings → Environment Variables
+2. Add new variable:
+   - **Name**: `NEXT_PUBLIC_BASE_MAINNET_RPC_URL`
+   - **Value**: Paste HTTP URL dari QuickNode (contoh: `https://your-endpoint-name.base.quiknode.pro/abc123def456/`)
+3. **Save**
+
+### **Step 5: Redeploy**
+
+Setelah set environment variable:
+- Vercel akan otomatis redeploy
+- Atau manual: Deployments → Redeploy
+
+### **Step 6: Verifikasi**
+
+Setelah redeploy, cek:
+- Browser console: tidak ada error 429
+- Data loading lebih cepat
+- Data konsisten (tidak berubah-ubah)
+
+---
+
+## ⚙️ **Setup di Vercel (General)**
 
 ### **Step 1: Dapatkan API Key**
 
@@ -91,8 +163,16 @@ Di Vercel Dashboard:
 1. Go to **Project Settings** → **Environment Variables**
 2. Add new variable:
    - **Name**: `NEXT_PUBLIC_BASE_MAINNET_RPC_URL`
-   - **Value**: `https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY` (contoh Alchemy)
+   - **Value**: 
+     - **Alchemy**: `https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY`
+     - **Infura**: `https://base-mainnet.infura.io/v3/YOUR_API_KEY`
+     - **QuickNode**: `https://YOUR-ENDPOINT-NAME.base.quiknode.pro/YOUR-API-KEY/`
 3. **Save**
+
+**Contoh untuk QuickNode**:
+```
+NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://your-endpoint-name.base.quiknode.pro/abc123def456/
+```
 
 ### **Step 3: Redeploy**
 
@@ -129,7 +209,7 @@ Setelah setup, cek di browser console:
 |----------|-----------|-----------|----------|
 | **Alchemy** | 300M CU/month | $49/month | High volume apps |
 | **Infura** | 100k req/day | $50/month | Simple apps |
-| **QuickNode** | 10M req/month | $49/month | Global distribution |
+| **QuickNode** | 10M req/month | $49/month | Global distribution, Production apps ⭐ |
 
 **CU** = Compute Units (Alchemy's billing metric)
 

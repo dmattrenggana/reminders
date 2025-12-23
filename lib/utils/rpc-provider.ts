@@ -15,6 +15,7 @@ function getRpcEndpoints(): string[] {
   // Priority 1: Premium RPC from environment (if configured)
   // Alchemy: https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY
   // Infura: https://base-mainnet.infura.io/v3/YOUR_API_KEY
+  // QuickNode: https://YOUR-ENDPOINT-NAME.base.quiknode.pro/YOUR-API-KEY/
   // Note: NEXT_PUBLIC_ prefix makes it available in browser
   if (typeof window !== "undefined") {
     // Client-side: access via window or process.env (Next.js exposes NEXT_PUBLIC_ vars)
