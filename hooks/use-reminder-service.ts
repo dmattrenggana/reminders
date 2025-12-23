@@ -2,36 +2,48 @@
 
 import { useEffect, useState } from "react"
 import { ReminderService } from "@/lib/contracts/reminder-service"
-import { useAccount, usePublicClient, useWalletClient } from "wagmi"
+import { useAccount, useWalletClient } from "wagmi"
 
 export function useReminderService() {
   const { address, isConnected } = useAccount()
-  const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
-  const [service, setService] = useState<any>(null) // Gunakan any untuk menghindari konflik tipe saat build
+  const [service, setService] = useState<ReminderService | null>(null)
 
   useEffect(() => {
-    if (isConnected && address && publicClient && walletClient) {
+    // Only create service if connected and have wallet client
+    if (!isConnected || !walletClient || typeof window === "undefined") {
+      setService(null)
+      return
+    }
+
+    // Convert Wagmi wallet client to ethers signer
+    const createService = async () => {
       try {
-        // Kita paksa class-nya menjadi 'any' agar TypeScript tidak protes soal jumlah argumen
-        const ServiceClass = ReminderService as any;
+        console.log("[useReminderService] Creating signer from Wagmi wallet client...")
         
-        // Coba inisialisasi dengan format objek (standar baru)
-        const instance = new ServiceClass({
-          publicClient,
-          walletClient,
-          address
-        });
+        const { BrowserProvider } = await import("ethers")
         
-        setService(instance)
-      } catch (error) {
-        console.error("Failed to initialize ReminderService:", error)
+        // Create ethers provider from wallet client
+        const provider = new BrowserProvider(walletClient as any)
+        const signer = await provider.getSigner()
+        
+        // Store signer in window for ReminderService to access
+        (window as any).__wagmiSigner = signer
+        
+        console.log("[useReminderService] ✅ Signer created from Wagmi wallet client")
+        console.log("[useReminderService] Address:", await signer.getAddress())
+        
+        // Create service with signer
+        const newService = new ReminderService(signer)
+        setService(newService)
+      } catch (error: any) {
+        console.error("[useReminderService] Failed to create signer:", error?.message || error)
         setService(null)
       }
-    } else {
-      setService(null)
     }
-  }, [isConnected, address, publicClient, walletClient])
 
-  return service as ReminderService | null
+    createService()
+  }, [isConnected, walletClient])
+
+  return service
 }
