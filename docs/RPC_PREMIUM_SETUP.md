@@ -224,17 +224,115 @@ Setelah setup, cek di browser console:
 
 ---
 
+## 🔧 **QuickNode Console API (Programmatic Endpoint Management)**
+
+### **Apa itu Console API?**
+
+QuickNode Console API memungkinkan Anda untuk:
+- ✅ Create endpoints secara programmatic
+- ✅ List dan manage endpoints
+- ✅ Monitor usage dan metrics
+- ✅ Automate endpoint management
+
+### **Setup Console API Key**
+
+1. **Generate Console API Key**:
+   - Login ke QuickNode Dashboard: https://www.quicknode.com/dashboard
+   - Go to **Settings** → **API Keys**
+   - Generate new Console API key
+   - Copy API key
+
+2. **Set Environment Variable**:
+   - Di Vercel: Add `QUICKNODE_CONSOLE_API_KEY`
+   - Value: Console API key Anda
+   - **Note**: Console API key berbeda dari RPC endpoint URL
+
+### **API Routes yang Tersedia**
+
+Setelah `QUICKNODE_CONSOLE_API_KEY` di-set, Anda bisa menggunakan:
+
+**1. List Endpoints**:
+```bash
+GET /api/quicknode/endpoints
+GET /api/quicknode/endpoints?chain=base&network=mainnet
+```
+
+**2. Create Endpoint**:
+```bash
+POST /api/quicknode/endpoints
+Body: {
+  "chain": "base",
+  "network": "mainnet",
+  "label": "My Base Endpoint"
+}
+```
+
+**3. Base Mainnet Endpoint Management**:
+```bash
+# Get or find Base Mainnet endpoint
+GET /api/quicknode/endpoints/base
+
+# Create Base Mainnet endpoint (auto)
+GET /api/quicknode/endpoints/base?create=true
+POST /api/quicknode/endpoints/base
+```
+
+**4. Usage Statistics**:
+```bash
+GET /api/quicknode/usage
+GET /api/quicknode/usage?period=month
+```
+
+### **Usage di Code**
+
+```typescript
+import { createQuickNodeConsoleClient } from "@/lib/utils/quicknode-console";
+
+const client = createQuickNodeConsoleClient();
+
+// List all endpoints
+const endpoints = await client.listEndpoints();
+
+// Find Base Mainnet endpoint
+const baseEndpoint = await client.findBaseEndpoint();
+
+// Create Base Mainnet endpoint if not exists
+const newEndpoint = await client.createBaseEndpoint("My Base Endpoint");
+
+// Get Base RPC URL (auto-create if needed)
+const rpcUrl = await client.getBaseRpcUrl(true);
+
+// Get usage statistics
+const usage = await client.getUsage();
+```
+
+### **Documentation**
+
+- **QuickNode Console API**: https://www.quicknode.com/docs/console-api
+- **Create Endpoint**: https://www.quicknode.com/docs/console-api/endpoints/v0-endpoints-post
+
+**Note**: Console API untuk management/monitoring. Untuk RPC calls, gunakan RPC endpoint URL di `NEXT_PUBLIC_BASE_MAINNET_RPC_URL`.
+
+---
+
 ## 🆘 **Troubleshooting**
 
 ### Error: "Invalid API Key"
 - Pastikan API key benar
 - Pastikan network adalah "Base Mainnet" (bukan Ethereum)
 - Cek format URL sesuai provider
+- Untuk Console API: pastikan `QUICKNODE_CONSOLE_API_KEY` sudah di-set
 
 ### Masih Error 429
 - Pastikan environment variable sudah di-set
 - Pastikan sudah redeploy setelah set env var
 - Cek di Vercel logs apakah RPC premium digunakan
+- Gunakan Console API untuk create endpoint baru jika perlu
+
+### Console API Error
+- Pastikan `QUICKNODE_CONSOLE_API_KEY` sudah di-set di Vercel
+- Pastikan API key valid dan tidak expired
+- Cek QuickNode Dashboard untuk API key status
 
 ---
 
