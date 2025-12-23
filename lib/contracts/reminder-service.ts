@@ -111,11 +111,20 @@ export class ReminderService {
 
     let activeSigner = this.signer
 
+    // Priority 1: Wagmi signer (for Farcaster MiniApp with Wagmi connector)
+    const wagmiSigner = (window as any).__wagmiSigner
+    
+    // Priority 2: Frame SDK signer (for Farcaster Frames)
     const frameProvider = (window as any).__frameEthProvider
     const frameSigner = (window as any).__frameSigner
+    
+    // Priority 3: Web wallet signer
     const webSigner = (window as any).__webSigner
 
-    if (frameSigner) {
+    if (wagmiSigner) {
+      console.log("[v0] Using stored Wagmi signer (Farcaster MiniApp)")
+      activeSigner = wagmiSigner
+    } else if (frameSigner) {
       console.log("[v0] Using stored Frame SDK signer")
       activeSigner = frameSigner
     } else if (webSigner) {
@@ -155,6 +164,14 @@ export class ReminderService {
       console.log("[v0] Contracts connected with active signer")
     } else {
       console.warn("[v0] No active signer available - transactions will fail")
+      console.error("[v0] Checked signers:", {
+        wagmiSigner: !!wagmiSigner,
+        frameSigner: !!frameSigner,
+        webSigner: !!webSigner,
+        frameProvider: !!frameProvider,
+        windowEthereum: !!(window as any)?.ethereum,
+        passedSigner: !!this.signer
+      })
       throw new Error("Wallet not connected. Please connect your wallet to perform transactions.")
     }
   }
