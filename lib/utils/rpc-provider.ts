@@ -5,17 +5,49 @@
 
 import { ethers } from "ethers";
 
-// List of Base Mainnet RPC endpoints (ordered by priority)
-// Note: mainnet.base.org is moved lower due to frequent 429 rate limiting
-const RPC_ENDPOINTS = [
-  "https://base.llamarpc.com", // LlamaRPC (free, reliable, less rate limiting)
-  "https://base-rpc.publicnode.com", // PublicNode (free, reliable)
-  "https://base.drpc.org", // dRPC (free tier, reliable)
-  "https://base-mainnet.public.blastapi.io", // BlastAPI (free tier)
-  "https://base.gateway.tenderly.co", // Tenderly Gateway
-  "https://mainnet.base.org", // Official Base RPC (moved lower due to rate limiting)
-  "https://base-mainnet.g.alchemy.com/v2/demo", // Alchemy (demo, may need API key)
-] as const;
+/**
+ * Get RPC endpoints list with priority order
+ * Premium RPC (from env) takes highest priority if configured
+ */
+function getRpcEndpoints(): string[] {
+  const endpoints: string[] = [];
+
+  // Priority 1: Premium RPC from environment (if configured)
+  // Alchemy: https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY
+  // Infura: https://base-mainnet.infura.io/v3/YOUR_API_KEY
+  // Note: NEXT_PUBLIC_ prefix makes it available in browser
+  if (typeof window !== "undefined") {
+    // Client-side: access via window or process.env (Next.js exposes NEXT_PUBLIC_ vars)
+    const customRpc = (process?.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL as string)?.trim();
+    if (customRpc && !customRpc.includes("mainnet.base.org")) {
+      // Only add if it's not the default (which has rate limiting)
+      endpoints.push(customRpc);
+    }
+  } else {
+    // Server-side: direct access
+    const customRpc = process.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL?.trim();
+    if (customRpc && !customRpc.includes("mainnet.base.org")) {
+      endpoints.push(customRpc);
+    }
+  }
+
+  // Priority 2: Free reliable RPCs (less rate limiting)
+  endpoints.push(
+    "https://base.llamarpc.com", // LlamaRPC (free, reliable, less rate limiting)
+    "https://base-rpc.publicnode.com", // PublicNode (free, reliable)
+    "https://base.drpc.org", // dRPC (free tier, reliable)
+    "https://base-mainnet.public.blastapi.io", // BlastAPI (free tier)
+    "https://base.gateway.tenderly.co", // Tenderly Gateway
+  );
+
+  // Priority 3: Official Base RPC (moved lower due to frequent 429 rate limiting)
+  endpoints.push("https://mainnet.base.org");
+
+  return endpoints;
+}
+
+// Get RPC endpoints (will be evaluated once per module load)
+const RPC_ENDPOINTS = getRpcEndpoints();
 
 interface RpcCallOptions {
   maxRetries?: number;
@@ -25,9 +57,13 @@ interface RpcCallOptions {
 
 /**
  * Create an RPC provider with fallback support
+ * If endpoint is not provided, uses first endpoint from priority list
  */
 export function createRpcProvider(endpoint?: string): ethers.JsonRpcProvider {
-  const rpcUrl = endpoint || RPC_ENDPOINTS[0];
+  // Refresh endpoints in case env var changed (for development)
+  const endpoints = getRpcEndpoints();
+  const rpcUrl = endpoint || endpoints[0];
+  
   return new ethers.JsonRpcProvider(rpcUrl, undefined, {
     staticNetwork: true,
   });
@@ -49,8 +85,11 @@ export async function executeRpcCall<T>(
   let lastError: Error | null = null;
   let usedEndpoints: string[] = [];
 
+  // Get fresh endpoints list (in case env var changed)
+  const endpoints = getRpcEndpoints();
+
   // Try each RPC endpoint
-  for (const endpoint of RPC_ENDPOINTS) {
+  for (const endpoint of endpoints) {
     // Skip if already tried
     if (usedEndpoints.includes(endpoint)) {
       continue;
