@@ -524,6 +524,21 @@ function Header({
   onConnect,
   onDisconnect
 }: HeaderProps) {
+  const [pfpError, setPfpError] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+
+  // Handle image loading errors
+  const handlePfpError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPfpError(true);
+    return false;
+  };
+
+  const handleLogoError = () => {
+    setLogoError(true);
+  };
+
   return (
     <header className="
       flex flex-col md:flex-row items-center justify-between gap-6 
@@ -531,14 +546,21 @@ function Header({
     ">
       {/* Logo */}
       <div className="flex items-center gap-4">
-        <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-sm">
-          <Image 
-            src="/logo.jpg" 
-            alt="Logo" 
-            fill 
-            className="object-cover" 
-            priority 
-          />
+        <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-sm bg-slate-100">
+          {!logoError ? (
+            <Image 
+              src="/logo.jpg" 
+              alt="Logo" 
+              fill 
+              className="object-cover" 
+              priority
+              onError={handleLogoError}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-indigo-100">
+              <span className="text-indigo-600 font-bold text-lg">R</span>
+            </div>
+          )}
         </div>
         <div>
           <h1 className="text-2xl font-black tracking-tighter">Reminders</h1>
@@ -572,12 +594,13 @@ function Header({
                 bg-white transition-all shadow-sm
               "
             >
-              {pfpUrl ? (
+              {pfpUrl && !pfpError ? (
                 <img 
                   src={pfpUrl} 
                   alt="PFP" 
                   className="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-50" 
-                  referrerPolicy="no-referrer" 
+                  referrerPolicy="no-referrer"
+                  onError={handlePfpError}
                 />
               ) : (
                 <Wallet className="h-4 w-4 text-indigo-500" />
@@ -598,12 +621,13 @@ function Header({
           >
             {isMiniApp && providerUser ? (
               <div className="flex items-center gap-2">
-                {pfpUrl && (
+                {pfpUrl && !pfpError && (
                   <img 
                     src={pfpUrl} 
                     alt="PFP" 
                     className="w-6 h-6 rounded-full object-cover" 
-                    referrerPolicy="no-referrer" 
+                    referrerPolicy="no-referrer"
+                    onError={handlePfpError}
                   />
                 )}
                 <span>@{username}</span>

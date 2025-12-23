@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,20 @@ export function ConnectWalletButton() {
   const { address, isConnected, isConnecting } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const [imageError, setImageError] = useState(false);
 
   // Get user info from Farcaster
   const username = user?.username || user?.displayName;
   const pfpUrl = user?.pfpUrl || user?.pfp;
+
+  // Handle image loading errors
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImageError(true);
+    // Suppress error to prevent console noise
+    return false;
+  };
 
   /**
    * Handle manual wallet connection
@@ -70,12 +81,13 @@ export function ConnectWalletButton() {
         onClick={() => disconnect()} 
         className="flex items-center gap-2 rounded-full h-10 bg-white shadow-sm border border-slate-200 text-xs font-black px-4 text-slate-700 hover:text-red-500 transition-colors"
       >
-        {pfpUrl ? (
+        {pfpUrl && !imageError ? (
           <img 
             src={pfpUrl} 
             alt={username || "User"} 
             className="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-50" 
             referrerPolicy="no-referrer"
+            onError={handleImageError}
           />
         ) : (
           <Wallet className="h-4 w-4 text-indigo-500" />
@@ -104,12 +116,13 @@ export function ConnectWalletButton() {
           </>
         ) : (
           <>
-            {pfpUrl && (
+            {pfpUrl && !imageError && (
               <img 
                 src={pfpUrl} 
                 alt={username || "User"} 
                 className="w-5 h-5 rounded-full object-cover ring-1 ring-white/20" 
                 referrerPolicy="no-referrer"
+                onError={handleImageError}
               />
             )}
             <span>{username ? `Connect @${username}` : "Connect Wallet"}</span>

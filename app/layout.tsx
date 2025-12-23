@@ -50,9 +50,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                // Suppress harmless postMessage errors from Farcaster wallet connector
-                // These errors occur when connector tries to communicate with wallet iframe
-                // Error is harmless and doesn't affect functionality
+                // Suppress harmless errors from Farcaster wallet connector and image loading
                 const originalError = window.onerror;
                 window.onerror = function(message, source, lineno, colno, error) {
                   // Suppress postMessage origin mismatch errors from Farcaster connector
@@ -67,6 +65,24 @@ export default function RootLayout({
                     return originalError.call(this, message, source, lineno, colno, error);
                   }
                   return false;
+                };
+                
+                // Suppress unhandled promise rejections from image loading errors
+                const originalUnhandledRejection = window.onunhandledrejection;
+                window.onunhandledrejection = function(event) {
+                  // Suppress image loading errors (harmless - handled by onError handlers)
+                  if (event.reason && typeof event.reason === 'object') {
+                    const reason = event.reason;
+                    // Check if it's an Event object from image error
+                    if (reason.type === 'error' && reason.target && reason.target.tagName === 'IMG') {
+                      event.preventDefault(); // Suppress error
+                      return;
+                    }
+                  }
+                  // Let other rejections through
+                  if (originalUnhandledRejection) {
+                    return originalUnhandledRejection.call(this, event);
+                  }
                 };
                 
                 if (typeof window !== 'undefined' && ('Farcaster' in window || window.Farcaster)) {
