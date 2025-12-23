@@ -50,6 +50,25 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                // Suppress harmless postMessage errors from Farcaster wallet connector
+                // These errors occur when connector tries to communicate with wallet iframe
+                // Error is harmless and doesn't affect functionality
+                const originalError = window.onerror;
+                window.onerror = function(message, source, lineno, colno, error) {
+                  // Suppress postMessage origin mismatch errors from Farcaster connector
+                  if (typeof message === 'string' && 
+                      message.includes('postMessage') && 
+                      (message.includes('farcaster.xyz') || message.includes('wallet.farcaster.xyz'))) {
+                    // Error is harmless - Farcaster connector handles this internally
+                    return true; // Suppress error
+                  }
+                  // Let other errors through
+                  if (originalError) {
+                    return originalError.call(this, message, source, lineno, colno, error);
+                  }
+                  return false;
+                };
+                
                 if (typeof window !== 'undefined' && ('Farcaster' in window || window.Farcaster)) {
                   try {
                     // Try to get SDK from window if already available
