@@ -54,6 +54,7 @@ export default function DashboardClient() {
     isLoaded: isFarcasterLoaded,
     mounted
   });
+  
 useEffect(() => {
     const initializeMiniApp = async () => {
       try {
@@ -62,6 +63,9 @@ useEffect(() => {
       } catch (error) {
         console.error("Failed to initialize Farcaster MiniApp:", error);
         
+      }
+    };
+  
   // Reminder actions hook
   const {
     createReminder,
