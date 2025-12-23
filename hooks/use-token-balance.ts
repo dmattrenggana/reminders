@@ -68,14 +68,36 @@ export function useTokenBalance() {
   const symbolResult = (data?.[1]?.result as string) || "RMNDtest";
   
   // Log balance for debugging
-  if (address && isConnected && balanceResult !== undefined) {
-    console.log("[TokenBalance] Raw balance:", {
-      raw: balanceResult,
-      type: typeof balanceResult,
-      address,
-      symbol: symbolResult
-    });
-  }
+  useEffect(() => {
+    if (address && isConnected) {
+      if (error) {
+        console.error("[TokenBalance] Error details:", {
+          error,
+          address,
+          isConnected,
+          isLoading
+        });
+      }
+      
+      if (balanceResult !== undefined) {
+        console.log("[TokenBalance] Balance data:", {
+          raw: balanceResult?.toString(),
+          type: typeof balanceResult,
+          isBigInt: balanceResult instanceof BigInt || typeof balanceResult === 'bigint',
+          address,
+          symbol: symbolResult,
+          isLoading
+        });
+      } else if (!isLoading) {
+        console.warn("[TokenBalance] Balance is undefined but not loading:", {
+          address,
+          isConnected,
+          data,
+          error
+        });
+      }
+    }
+  }, [address, isConnected, balanceResult, symbolResult, isLoading, error, data]);
 
   return {
     // Menggunakan BigInt(0) agar lolos build Vercel

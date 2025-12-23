@@ -161,17 +161,53 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
               
               if (context?.user) {
                 const userData = context.user as any;
+                const fid = userData.fid;
+                
                 console.log('[Farcaster] User data found:', {
                   username: userData.username,
-                  fid: userData.fid,
+                  fid: fid,
                   hasPfp: !!(userData.pfpUrl || userData.pfp)
                 });
                 
+                // Try to fetch enhanced user data from Neynar if FID is available
+                let enhancedUserData = userData;
+                if (fid) {
+                  try {
+                    console.log('[Farcaster] Fetching enhanced user data from Neynar...');
+                    const neynarResponse = await fetch(`/api/farcaster/user?fid=${fid}`);
+                    if (neynarResponse.ok) {
+                      const neynarData = await neynarResponse.json();
+                      if (neynarData.user) {
+                        console.log('[Farcaster] Neynar user data fetched:', {
+                          username: neynarData.user.username,
+                          hasPfp: !!neynarData.user.pfp_url
+                        });
+                        // Merge Neynar data (more complete) with SDK data
+                        enhancedUserData = {
+                          ...userData,
+                          username: neynarData.user.username || userData.username,
+                          pfpUrl: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
+                          displayName: neynarData.user.display_name || userData.displayName,
+                          bio: neynarData.user.bio || userData.bio,
+                        };
+                      }
+                    }
+                  } catch (neynarError: any) {
+                    console.warn('[Farcaster] Neynar fetch failed (non-critical):', neynarError?.message || neynarError);
+                    // Continue with SDK data if Neynar fails
+                  }
+                }
+                
                 const normalizedUser = {
-                  ...userData,
-                  username: userData.username || "Farcaster User",
-                  pfpUrl: userData.pfpUrl || userData.pfp || "" 
+                  ...enhancedUserData,
+                  username: enhancedUserData.username || "Farcaster User",
+                  pfpUrl: enhancedUserData.pfpUrl || enhancedUserData.pfp || "" 
                 };
+                
+                console.log('[Farcaster] Setting normalized user:', {
+                  username: normalizedUser.username,
+                  hasPfp: !!normalizedUser.pfpUrl
+                });
                 
                 setUser(normalizedUser);
               } else {
