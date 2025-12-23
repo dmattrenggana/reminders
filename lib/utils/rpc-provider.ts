@@ -120,7 +120,7 @@ export async function executeRpcCall<T>(
       continue;
     }
 
-    const provider = createRpcProvider(endpoint);
+    const provider = await createRpcProvider(endpoint);
 
     // Try with retries for this endpoint
     for (let attempt = 0; attempt < maxRetries; attempt++) {
