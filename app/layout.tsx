@@ -50,7 +50,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                // Suppress harmless errors from Farcaster wallet connector and image loading
+                // Suppress harmless errors from Farcaster wallet connector, image loading, and Privy/WalletConnect
                 const originalError = window.onerror;
                 window.onerror = function(message, source, lineno, colno, error) {
                   // Suppress postMessage origin mismatch errors from Farcaster connector
@@ -58,6 +58,16 @@ export default function RootLayout({
                       message.includes('postMessage') && 
                       (message.includes('farcaster.xyz') || message.includes('wallet.farcaster.xyz'))) {
                     // Error is harmless - Farcaster connector handles this internally
+                    return true; // Suppress error
+                  }
+                  // Suppress WalletConnect CSP errors from Privy (dependency transitif)
+                  // Privy mencoba fetch wallet list dari WalletConnect Explorer API (optional feature)
+                  if (typeof message === 'string' && 
+                      (message.includes('WalletConnect') || 
+                       message.includes('explorer-api.walletconnect.com') ||
+                       message.includes('walletconnect.com'))) {
+                    // Error is harmless - Privy wallet discovery is optional, not critical
+                    console.warn('[Suppressed] WalletConnect CSP error (harmless - from Privy dependency)');
                     return true; // Suppress error
                   }
                   // Let other errors through
