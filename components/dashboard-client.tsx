@@ -11,6 +11,7 @@ import { useReminders } from "@/hooks/useReminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { useAutoConnect } from "@/hooks/use-auto-connect";
+import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
 // Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -390,15 +391,15 @@ export default function DashboardClient() {
     };
   }, [reminders, address]);
 
-  // Connect handler
+  // Connect handler - menggunakan utility function
   const handleConnect = () => {
-    const fcConnector = connectors.find(
-      (c) => c.id === "farcasterMiniApp" || c.id === "io.farcaster.miniapp"
-    );
+    // Use centralized utility to find Farcaster connector
+    const fcConnector = findFarcasterConnector(connectors);
     
     if (fcConnector) {
       connect({ connector: fcConnector });
     } else {
+      // Fallback untuk web browser (Injected/MetaMask)
       const injectedConnector = connectors.find((c) => c.id === "injected");
       connect({ connector: injectedConnector || connectors[0] });
     }
