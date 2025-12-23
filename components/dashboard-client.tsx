@@ -1,5 +1,5 @@
 "use client";
-import { sdk } from "@farcaster/miniapp-sdk";
+
 import { useState, useEffect, useMemo } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { formatUnits } from "viem";
@@ -54,18 +54,7 @@ export default function DashboardClient() {
     isLoaded: isFarcasterLoaded,
     mounted
   });
-  
-useEffect(() => {
-    const initializeMiniApp = async () => {
-      try {
-        await sdk.actions.ready();
-        console.log("Farcaster MiniApp SDK initialized successfully");
-      } catch (error) {
-        console.error("Failed to initialize Farcaster MiniApp:", error);
-        
-      }
-    };
-  
+
   // Reminder actions hook
   const {
     createReminder,
