@@ -100,9 +100,20 @@ export default function DashboardClient() {
   
   // Format balance with proper handling (memoized to prevent re-renders)
   const formattedBalance = useMemo(() => {
+    // Show loading state if balance is being fetched
+    if (isLoadingBalance && isConnected && address) {
+      return "...";
+    }
+    
     if (!isConnected || !address) {
       return "0.00";
     }
+    
+    // If balance is undefined or null, show 0.00
+    if (balance === undefined || balance === null) {
+      return "0.00";
+    }
+    
     if (typeof balance === 'bigint') {
       try {
         // Convert from wei (18 decimals) to token units
@@ -135,7 +146,7 @@ export default function DashboardClient() {
       }
     }
     return "0.00";
-  }, [balance, isConnected, address]);
+  }, [balance, isConnected, address, isLoadingBalance]);
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -235,7 +246,7 @@ export default function DashboardClient() {
         <Header
           isConnected={isConnected}
           formattedBalance={formattedBalance}
-          symbol={symbol}
+          symbol={symbol || "RMNDtest"}
           pfpUrl={pfpUrl}
           username={username}
           address={address}

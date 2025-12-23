@@ -90,7 +90,7 @@ export function Header({
               px-4 py-1.5 text-xs font-bold text-[#4f46e5] 
               border-r border-slate-200 whitespace-nowrap
             ">
-              {formattedBalance} <span className="text-[10px] opacity-75">{symbol}</span>
+              {formattedBalance || "0.00"} <span className="text-[10px] opacity-75">{symbol || "RMNDtest"}</span>
             </div>
             <Button 
               variant="ghost" 
@@ -126,7 +126,7 @@ export function Header({
             "
           >
             {/* Show user info if logged in via Farcaster miniapp */}
-            {isMiniApp && providerUser ? (
+            {isMiniApp && providerUser && (username || pfpUrl) ? (
               <div className="flex items-center gap-2">
                 {pfpUrl && !pfpError ? (
                   <img 
