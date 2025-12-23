@@ -87,10 +87,10 @@ export function Header({
             border border-slate-200 shadow-sm
           ">
             <div className="
-              px-4 text-[11px] font-black text-[#4f46e5] 
-              border-r border-slate-200
+              px-4 py-1.5 text-xs font-bold text-[#4f46e5] 
+              border-r border-slate-200 whitespace-nowrap
             ">
-              {formattedBalance} {symbol}
+              {formattedBalance} <span className="text-[10px] opacity-75">{symbol}</span>
             </div>
             <Button 
               variant="ghost" 
@@ -125,22 +125,27 @@ export function Header({
               text-white h-12 px-8 shadow-lg transition-all active:scale-95
             "
           >
-            {isMiniApp && providerUser && username ? (
+            {/* Show user info if logged in via Farcaster miniapp */}
+            {isMiniApp && providerUser ? (
               <div className="flex items-center gap-2">
                 {pfpUrl && !pfpError ? (
                   <img 
                     src={pfpUrl} 
-                    alt={username} 
+                    alt={username || "User"} 
                     className="w-6 h-6 rounded-full object-cover ring-2 ring-white/30" 
                     referrerPolicy="no-referrer"
                     onError={handlePfpError}
                   />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-indigo-300 flex items-center justify-center text-xs font-bold">
+                ) : username ? (
+                  <div className="w-6 h-6 rounded-full bg-indigo-300 flex items-center justify-center text-xs font-bold text-white">
                     {username.charAt(0).toUpperCase()}
                   </div>
+                ) : (
+                  <Wallet className="h-4 w-4" />
                 )}
-                <span>Connect @{username}</span>
+                <span>
+                  {username ? `Connect @${username}` : "Connect Wallet"}
+                </span>
               </div>
             ) : (
               <div className="flex items-center gap-2">

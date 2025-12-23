@@ -94,8 +94,8 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // Computed values
-  const username = providerUser?.username;
+  // Computed values - prioritize Farcaster user info
+  const username = providerUser?.username || providerUser?.displayName;
   const pfpUrl = providerUser?.pfpUrl || providerUser?.pfp;
   
   // Format balance with proper handling (memoized to prevent re-renders)
@@ -108,12 +108,25 @@ export default function DashboardClient() {
         // Convert from wei (18 decimals) to token units
         const num = Number(formatUnits(balance, 18));
         
-        // Format with 2 decimal places, but show more if needed
+        // Format with proper decimal places
         if (num === 0) {
           return "0.00";
         }
         if (num < 0.01) {
           return num.toFixed(6); // Show more decimals for very small amounts
+        }
+        if (num < 1) {
+          return num.toFixed(4); // Show 4 decimals for amounts < 1
+        }
+        if (num < 1000) {
+          return num.toFixed(2); // Show 2 decimals for amounts < 1000
+        }
+        // For large amounts, use compact notation
+        if (num >= 1000000) {
+          return (num / 1000000).toFixed(2) + "M";
+        }
+        if (num >= 1000) {
+          return (num / 1000).toFixed(2) + "K";
         }
         return num.toFixed(2);
       } catch (error) {
