@@ -115,20 +115,32 @@ export default function RootLayout({
                 // Simplified: Single check without polling
                 // FarcasterProvider is the PRIMARY caller if this fails
                 if (typeof window !== 'undefined') {
+                  console.log('[Layout Script] 🚀 Checking for Farcaster SDK...');
+                  console.log('[Layout Script] Window.Farcaster:', 'Farcaster' in window);
+                  
                   // Check once if SDK is immediately available (injected by Farcaster)
                   const checkSDK = function() {
                     const isFarcasterEnv = 'Farcaster' in window || window.Farcaster;
+                    console.log('[Layout Script] Is Farcaster environment:', isFarcasterEnv);
+                    
                     if (isFarcasterEnv) {
                       const sdk = window.Farcaster?.sdk || window.__farcasterSDK;
+                      console.log('[Layout Script] SDK found:', !!sdk);
+                      console.log('[Layout Script] SDK.actions:', !!(sdk && sdk.actions));
+                      console.log('[Layout Script] SDK.actions.ready:', !!(sdk && sdk.actions && sdk.actions.ready));
+                      
                       if (sdk && sdk.actions && sdk.actions.ready) {
-                        console.log('[Layout Script] ✅ SDK available, calling ready()...');
+                        console.log('[Layout Script] ⚡ Calling ready() from layout...');
                         try {
                           sdk.actions.ready({});
                           window.__farcasterReady = true;
-                          console.log('[Layout Script] ✅ ready() called');
+                          console.log('[Layout Script] ✅✅✅ ready() called successfully');
                         } catch (error) {
-                          console.log('[Layout Script] ready() failed, FarcasterProvider will handle');
+                          console.error('[Layout Script] ❌ ready() failed:', error);
+                          console.log('[Layout Script] FarcasterProvider will handle');
                         }
+                      } else {
+                        console.log('[Layout Script] SDK not ready yet, FarcasterProvider will handle');
                       }
                     }
                   };
@@ -137,7 +149,18 @@ export default function RootLayout({
                   checkSDK();
                   
                   // Also try after a short delay (50ms) in case SDK loads very quickly
-                  setTimeout(checkSDK, 50);
+                  setTimeout(function() {
+                    console.log('[Layout Script] Second attempt (50ms delay)...');
+                    checkSDK();
+                  }, 50);
+                  
+                  // Final attempt after 100ms
+                  setTimeout(function() {
+                    if (!window.__farcasterReady) {
+                      console.log('[Layout Script] Final attempt (100ms delay)...');
+                      checkSDK();
+                    }
+                  }, 100);
                 }
               })();
             `,
