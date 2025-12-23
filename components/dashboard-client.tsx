@@ -1,27 +1,26 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useAccount, useConnect, useDisconnect, useWriteContract, useReadContract, usePublicClient } from "wagmi";
-import { formatUnits, parseUnits } from "viem";
-import Image from "next/image";
-import { CONTRACTS, REMINDER_VAULT_ABI, COMMIT_TOKEN_ABI } from "@/lib/contracts/config";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { formatUnits } from "viem";
 
 // Hooks
 import { useReminders } from "@/hooks/useReminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { useAutoConnect } from "@/hooks/use-auto-connect";
+import { useReminderActions } from "@/hooks/use-reminder-actions";
 import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
-// Components
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FloatingCreate } from "@/components/floating-create";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ReminderCard } from "@/components/reminders/reminder-card";
-import { useToast } from "@/components/ui/use-toast";
 
-// Icons
-import { Bell, Loader2, Wallet, RefreshCw, LogOut } from "lucide-react";
+// Components
+import { Header } from "@/components/dashboard/Header";
+import { StatsCards } from "@/components/dashboard/StatsCards";
+import { TabsHeader } from "@/components/dashboard/TabsHeader";
+import { ReminderList } from "@/components/dashboard/ReminderList";
+import { FloatingCreate } from "@/components/floating-create";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react";
 
 export default function DashboardClient() {
   const [mounted, setMounted] = useState(false);
@@ -56,350 +55,27 @@ export default function DashboardClient() {
     mounted
   });
 
-  // Wagmi hooks for contract interactions
-  const { writeContractAsync } = useWriteContract();
-  const publicClient = usePublicClient();
-  
-  // State for submission and transaction tracking
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [txStatus, setTxStatus] = useState<string>("");
+  // Reminder actions hook
+  const {
+    createReminder,
+    confirmReminder,
+    helpRemind,
+    isSubmitting,
+    txStatus,
+  } = useReminderActions({
+    address,
+    isConnected,
+    providerUser,
+    refreshReminders,
+    refreshBalance,
+  });
+
   const { toast } = useToast();
-
-  // Create reminder function (V4)
-  const createReminder = async (desc: string, amt: string, dl: string) => {
-    if (!isConnected || !address) {
-      toast({
-        variant: "destructive",
-        title: "Wallet Not Connected",
-        description: "Please connect wallet first",
-      });
-      return;
-    }
-
-    if (!desc || !amt || !dl) {
-      toast({
-        variant: "destructive",
-        title: "Missing Fields",
-        description: "Please fill in all fields",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setTxStatus("Preparing transaction...");
-    
-    try {
-      const farcasterUsername = providerUser?.username || `wallet-${address.slice(0, 6)}`;
-      const amountInWei = parseUnits(amt, 18);
-      const deadlineTimestamp = Math.floor(new Date(dl).getTime() / 1000);
-
-      // Check if current time is valid
-      if (deadlineTimestamp <= Math.floor(Date.now() / 1000)) {
-        toast({
-          variant: "destructive",
-          title: "Invalid Deadline",
-          description: "Deadline must be in the future",
-        });
-        setIsSubmitting(false);
-        setTxStatus("");
-        return;
-      }
-
-      // Step 1: Check allowance first
-      setTxStatus("Checking token allowance...");
-      if (!publicClient) {
-        throw new Error("Public client not available");
-      }
-      
-      const allowance = await publicClient.readContract({
-        address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
-        abi: COMMIT_TOKEN_ABI,
-        functionName: 'allowance',
-        args: [address, CONTRACTS.REMINDER_VAULT as `0x${string}`],
-      }) as bigint;
-
-      // Step 2: Approve if needed
-      if (!allowance || allowance < amountInWei) {
-        setTxStatus("Approving tokens... Please confirm in wallet.");
-        try {
-          const approveTxHash = await writeContractAsync({
-            address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
-            abi: COMMIT_TOKEN_ABI,
-            functionName: 'approve',
-            args: [CONTRACTS.REMINDER_VAULT as `0x${string}`, amountInWei],
-          });
-          
-          setTxStatus("Waiting for approval confirmation...");
-          
-          // Wait for approval to be confirmed
-          const approveReceipt = await publicClient.waitForTransactionReceipt({
-            hash: approveTxHash,
-          });
-          
-          if (approveReceipt.status !== "success") {
-            throw new Error("Approval transaction failed");
-          }
-          
-          setTxStatus("Approval confirmed! Creating reminder...");
-        } catch (approveError: any) {
-          if (approveError.message?.includes("User rejected") || approveError.code === 4001) {
-            throw new Error("Approval cancelled by user");
-          }
-          throw approveError;
-        }
-      }
-
-      // Step 3: Create reminder
-      setTxStatus("Creating reminder... Please confirm in wallet.");
-      const createTxHash = await writeContractAsync({
-        address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
-        abi: REMINDER_VAULT_ABI,
-        functionName: 'createReminder',
-        args: [amountInWei, BigInt(deadlineTimestamp), desc, farcasterUsername],
-      });
-
-      setTxStatus("Waiting for transaction confirmation...");
-      
-      // Wait for create reminder transaction to be confirmed
-      const createReceipt = await publicClient.waitForTransactionReceipt({
-        hash: createTxHash,
-      });
-      
-      if (createReceipt.status === "success") {
-        setTxStatus("");
-        toast({
-          variant: "success",
-          title: "Success!",
-          description: "Reminder created successfully! Transaction confirmed.",
-        });
-        
-        // Immediately refresh balance (may need to wait for block confirmation)
-        refreshBalance();
-        
-        // Wait a bit for blockchain state to update, then refresh again
-        setTimeout(() => {
-          refreshReminders();
-          refreshBalance();
-        }, 2000);
-        
-        // Also refresh again after longer delay to ensure data is synced
-        setTimeout(() => {
-          refreshReminders();
-          refreshBalance();
-        }, 5000);
-        
-        // Final refresh after 10 seconds to ensure balance is updated
-        setTimeout(() => {
-          refreshBalance();
-        }, 10000);
-        
-        setIsSubmitting(false);
-      } else {
-        throw new Error("Transaction reverted");
-      }
-      
-    } catch (error: any) {
-      console.error("Create reminder error:", error);
-      setTxStatus("");
-      setIsSubmitting(false);
-      
-      // Better error messages
-      if (error.message?.includes("User rejected") || error.code === 4001 || error.message?.includes("cancelled")) {
-        toast({
-          variant: "destructive",
-          title: "Transaction Cancelled",
-          description: "Transaction cancelled by user",
-        });
-      } else if (error.message?.includes("insufficient funds")) {
-        toast({
-          variant: "destructive",
-          title: "Insufficient Funds",
-          description: "Insufficient funds for gas or tokens",
-        });
-      } else if (error.message?.includes("reverted") || error.shortMessage?.includes("reverted")) {
-        toast({
-          variant: "destructive",
-          title: "Transaction Reverted",
-          description: "Transaction reverted. Please check: Token balance is sufficient, Deadline is in the future, Contract address is correct",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Failed to Create Reminder",
-          description: error.shortMessage || error.message || "Unknown error",
-        });
-      }
-    }
-  };
-
-  // Confirm reminder function (V4)
-  const confirmReminder = async (id: number) => {
-    if (!isConnected || !address) {
-      toast({
-        variant: "destructive",
-        title: "Wallet Not Connected",
-        description: "Please connect wallet first",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setTxStatus("Confirming reminder... Please confirm in wallet.");
-    try {
-      if (!publicClient) {
-        throw new Error("Public client not available");
-      }
-
-      const txHash = await writeContractAsync({
-        address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
-        abi: REMINDER_VAULT_ABI,
-        functionName: 'confirmReminder',
-        args: [BigInt(id)],
-      });
-
-      setTxStatus("Waiting for transaction confirmation...");
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-      });
-
-      if (receipt.status === "success") {
-        setTxStatus("");
-        toast({
-          variant: "success",
-          title: "Success!",
-          description: "Reminder confirmed! Tokens returned.",
-        });
-        refreshReminders();
-        refreshBalance();
-      } else {
-        throw new Error("Transaction reverted");
-      }
-    } catch (error: any) {
-      console.error("Confirm reminder error:", error);
-      setTxStatus("");
-      if (error.message?.includes("User rejected") || error.code === 4001) {
-        toast({
-          variant: "destructive",
-          title: "Transaction Cancelled",
-          description: "Transaction cancelled by user",
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Failed to Confirm Reminder",
-          description: error.shortMessage || error.message || "Failed to confirm reminder",
-        });
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Help remind function (V4)
-  const helpRemind = async (reminder: any, isMiniApp: boolean, fid: number) => {
-    if (!isConnected || !address) {
-      toast({
-        variant: "destructive",
-        title: "Wallet Not Connected",
-        description: "Please connect wallet first",
-      });
-      return;
-    }
-
-    // First, call API to record reminder and get Neynar score
-    try {
-      const response = await fetch("/api/reminders/record", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reminderId: reminder.id,
-          helperAddress: address,
-          helperFid: fid,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!data.success) {
-        toast({
-          variant: "destructive",
-          title: "Failed to Record Reminder",
-          description: data.error || "Failed to record reminder",
-        });
-        return;
-      }
-
-      // Then claim reward
-      setIsSubmitting(true);
-      setTxStatus("Claiming reward... Please confirm in wallet.");
-      try {
-        if (!publicClient) {
-          throw new Error("Public client not available");
-        }
-
-        const txHash = await writeContractAsync({
-          address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
-          abi: REMINDER_VAULT_ABI,
-          functionName: 'claimReward',
-          args: [BigInt(reminder.id)],
-        });
-
-        setTxStatus("Waiting for transaction confirmation...");
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash,
-        });
-
-        if (receipt.status === "success") {
-          setTxStatus("");
-          toast({
-            variant: "success",
-            title: "Reward Claimed!",
-            description: `You earned ${data.data?.estimatedReward || "tokens"}`,
-          });
-          refreshReminders();
-          refreshBalance();
-        } else {
-          throw new Error("Transaction reverted");
-        }
-      } catch (error: any) {
-        console.error("Claim reward error:", error);
-        setTxStatus("");
-        if (error.message?.includes("User rejected") || error.code === 4001) {
-          toast({
-            variant: "destructive",
-            title: "Transaction Cancelled",
-            description: "Transaction cancelled by user",
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Failed to Claim Reward",
-            description: error.shortMessage || error.message || "Failed to claim reward",
-          });
-        }
-      } finally {
-        setIsSubmitting(false);
-      }
-    } catch (error: any) {
-      console.error("Help remind error:", error);
-      toast({
-        variant: "destructive",
-        title: "Failed to Help Remind",
-        description: error.message || "Failed to help remind",
-      });
-    }
-  };
 
   // Mount effect
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Call ready() after interface is loaded (per Farcaster docs best practices)
-  // Note: sdk.actions.ready() is now called directly in FarcasterProvider
-  // after SDK is imported, following Farcaster docs best practices:
-  // "Call ready when your interface is ready to be displayed"
-  // "Call ready as soon as possible while avoiding jitter and content reflows"
 
   // Computed values
   const username = providerUser?.username;
@@ -415,13 +91,6 @@ export default function DashboardClient() {
         // Convert from wei (18 decimals) to token units
         const num = Number(formatUnits(balance, 18));
         
-        // Log for debugging
-        console.log("[Dashboard] Formatting balance:", {
-          raw: balance.toString(),
-          formatted: num,
-          address
-        });
-        
         // Format with 2 decimal places, but show more if needed
         if (num === 0) {
           return "0.00";
@@ -431,20 +100,9 @@ export default function DashboardClient() {
         }
         return num.toFixed(2);
       } catch (error) {
-        console.error("[Dashboard] Error formatting balance:", error, {
-          balance,
-          balanceType: typeof balance,
-          address
-        });
+        console.error("[Dashboard] Error formatting balance:", error);
         return "0.00";
       }
-    }
-    if (balance !== undefined && balance !== null) {
-      console.warn("[Dashboard] Balance is not bigint:", {
-        balance,
-        type: typeof balance,
-        address
-      });
     }
     return "0.00";
   }, [balance, isConnected, address]);
@@ -472,9 +130,8 @@ export default function DashboardClient() {
     };
   }, [reminders, address]);
 
-  // Connect handler - menggunakan utility function
+  // Connect handler
   const handleConnect = () => {
-    // Use centralized utility to find Farcaster connector
     const fcConnector = findFarcasterConnector(connectors);
     
     if (fcConnector) {
@@ -488,7 +145,15 @@ export default function DashboardClient() {
 
   // Help remind handler
   const handleHelpRemindMe = (reminder: any) => {
-    helpRemind(reminder, isMiniApp, providerUser?.fid || 0);
+    if (providerUser?.fid) {
+      helpRemind(reminder, isMiniApp, providerUser.fid);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Farcaster User Not Available",
+        description: "Farcaster user not available",
+      });
+    }
   };
 
   // Refresh handler
@@ -539,17 +204,7 @@ export default function DashboardClient() {
               items={stats.publicFeed}
               feedType="public"
               address={address}
-              onHelpRemind={(reminder) => {
-                if (providerUser?.fid) {
-                  helpRemind(reminder, isMiniApp, providerUser.fid);
-                } else {
-                  toast({
-                    variant: "destructive",
-                    title: "Farcaster User Not Available",
-                    description: "Farcaster user not available",
-                  });
-                }
-              }}
+              onHelpRemind={handleHelpRemindMe}
             />
           </TabsContent>
 
@@ -571,296 +226,6 @@ export default function DashboardClient() {
         onConfirm={createReminder}
         status={txStatus}
       />
-    </div>
-  );
-}
-
-// ============= Sub-components =============
-
-interface HeaderProps {
-  isConnected: boolean;
-  formattedBalance: string;
-  symbol: string;
-  pfpUrl?: string;
-  username?: string;
-  address?: string;
-  isMiniApp: boolean;
-  providerUser: any;
-  onConnect: () => void;
-  onDisconnect: () => void;
-}
-
-function Header({
-  isConnected,
-  formattedBalance,
-  symbol,
-  pfpUrl,
-  username,
-  address,
-  isMiniApp,
-  providerUser,
-  onConnect,
-  onDisconnect
-}: HeaderProps) {
-  const [pfpError, setPfpError] = useState(false);
-  const [logoError, setLogoError] = useState(false);
-
-  // Handle image loading errors
-  const handlePfpError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setPfpError(true);
-    return false;
-  };
-
-  const handleLogoError = () => {
-    setLogoError(true);
-  };
-
-  return (
-    <header className="
-      flex flex-col md:flex-row items-center justify-between gap-6 
-      bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm
-    ">
-      {/* Logo */}
-      <div className="flex items-center gap-4">
-        <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-sm bg-slate-100">
-          {!logoError ? (
-            <Image 
-              src="/logo.jpg" 
-              alt="Logo" 
-              fill 
-              className="object-cover" 
-              priority
-              onError={handleLogoError}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-indigo-100">
-              <span className="text-indigo-600 font-bold text-lg">R</span>
-            </div>
-          )}
-        </div>
-        <div>
-          <h1 className="text-2xl font-black tracking-tighter">Reminders</h1>
-          <p className="
-            text-[10px] font-bold text-slate-400 uppercase 
-            tracking-widest leading-none
-          ">
-            Never Miss What Matters
-          </p>
-        </div>
-      </div>
-      
-      {/* Wallet section */}
-      <div className="flex items-center gap-3">
-        {isConnected ? (
-          <div className="
-            flex items-center gap-2 bg-slate-50 p-1 rounded-full 
-            border border-slate-200 shadow-sm
-          ">
-            <div className="
-              px-4 text-[11px] font-black text-[#4f46e5] 
-              border-r border-slate-200
-            ">
-              {formattedBalance} {symbol}
-            </div>
-            <Button 
-              variant="ghost" 
-              onClick={onDisconnect} 
-              className="
-                flex items-center gap-2 h-9 px-3 rounded-full 
-                bg-white transition-all shadow-sm
-              "
-            >
-              {pfpUrl && !pfpError ? (
-                <img 
-                  src={pfpUrl} 
-                  alt="PFP" 
-                  className="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-50" 
-                  referrerPolicy="no-referrer"
-                  onError={handlePfpError}
-                />
-              ) : (
-                <Wallet className="h-4 w-4 text-indigo-500" />
-              )}
-              <span className="text-xs font-black">
-                {username ? `@${username}` : `${address?.slice(0, 4)}...`}
-              </span>
-              <LogOut className="h-3 w-3 opacity-20 ml-1" />
-            </Button>
-          </div>
-        ) : (
-          <Button 
-            onClick={onConnect} 
-            className="
-              rounded-full bg-[#4f46e5] hover:opacity-90 font-bold 
-              text-white h-12 px-8 shadow-lg transition-all active:scale-95
-            "
-          >
-            {isMiniApp && providerUser ? (
-              <div className="flex items-center gap-2">
-                {pfpUrl && !pfpError && (
-                  <img 
-                    src={pfpUrl} 
-                    alt="PFP" 
-                    className="w-6 h-6 rounded-full object-cover" 
-                    referrerPolicy="no-referrer"
-                    onError={handlePfpError}
-                  />
-                )}
-                <span>@{username}</span>
-              </div>
-            ) : (
-              "Connect Wallet"
-            )}
-          </Button>
-        )}
-      </div>
-    </header>
-  );
-}
-
-interface StatsCardsProps {
-  stats: {
-    locked: number;
-    completed: number;
-    burned: number;
-  };
-  symbol: string;
-  reminders: any[];
-}
-
-function StatsCards({ stats, symbol, reminders }: StatsCardsProps) {
-  const cards = [
-    { 
-      label: `Locked ${symbol}`, 
-      val: stats.locked, 
-      color: "border-b-indigo-500" 
-    },
-    { 
-      label: "Completed", 
-      val: stats.completed, 
-      color: "border-b-green-500" 
-    },
-    { 
-      label: "Burned", 
-      val: stats.burned, 
-      color: "border-b-red-500" 
-    },
-    { 
-      label: "Total Tasks", 
-      val: Array.isArray(reminders) ? reminders.length : 0, 
-      color: "bg-[#4f46e5] text-white border-none shadow-indigo-100 shadow-xl" 
-    }
-  ];
-
-  return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card, i) => (
-        <Card 
-          key={i} 
-          className={`
-            rounded-3xl shadow-sm border-slate-100 overflow-hidden ${card.color}
-          `}
-        >
-          <CardHeader className="pb-1">
-            <CardTitle className="
-              text-[10px] font-black uppercase opacity-60 tracking-wider
-            ">
-              {card.label}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black">{card.val}</div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-interface TabsHeaderProps {
-  loadingReminders: boolean;
-  onRefresh: () => void;
-}
-
-function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
-  return (
-    <div className="
-      flex items-center justify-between mb-6 bg-white/60 backdrop-blur-sm 
-      p-2 rounded-3xl border border-slate-200 shadow-sm
-    ">
-      <TabsList className="bg-transparent border-none gap-2">
-        <TabsTrigger 
-          value="public" 
-          className="
-            rounded-2xl px-6 font-black text-xs uppercase transition-all 
-            data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white
-          "
-        >
-          🌍 Public Feed
-        </TabsTrigger>
-        <TabsTrigger 
-          value="my" 
-          className="
-            rounded-2xl px-6 font-black text-xs uppercase transition-all 
-            data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white
-          "
-        >
-          👤 My Feed
-        </TabsTrigger>
-      </TabsList>
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        onClick={onRefresh}
-        className="text-[#4f46e5] font-black text-[10px] uppercase"
-      >
-        <RefreshCw 
-          className={`h-4 w-4 mr-2 ${loadingReminders ? 'animate-spin' : ''}`} 
-        /> 
-        Sync Network
-      </Button>
-    </div>
-  );
-}
-
-interface ReminderListProps {
-  items: any[];
-  feedType?: "public" | "my";
-  address?: string;
-  onHelpRemind?: (reminder: any) => void;
-  onConfirm?: (reminderId: number) => void;
-}
-
-function ReminderList({ items, feedType = "public", address, onHelpRemind, onConfirm }: ReminderListProps) {
-  if (!items || items.length === 0) {
-    return (
-      <div className="
-        text-center py-24 bg-white rounded-[3rem] 
-        border-2 border-dashed border-slate-100
-      ">
-        <Bell width={40} height={40} className="text-slate-100 mx-auto mb-4" />
-        <p className="
-          text-slate-300 text-[10px] font-black uppercase tracking-[0.3em]
-        ">
-          No activity found
-        </p>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="grid gap-5">
-      {items.map((reminder) => (
-        <ReminderCard
-          key={reminder.id}
-          reminder={reminder}
-          feedType={feedType}
-          onHelpRemind={onHelpRemind}
-          onConfirm={onConfirm}
-        />
-      ))}
     </div>
   );
 }
