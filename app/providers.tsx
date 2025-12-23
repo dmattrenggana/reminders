@@ -50,19 +50,20 @@ export const config = createConfig({
          transports: {
            // Use fallback transport to handle rate limiting (429 errors)
            // Fallback will try next RPC if one fails or returns 429
+           // Note: mainnet.base.org moved lower due to frequent 429 rate limiting
            [base.id]: fallback([
-             // Primary: Official Base RPC
-             http("https://mainnet.base.org"),
-             // Fallback 1: LlamaRPC (free, reliable)
+             // Primary: LlamaRPC (free, reliable, less rate limiting)
              http("https://base.llamarpc.com"),
-             // Fallback 2: PublicNode (free, reliable)
+             // Fallback 1: PublicNode (free, reliable)
              http("https://base-rpc.publicnode.com"),
-             // Fallback 3: Tenderly Gateway
-             http("https://base.gateway.tenderly.co"),
-             // Fallback 4: BlastAPI (free tier)
-             http("https://base-mainnet.public.blastapi.io"),
-             // Fallback 5: dRPC (free tier)
+             // Fallback 2: dRPC (free tier, reliable)
              http("https://base.drpc.org"),
+             // Fallback 3: BlastAPI (free tier)
+             http("https://base-mainnet.public.blastapi.io"),
+             // Fallback 4: Tenderly Gateway
+             http("https://base.gateway.tenderly.co"),
+             // Fallback 5: Official Base RPC (moved lower due to rate limiting)
+             http("https://mainnet.base.org"),
            ]),
          },
 });

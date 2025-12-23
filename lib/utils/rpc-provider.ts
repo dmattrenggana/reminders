@@ -6,14 +6,15 @@
 import { ethers } from "ethers";
 
 // List of Base Mainnet RPC endpoints (ordered by priority)
+// Note: mainnet.base.org is moved lower due to frequent 429 rate limiting
 const RPC_ENDPOINTS = [
-  "https://mainnet.base.org", // Official Base RPC (primary)
-  "https://base.llamarpc.com", // LlamaRPC (free, reliable)
+  "https://base.llamarpc.com", // LlamaRPC (free, reliable, less rate limiting)
   "https://base-rpc.publicnode.com", // PublicNode (free, reliable)
-  "https://base.gateway.tenderly.co", // Tenderly Gateway
-  "https://base-mainnet.g.alchemy.com/v2/demo", // Alchemy (demo, may need API key)
+  "https://base.drpc.org", // dRPC (free tier, reliable)
   "https://base-mainnet.public.blastapi.io", // BlastAPI (free tier)
-  "https://base.drpc.org", // dRPC (free tier)
+  "https://base.gateway.tenderly.co", // Tenderly Gateway
+  "https://mainnet.base.org", // Official Base RPC (moved lower due to rate limiting)
+  "https://base-mainnet.g.alchemy.com/v2/demo", // Alchemy (demo, may need API key)
 ] as const;
 
 interface RpcCallOptions {
@@ -79,10 +80,14 @@ export async function executeRpcCall<T>(
         // Check if it's a rate limit error (429 or "too many requests")
         const isRateLimit =
           error?.statusCode === 429 ||
+          error?.status === 429 ||
+          error?.response?.status === 429 ||
           error?.message?.toLowerCase().includes("too many requests") ||
           error?.message?.toLowerCase().includes("rate limit") ||
+          error?.message?.toLowerCase().includes("429") ||
           error?.code === "ECONNRESET" ||
-          error?.code === "ETIMEDOUT";
+          error?.code === "ETIMEDOUT" ||
+          (error?.error?.code && error.error.code === -32005); // JSON-RPC rate limit code
 
         // If rate limit, try next endpoint immediately
         if (isRateLimit) {
@@ -120,8 +125,8 @@ export async function batchRpcCalls<T>(
   options: RpcCallOptions & { batchSize?: number; batchDelay?: number } = {}
 ): Promise<T[]> {
   const {
-    batchSize = 10, // Process 10 calls at a time
-    batchDelay = 100, // 100ms delay between batches
+    batchSize = 5, // Process 5 calls at a time (reduced to avoid rate limiting)
+    batchDelay = 300, // 300ms delay between batches (increased to avoid rate limiting)
   } = options;
 
   const results: (T | null)[] = [];

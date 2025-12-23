@@ -5,23 +5,46 @@ import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
 
 // Cache untuk mengurangi RPC calls
 const reminderCache = new Map<number, { data: any; timestamp: number }>();
-const CACHE_DURATION = 60000; // 60 seconds cache (increased from 30s for stability)
+const CACHE_DURATION = 120000; // 120 seconds cache (2 minutes for stability)
+let globalFetchInProgress = false; // Prevent multiple simultaneous fetches
 
 export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 15000; // Minimum 15 seconds between fetches (increased from 10s)
+  const MIN_FETCH_INTERVAL = 30000; // Minimum 30 seconds between fetches (increased for stability)
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchReminders = useCallback(async () => {
     try {
+      // Prevent multiple simultaneous fetches
+      if (globalFetchInProgress) {
+        console.log("[useReminders] Fetch already in progress, skipping...");
+        return;
+      }
+
       // Throttle: Don't fetch if last fetch was too recent
       const now = Date.now();
       if (now - lastFetchRef.current < MIN_FETCH_INTERVAL && reminderCache.size > 0) {
         console.log("[useReminders] Throttled: Using cached data");
+        // Update timeLeft for cached data without fetching
+        const cachedItems = Array.from(reminderCache.values())
+          .filter((cached) => now - cached.timestamp < CACHE_DURATION)
+          .map((cached) => cached.data)
+          .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
+          .map((r: any) => {
+            const timeLeft = r.deadline - Math.floor(Date.now() / 1000);
+            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+            const isExpired = !r.isResolved && timeLeft <= 0;
+            return { ...r, timeLeft, isDangerZone, isExpired };
+          });
+        if (cachedItems.length > 0) {
+          setActiveReminders(cachedItems.reverse());
+        }
         return;
       }
       lastFetchRef.current = now;
+      globalFetchInProgress = true;
 
       setLoading(true);
       
@@ -93,7 +116,7 @@ export function useReminders() {
             totalReminders: Number(r.totalReminders),
             rewardsClaimed: ethers.formatUnits(r.rewardsClaimed, 18),
           };
-          // Cache the result
+          // Only cache valid data
           reminderCache.set(id, { data: reminderData, timestamp: now });
           return reminderData;
         } catch (e: any) {
@@ -101,58 +124,86 @@ export function useReminders() {
           if (!e.message?.includes("missing revert data") && !e.message?.includes("CALL_EXCEPTION")) {
             console.warn(`Error fetching reminder ID ${id}:`, e.message || e);
           }
+          // Don't cache errors - return null
           return null;
         }
       });
 
       // Execute batch calls with rate limiting
       const fetchedResults = await batchRpcCalls(fetchCalls, {
-        batchSize: 5, // Process 5 reminders at a time
-        batchDelay: 200, // 200ms delay between batches
+        batchSize: 3, // Process 3 reminders at a time (reduced to avoid rate limiting)
+        batchDelay: 500, // 500ms delay between batches (increased to avoid rate limiting)
         maxRetries: 2,
-        retryDelay: 500,
+        retryDelay: 1000,
       });
 
+      // Only update state if we got valid results
+      const validFetchedResults = fetchedResults.filter((r) => r !== null && r.creator !== ethers.ZeroAddress);
+      
       // Combine cached and fetched results
-      const allResults = [...cachedReminders, ...fetchedResults];
+      const allResults = [...cachedReminders, ...validFetchedResults];
 
-      // Filter data valid dan tambahkan metadata workflow
-      const items = allResults
-        .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
-        .map((r: any) => {
-          const timeLeft = r.deadline - nowTimestamp;
-          
-          // Logika Workflow: Danger Zone adalah -1 jam (3600 detik) sebelum deadline
-          const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-          
-          // Logika Workflow: Expired jika deadline lewat tapi belum resolved
-          const isExpired = !r.isResolved && timeLeft <= 0;
+      // Only update state if we have valid data
+      if (allResults.length > 0 || cachedReminders.length > 0) {
+        // Filter data valid dan tambahkan metadata workflow
+        const items = allResults
+          .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
+          .map((r: any) => {
+            const timeLeft = r.deadline - nowTimestamp;
+            
+            // Logika Workflow: Danger Zone adalah -1 jam (3600 detik) sebelum deadline
+            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+            
+            // Logika Workflow: Expired jika deadline lewat tapi belum resolved
+            const isExpired = !r.isResolved && timeLeft <= 0;
 
-          return {
-            ...r,
-            timeLeft,
-            isDangerZone,
-            isExpired,
-          };
-        });
+            return {
+              ...r,
+              timeLeft,
+              isDangerZone,
+              isExpired,
+            };
+          });
 
-      // Urutkan dari yang terbaru (ID terbesar di atas)
-      setActiveReminders(items.reverse());
+        // Urutkan dari yang terbaru (ID terbesar di atas)
+        setActiveReminders(items.reverse());
+      }
+      // If error but we have cached data, keep using cached data (don't clear)
     } catch (error: any) {
       console.warn("Could not fetch reminders from contract:", error?.message || error);
-      // Set empty array on error - app continues to work
-      setActiveReminders([]);
+      // Don't clear state on error - keep existing data for stability
+      // Only set empty if we have no cached data
+      if (reminderCache.size === 0) {
+        setActiveReminders([]);
+      }
     } finally {
       setLoading(false);
+      globalFetchInProgress = false;
     }
   }, []);
 
   useEffect(() => {
-    fetchReminders();
+    // Clear any pending timeout
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+
+    // Initial fetch with small delay to avoid race conditions
+    fetchTimeoutRef.current = setTimeout(() => {
+      fetchReminders();
+    }, 100);
     
-    // Opsional: Refresh otomatis setiap 1 menit untuk mengupdate status Danger Zone
-    const interval = setInterval(fetchReminders, 60000);
-    return () => clearInterval(interval);
+    // Refresh otomatis setiap 2 menit untuk mengupdate status (reduced frequency)
+    const interval = setInterval(() => {
+      fetchReminders();
+    }, 120000); // 2 minutes
+
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+      clearInterval(interval);
+    };
   }, [fetchReminders]);
 
   return { activeReminders, loading, refresh: fetchReminders };
