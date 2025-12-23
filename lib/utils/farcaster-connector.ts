@@ -11,7 +11,7 @@ import { Connector } from "wagmi";
  * Find Farcaster miniapp connector from available connectors
  * Tries multiple possible IDs/names to ensure compatibility
  */
-export function findFarcasterConnector(connectors: Connector[]): Connector | undefined {
+export function findFarcasterConnector(connectors: readonly Connector[]): Connector | undefined {
   return connectors.find((c) => {
     const id = c.id?.toLowerCase() || '';
     const name = c.name?.toLowerCase() || '';
