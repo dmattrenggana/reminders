@@ -58,16 +58,40 @@ interface RpcCallOptions {
 
 /**
  * Create an RPC provider with fallback support
- * If endpoint is not provided, uses first endpoint from priority list
+ * Tests connection and falls back to next endpoint if needed
  */
-export function createRpcProvider(endpoint?: string): ethers.JsonRpcProvider {
+export async function createRpcProvider(endpoint?: string): Promise<ethers.JsonRpcProvider> {
   // Refresh endpoints in case env var changed (for development)
   const endpoints = getRpcEndpoints();
-  const rpcUrl = endpoint || endpoints[0];
   
-  return new ethers.JsonRpcProvider(rpcUrl, undefined, {
-    staticNetwork: true,
-  });
+  // If specific endpoint provided, use it
+  if (endpoint) {
+    return new ethers.JsonRpcProvider(endpoint, undefined, {
+      staticNetwork: true,
+    });
+  }
+  
+  // Try endpoints in order until one works
+  for (const rpcUrl of endpoints) {
+    try {
+      const provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
+        staticNetwork: true,
+      });
+      
+      // Test connection with timeout
+      await Promise.race([
+        provider.getNetwork(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+      ]);
+      
+      return provider;
+    } catch (e) {
+      console.log(`[RPC] Endpoint failed, trying next: ${rpcUrl.slice(0, 30)}...`);
+      continue;
+    }
+  }
+  
+  throw new Error("Could not connect to any RPC endpoint");
 }
 
 /**

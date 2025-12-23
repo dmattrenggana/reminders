@@ -39,42 +39,18 @@ export class ReminderService {
     if (typeof window === "undefined") return
 
     try {
-      const { Contract, JsonRpcProvider } = await import("ethers")
+      const { Contract } = await import("ethers")
+      const { createRpcProvider } = await import("@/lib/utils/rpc-provider")
 
       if (!CONTRACTS.COMMIT_TOKEN || !CONTRACTS.REMINDER_VAULT) {
         throw new Error("Contract addresses not configured")
       }
 
-      const rpcEndpoints = [
-        process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL,
-        "https://mainnet.base.org",
-        "https://base.llamarpc.com",
-        "https://base-rpc.publicnode.com",
-      ].filter(Boolean) as string[]
-
       console.log("[v0] Trying to connect to Base Mainnet RPC...")
-      let provider = null
-
-      for (let i = 0; i < rpcEndpoints.length; i++) {
-        const rpcUrl = rpcEndpoints[i]
-        try {
-          console.log(`[v0] Attempting RPC ${i + 1}/${rpcEndpoints.length}:`, rpcUrl.slice(0, 30) + "...")
-          const testProvider = new JsonRpcProvider(rpcUrl, 8453)
-
-          await Promise.race([
-            testProvider.getNetwork(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
-          ])
-
-          provider = testProvider
-          console.log("[v0] ✅ Connected to Base Mainnet via RPC", i + 1)
-          break
-        } catch (e) {
-          console.log(`[v0] RPC ${i + 1} failed, trying next...`)
-          continue
-        }
-      }
-
+      
+      // Use centralized RPC provider with fallback support
+      const provider = await createRpcProvider()
+      
       if (!provider) {
         throw new Error("Could not connect to Base Mainnet. All RPC endpoints failed.")
       }
