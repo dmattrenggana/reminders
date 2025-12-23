@@ -1,6 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { CONTRACTS, REMINDER_VAULT_ABI } from "@/lib/contracts/config"
 
+/**
+ * Cron Job: Process Expired Reminders
+ * 
+ * Schedule: Every 15 minutes (*/15 * * * *)
+ * 
+ * This cron job:
+ * 1. Checks all reminders for expired confirmationDeadline
+ * 2. Automatically burns 30% commitment tokens for missed reminders
+ * 3. Returns unclaimed 70% reward pool to reminder creator
+ * 
+ * Runs automatically via Vercel Cron Jobs
+ */
 export const maxDuration = 60
 
 export async function GET(request: NextRequest) {
@@ -51,7 +63,7 @@ export async function GET(request: NextRequest) {
           confirmationTime
 
         if (reminder.length === 12) {
-          // V3 contract with confirmationTime field at index 11
+          // V4/V3 contract with confirmationTime field at index 11
           ;[
             user,
             commitAmount,
@@ -86,27 +98,41 @@ export async function GET(request: NextRequest) {
         // Skip already processed reminders
         if (confirmed || burned) continue
 
+        // Check if deadline has passed
         if (currentTime > Number(confirmationDeadline)) {
+          const deadlineDate = new Date(Number(confirmationDeadline) * 1000).toISOString()
+          console.log(
+            `[v0] Cron: Deadline passed for reminder ${i} (deadline: ${deadlineDate}, current: ${new Date().toISOString()})`
+          )
           console.log(`[v0] Cron: Burning expired reminder ${i} for ${farcasterUsername || "wallet user"}`)
 
-          // Burns 50% commitment tokens to 0xdead
-          // Returns 50% reward pool to user
+          // V4: Burns 30% commitment tokens to 0xdead
+          // V4: Returns unclaimed portion of 70% reward pool to user
           const tx = await vaultContract.burnMissedReminder(i)
           const receipt = await tx.wait()
+
+          // Calculate unclaimed rewards (V4 returns unclaimed portion, not full reward pool)
+          // Use BigInt arithmetic to avoid precision loss
+          const unclaimedRewards = BigInt(rewardPoolAmount) - BigInt(rewardsClaimed)
 
           processedReminders.push({
             id: i,
             action: "burned_missed_reminder",
             user,
             farcasterUsername: farcasterUsername || "wallet user",
-            commitmentBurned: ethers.formatUnits(commitAmount, 18),
-            rewardPoolReturned: ethers.formatUnits(rewardPoolAmount, 18),
+            commitmentBurned: ethers.formatUnits(commitAmount, 18), // 30% of total (V4)
+            rewardPoolTotal: ethers.formatUnits(rewardPoolAmount, 18), // 70% of total (V4)
+            rewardsClaimed: ethers.formatUnits(rewardsClaimed, 18),
+            rewardPoolReturned: ethers.formatUnits(unclaimedRewards, 18), // Unclaimed portion returned
             helpersCount: Number(totalReminders),
+            deadline: deadlineDate,
             txHash: tx.hash,
             blockNumber: receipt.blockNumber,
           })
 
-          console.log(`[v0] Cron: Successfully burned reminder ${i}, tx: ${tx.hash}`)
+          console.log(
+            `[v0] Cron: Successfully burned reminder ${i} - Burned: ${ethers.formatUnits(commitAmount, 18)} tokens, Returned: ${ethers.formatUnits(unclaimedRewards, 18)} unclaimed rewards, tx: ${tx.hash}`
+          )
         }
       } catch (error: any) {
         console.error(`[v0] Cron: Error processing reminder ${i}:`, error.message)
