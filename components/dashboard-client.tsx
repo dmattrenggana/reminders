@@ -1,7 +1,7 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { formatUnits } from "viem";
 
@@ -199,8 +199,21 @@ export default function DashboardClient() {
     }
   };
 
-  // Refresh handler
+  // Refresh handler with debouncing to save quota
+  const lastRefreshRef = useRef<number>(0);
+  const REFRESH_COOLDOWN = 10000; // 10 seconds cooldown between manual refreshes
+  
   const handleRefresh = () => {
+    const now = Date.now();
+    if (now - lastRefreshRef.current < REFRESH_COOLDOWN) {
+      toast({
+        variant: "default",
+        title: "Please wait",
+        description: `Wait ${Math.ceil((REFRESH_COOLDOWN - (now - lastRefreshRef.current)) / 1000)}s before refreshing again`,
+      });
+      return;
+    }
+    lastRefreshRef.current = now;
     refreshReminders();
     refreshBalance();
   };

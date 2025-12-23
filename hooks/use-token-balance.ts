@@ -49,9 +49,12 @@ export function useTokenBalance() {
     ],
     query: {
       enabled: !!address && isConnected,
-      refetchInterval: 10000, // Refresh every 10 seconds
-      staleTime: 5000, // Consider data stale after 5 seconds
-      retry: 3, // Retry 3 times on failure
+      refetchInterval: 60000, // Refresh every 60 seconds (reduced from 10s to save quota)
+      staleTime: 30000, // Consider data stale after 30 seconds (increased from 5s)
+      gcTime: 300000, // Keep in cache for 5 minutes (was default 5 minutes)
+      retry: 2, // Retry 2 times on failure (reduced from 3)
+      refetchOnWindowFocus: false, // Don't refetch on window focus to save quota
+      refetchOnReconnect: false, // Don't refetch on reconnect to save quota
     }
   });
 

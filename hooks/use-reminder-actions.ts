@@ -135,25 +135,12 @@ export function useReminderActions({
           description: "Reminder created successfully! Transaction confirmed.",
         });
         
-        // Immediately refresh balance (may need to wait for block confirmation)
-        refreshBalance();
-        
-        // Wait a bit for blockchain state to update, then refresh again
+        // Wait for blockchain state to update (optimized to save quota)
+        // Only refresh once after transaction confirmation
         setTimeout(() => {
           refreshReminders();
           refreshBalance();
-        }, 2000);
-        
-        // Also refresh again after longer delay to ensure data is synced
-        setTimeout(() => {
-          refreshReminders();
-          refreshBalance();
-        }, 5000);
-        
-        // Final refresh after 10 seconds to ensure balance is updated
-        setTimeout(() => {
-          refreshBalance();
-        }, 10000);
+        }, 3000); // Single refresh after 3 seconds (reduced from multiple refreshes)
         
         setIsSubmitting(false);
       } else {

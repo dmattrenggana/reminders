@@ -3,16 +3,16 @@ import { ethers } from "ethers";
 import { VAULT_ABI, VAULT_ADDRESS } from "@/lib/contracts/config";
 import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
 
-// Cache untuk mengurangi RPC calls
+// Cache untuk mengurangi RPC calls - Optimized for QuickNode quota
 const reminderCache = new Map<number, { data: any; timestamp: number }>();
-const CACHE_DURATION = 120000; // 120 seconds cache (2 minutes for stability)
+const CACHE_DURATION = 300000; // 300 seconds cache (5 minutes - increased to save quota)
 let globalFetchInProgress = false; // Prevent multiple simultaneous fetches
 
 export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 30000; // Minimum 30 seconds between fetches (increased for stability)
+  const MIN_FETCH_INTERVAL = 60000; // Minimum 60 seconds between fetches (increased to save quota)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchReminders = useCallback(async () => {
@@ -129,12 +129,12 @@ export function useReminders() {
         }
       });
 
-      // Execute batch calls with rate limiting
+      // Execute batch calls with rate limiting - Optimized for QuickNode quota
       const fetchedResults = await batchRpcCalls(fetchCalls, {
-        batchSize: 3, // Process 3 reminders at a time (reduced to avoid rate limiting)
-        batchDelay: 500, // 500ms delay between batches (increased to avoid rate limiting)
-        maxRetries: 2,
-        retryDelay: 1000,
+        batchSize: 2, // Process 2 reminders at a time (reduced to save quota)
+        batchDelay: 1000, // 1000ms delay between batches (increased to save quota)
+        maxRetries: 1, // Reduced retries to save quota
+        retryDelay: 2000, // Increased retry delay
       });
 
       // Only update state if we got valid results
@@ -193,10 +193,10 @@ export function useReminders() {
       fetchReminders();
     }, 100);
     
-    // Refresh otomatis setiap 2 menit untuk mengupdate status (reduced frequency)
+    // Refresh otomatis setiap 5 menit untuk mengupdate status (optimized for quota)
     const interval = setInterval(() => {
       fetchReminders();
-    }, 120000); // 2 minutes
+    }, 300000); // 5 minutes (increased to save QuickNode quota)
 
     return () => {
       if (fetchTimeoutRef.current) {

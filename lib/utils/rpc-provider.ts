@@ -78,8 +78,8 @@ export async function executeRpcCall<T>(
   options: RpcCallOptions = {}
 ): Promise<T> {
   const {
-    maxRetries = 3,
-    retryDelay = 1000,
+    maxRetries = 2, // Reduced from 3 to save QuickNode quota
+    retryDelay = 2000, // Increased from 1000ms to save quota
     timeout = 30000,
   } = options;
 
@@ -165,8 +165,8 @@ export async function batchRpcCalls<T>(
   options: RpcCallOptions & { batchSize?: number; batchDelay?: number } = {}
 ): Promise<T[]> {
   const {
-    batchSize = 5, // Process 5 calls at a time (reduced to avoid rate limiting)
-    batchDelay = 300, // 300ms delay between batches (increased to avoid rate limiting)
+    batchSize = 2, // Process 2 calls at a time (reduced to save QuickNode quota)
+    batchDelay = 1000, // 1000ms delay between batches (increased to save quota)
   } = options;
 
   const results: (T | null)[] = [];
