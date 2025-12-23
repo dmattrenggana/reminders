@@ -128,20 +128,33 @@ export default function DashboardClient() {
   const stats = useMemo(() => {
     const safeReminders = Array.isArray(reminders) ? reminders : [];
     
-    // Public Feed: semua reminder yang belum resolved (termasuk milik kita)
+    // Public Feed: semua reminder yang belum resolved dari semua user (termasuk milik kita)
     const publicFeed = safeReminders.filter(r => !r.isResolved);
     
-    // My Feed: semua reminder yang dibuat oleh user (resolved atau belum)
+    // My Feed: semua reminder yang dibuat oleh user yang sedang terkoneksi (resolved atau belum)
     const myFeed = safeReminders.filter(
       r => address && r.creator?.toLowerCase() === address.toLowerCase()
     );
     
+    // Stats: HANYA untuk user yang sedang terkoneksi
+    // Locked: Total token yang di-lock oleh user di reminder yang belum resolved
+    const myActiveReminders = myFeed.filter(r => !r.isResolved);
+    const locked = myActiveReminders.reduce((acc, curr) => acc + Number(curr.rewardPool || 0), 0);
+    
+    // Completed: Jumlah reminder user yang sudah di-confirm
+    const completed = myFeed.filter(r => r.isResolved && r.isCompleted).length;
+    
+    // Burned: Jumlah reminder user yang burned (missed)
+    const burned = myFeed.filter(r => r.isResolved && !r.isCompleted).length;
+    
+    // Total Tasks: Total reminder yang dibuat oleh user (all statuses)
+    const totalTasks = myFeed.length;
+    
     return {
-      locked: safeReminders
-        .filter(r => !r.isResolved)
-        .reduce((acc, curr) => acc + Number(curr.rewardPool || 0), 0),
-      completed: safeReminders.filter(r => r.isResolved && r.isCompleted).length,
-      burned: safeReminders.filter(r => r.isResolved && !r.isCompleted).length,
+      locked,
+      completed,
+      burned,
+      totalTasks,
       publicFeed,
       myFeed
     };

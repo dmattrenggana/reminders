@@ -7,16 +7,17 @@ interface StatsCardsProps {
     locked: number;
     completed: number;
     burned: number;
+    totalTasks: number;
   };
   symbol: string;
   reminders: any[];
 }
 
-export function StatsCards({ stats, symbol, reminders }: StatsCardsProps) {
+export function StatsCards({ stats, symbol }: StatsCardsProps) {
   const cards = [
     { 
       label: `Locked ${symbol}`, 
-      val: stats.locked, 
+      val: stats.locked.toFixed(2), 
       color: "border-b-indigo-500" 
     },
     { 
@@ -31,7 +32,7 @@ export function StatsCards({ stats, symbol, reminders }: StatsCardsProps) {
     },
     { 
       label: "Total Tasks", 
-      val: Array.isArray(reminders) ? reminders.length : 0, 
+      val: stats.totalTasks, 
       color: "bg-[#4f46e5] text-white border-none shadow-indigo-100 shadow-xl" 
     }
   ];
