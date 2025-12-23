@@ -47,20 +47,24 @@ export const config = createConfig({
     // Injected connector for web browser (MetaMask, etc)
     injected(),
   ],
-  transports: {
-    // Use fallback transport to handle rate limiting (429 errors)
-    // Fallback will try next RPC if one fails or returns 429
-    [base.id]: fallback([
-      // Primary: Official Base RPC
-      http("https://mainnet.base.org"),
-      // Fallback 1: LlamaRPC (free, reliable)
-      http("https://base.llamarpc.com"),
-      // Fallback 2: PublicNode (free, reliable)
-      http("https://base-rpc.publicnode.com"),
-      // Fallback 3: Alternative public RPC
-      http("https://base.gateway.tenderly.co"),
-    ]),
-  },
+         transports: {
+           // Use fallback transport to handle rate limiting (429 errors)
+           // Fallback will try next RPC if one fails or returns 429
+           [base.id]: fallback([
+             // Primary: Official Base RPC
+             http("https://mainnet.base.org"),
+             // Fallback 1: LlamaRPC (free, reliable)
+             http("https://base.llamarpc.com"),
+             // Fallback 2: PublicNode (free, reliable)
+             http("https://base-rpc.publicnode.com"),
+             // Fallback 3: Tenderly Gateway
+             http("https://base.gateway.tenderly.co"),
+             // Fallback 4: BlastAPI (free tier)
+             http("https://base-mainnet.public.blastapi.io"),
+             // Fallback 5: dRPC (free tier)
+             http("https://base.drpc.org"),
+           ]),
+         },
 });
 
 // Log connector info after config creation (client-side only)

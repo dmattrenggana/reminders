@@ -1,13 +1,28 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ethers } from "ethers";
 import { VAULT_ABI, VAULT_ADDRESS } from "@/lib/contracts/config";
+import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
+
+// Cache untuk mengurangi RPC calls
+const reminderCache = new Map<number, { data: any; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds cache
 
 export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const lastFetchRef = useRef<number>(0);
+  const MIN_FETCH_INTERVAL = 10000; // Minimum 10 seconds between fetches
 
   const fetchReminders = useCallback(async () => {
     try {
+      // Throttle: Don't fetch if last fetch was too recent
+      const now = Date.now();
+      if (now - lastFetchRef.current < MIN_FETCH_INTERVAL && reminderCache.size > 0) {
+        console.log("[useReminders] Throttled: Using cached data");
+        return;
+      }
+      lastFetchRef.current = now;
+
       setLoading(true);
       
       // Check if contract address is configured
@@ -16,53 +31,90 @@ export function useReminders() {
         setActiveReminders([]);
         return;
       }
-      
-      const rpcUrl = "https://mainnet.base.org"; 
-      const provider = new ethers.JsonRpcProvider(rpcUrl);
-      const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider);
 
-      // Mengambil total ID yang ada (V4 uses nextReminderId)
-      const nextId = await contract.nextReminderId();
+      // Fetch nextReminderId with retry and fallback
+      const nextId = await executeRpcCall(async (provider) => {
+        const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider);
+        return await contract.nextReminderId();
+      });
+      
       const count = Number(nextId);
-      
-      const now = Math.floor(Date.now() / 1000);
+      const nowTimestamp = Math.floor(Date.now() / 1000);
 
-      // OPTIMASI: Membuat array promise untuk fetch data secara paralel
-      const promises = [];
+      // Check cache for valid reminders
+      const cachedReminders: any[] = [];
+      const idsToFetch: number[] = [];
+
       for (let i = 0; i < count; i++) {
-        promises.push(
-          contract.reminders(i).then((r) => {
-            // Check if reminder exists (user is not zero address)
-            if (r.user === ethers.ZeroAddress || !r.user) {
-              return null; // Skip non-existent reminders
-            }
-            return {
-              id: i,
-              creator: r.user, // V4 uses 'user' not 'creator'
-              rewardPool: ethers.formatUnits(r.rewardPoolAmount, 18), // V4 uses 'rewardPoolAmount'
-              deadline: Number(r.reminderTime), // V4 uses 'reminderTime'
-              isResolved: r.confirmed || r.burned, // V4: resolved if confirmed or burned
-              isCompleted: r.confirmed, // V4: completed if confirmed
-              description: r.description,
-              farcasterUsername: r.farcasterUsername,
-              commitAmount: ethers.formatUnits(r.commitAmount, 18),
-              confirmationDeadline: Number(r.confirmationDeadline),
-              totalReminders: Number(r.totalReminders),
-              rewardsClaimed: ethers.formatUnits(r.rewardsClaimed, 18),
-            };
-          }).catch(e => {
-            // Silently skip errors for non-existent reminders
-            // Only log if it's not a "missing revert data" error (which means reminder doesn't exist)
-            if (!e.message?.includes("missing revert data") && !e.message?.includes("CALL_EXCEPTION")) {
-              console.warn(`Error fetching reminder ID ${i}:`, e.message || e);
-            }
-            return null;
-          })
-        );
+        const cached = reminderCache.get(i);
+        if (cached && now - cached.timestamp < CACHE_DURATION) {
+          cachedReminders.push(cached.data);
+        } else {
+          idsToFetch.push(i);
+        }
       }
 
-      // Menjalankan semua request secara bersamaan
-      const results = await Promise.all(promises);
+      // If all reminders are cached and fresh, use cache
+      if (idsToFetch.length === 0 && cachedReminders.length > 0) {
+        console.log("[useReminders] Using cached data for all reminders");
+        const items = cachedReminders
+          .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
+          .map((r: any) => {
+            const timeLeft = r.deadline - nowTimestamp;
+            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+            const isExpired = !r.isResolved && timeLeft <= 0;
+            return { ...r, timeLeft, isDangerZone, isExpired };
+          });
+        setActiveReminders(items.reverse());
+        setLoading(false);
+        return;
+      }
+
+      // Batch fetch remaining reminders with rate limiting
+      const fetchCalls = idsToFetch.map((id) => async (provider: ethers.JsonRpcProvider) => {
+        const contract = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, provider);
+        try {
+          const r = await contract.reminders(id);
+          // Check if reminder exists (user is not zero address)
+          if (r.user === ethers.ZeroAddress || !r.user) {
+            return null;
+          }
+          const reminderData = {
+            id: id,
+            creator: r.user,
+            rewardPool: ethers.formatUnits(r.rewardPoolAmount, 18),
+            deadline: Number(r.reminderTime),
+            isResolved: r.confirmed || r.burned,
+            isCompleted: r.confirmed,
+            description: r.description,
+            farcasterUsername: r.farcasterUsername,
+            commitAmount: ethers.formatUnits(r.commitAmount, 18),
+            confirmationDeadline: Number(r.confirmationDeadline),
+            totalReminders: Number(r.totalReminders),
+            rewardsClaimed: ethers.formatUnits(r.rewardsClaimed, 18),
+          };
+          // Cache the result
+          reminderCache.set(id, { data: reminderData, timestamp: now });
+          return reminderData;
+        } catch (e: any) {
+          // Silently skip errors for non-existent reminders
+          if (!e.message?.includes("missing revert data") && !e.message?.includes("CALL_EXCEPTION")) {
+            console.warn(`Error fetching reminder ID ${id}:`, e.message || e);
+          }
+          return null;
+        }
+      });
+
+      // Execute batch calls with rate limiting
+      const fetchedResults = await batchRpcCalls(fetchCalls, {
+        batchSize: 5, // Process 5 reminders at a time
+        batchDelay: 200, // 200ms delay between batches
+        maxRetries: 2,
+        retryDelay: 500,
+      });
+
+      // Combine cached and fetched results
+      const allResults = [...cachedReminders, ...fetchedResults];
 
       // Filter data valid dan tambahkan metadata workflow
       const items = results
