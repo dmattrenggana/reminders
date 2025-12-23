@@ -4,7 +4,7 @@ import { CONTRACTS, REMINDER_VAULT_ABI } from "@/lib/contracts/config"
 /**
  * Cron Job: Process Expired Reminders
  * 
- * Schedule: Every 15 minutes (*/15 * * * *)
+ * Schedule: Every 15 minutes (configured in vercel.json)
  * 
  * This cron job:
  * 1. Checks all reminders for expired confirmationDeadline
