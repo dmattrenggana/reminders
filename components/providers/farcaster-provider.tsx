@@ -72,61 +72,89 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
           // Per Farcaster Loading Guide: "Call ready when your interface is ready to be displayed"
           // Per Farcaster Loading Guide: "If you're using React, call ready inside a useEffect hook"
           // Per Farcaster Loading Guide: "You should call ready as soon as possible while avoiding jitter and content reflows"
+          // Per Farcaster Loading Guide: "Don't call ready until your interface has loaded"
           // This is the PRIMARY caller per React best practices (useEffect)
-          // NOTE: ready() may have been called from layout.tsx script tag (early attempt), but we call it here as PRIMARY
+          // NOTE: We ensure interface is ready by checking document.readyState
           if (sdk && sdk.actions && sdk.actions.ready) {
             // Check if ready() was already called from layout script (early attempt)
             const alreadyCalled = typeof window !== 'undefined' && (window as any).__farcasterReady;
             
             if (!alreadyCalled) {
-              console.log('[Farcaster] ⚡⚡⚡ PRIMARY: Calling sdk.actions.ready() (per React useEffect best practices)...');
-              console.log('[Farcaster] SDK details:', {
-                sdkType: typeof sdk,
-                actionsType: typeof sdk.actions,
-                readyType: typeof sdk.actions.ready
-              });
-              
-              try {
-                // Call ready() with empty object as per Farcaster docs
-                // IMPORTANT: Call it immediately - don't await to ensure it's called
-                // This ensures ready() is called even if there are errors later
-                // Per docs: "Call ready when your interface is ready to be displayed"
-                const readyPromise = sdk.actions.ready({});
-                console.log('[Farcaster] ready() promise created:', !!readyPromise);
+              // Ensure interface is ready before calling ready()
+              // Per docs: "Don't call ready until your interface has loaded"
+              const callReady = () => {
+                console.log('[Farcaster] ⚡⚡⚡ PRIMARY: Calling sdk.actions.ready() (per React useEffect best practices)...');
+                console.log('[Farcaster] SDK details:', {
+                  sdkType: typeof sdk,
+                  actionsType: typeof sdk.actions,
+                  readyType: typeof sdk.actions.ready,
+                  documentReadyState: typeof document !== 'undefined' ? document.readyState : 'N/A'
+                });
                 
-                readyPromise.then(() => {
-                  console.log('[Farcaster] ✅✅✅✅✅ ready() SUCCESS - splash screen should dismiss NOW');
-                  (window as any).__farcasterReady = true;
-                }).catch((readyError: any) => {
-                  console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", {
-                    error: readyError?.message || readyError,
-                    name: readyError?.name,
-                    stack: readyError?.stack,
-                    toString: readyError?.toString()
+                try {
+                  // Call ready() with empty object as per Farcaster docs
+                  // IMPORTANT: Call it immediately - don't await to ensure it's called
+                  // This ensures ready() is called even if there are errors later
+                  // Per docs: "Call ready when your interface is ready to be displayed"
+                  const readyPromise = sdk.actions.ready({});
+                  console.log('[Farcaster] ready() promise created:', !!readyPromise);
+                  
+                  readyPromise.then(() => {
+                    console.log('[Farcaster] ✅✅✅✅✅ ready() SUCCESS - splash screen should dismiss NOW');
+                    (window as any).__farcasterReady = true;
+                  }).catch((readyError: any) => {
+                    console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", {
+                      error: readyError?.message || readyError,
+                      name: readyError?.name,
+                      stack: readyError?.stack,
+                      toString: readyError?.toString()
+                    });
+                    // Mark as ready anyway so app can continue
+                    (window as any).__farcasterReady = true;
                   });
+                  // Also set flag immediately to prevent blocking
+                  (window as any).__farcasterReady = true;
+                  console.log('[Farcaster] ✅ ready() called, flag set');
+                } catch (syncError: any) {
+                  console.error("[Farcaster] ❌❌❌ Sync ready() call failed:", syncError);
+                  console.error("[Farcaster] Error details:", {
+                    message: syncError?.message,
+                    name: syncError?.name,
+                    stack: syncError?.stack
+                  });
+                  // Try async call as fallback
+                  try {
+                    sdk.actions.ready({}).catch((e: any) => {
+                      console.error("[Farcaster] Async ready() also failed:", e);
+                    });
+                  } catch (retryError) {
+                    console.error("[Farcaster] Cannot call ready():", retryError);
+                  }
                   // Mark as ready anyway so app can continue
                   (window as any).__farcasterReady = true;
-                });
-                // Also set flag immediately to prevent blocking
-                (window as any).__farcasterReady = true;
-                console.log('[Farcaster] ✅ ready() called, flag set');
-              } catch (syncError: any) {
-                console.error("[Farcaster] ❌❌❌ Sync ready() call failed:", syncError);
-                console.error("[Farcaster] Error details:", {
-                  message: syncError?.message,
-                  name: syncError?.name,
-                  stack: syncError?.stack
-                });
-                // Try async call as fallback
-                try {
-                  sdk.actions.ready({}).catch((e: any) => {
-                    console.error("[Farcaster] Async ready() also failed:", e);
-                  });
-                } catch (retryError) {
-                  console.error("[Farcaster] Cannot call ready():", retryError);
                 }
-                // Mark as ready anyway so app can continue
-                (window as any).__farcasterReady = true;
+              };
+
+              // Check if document is ready
+              // Per docs: "Don't call ready until your interface has loaded"
+              if (typeof document !== 'undefined') {
+                if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                  // Document is ready, call immediately
+                  callReady();
+                } else {
+                  // Wait for DOM to be ready
+                  document.addEventListener('DOMContentLoaded', callReady, { once: true });
+                  // Also set a timeout as fallback (max 1 second)
+                  setTimeout(() => {
+                    if (!(window as any).__farcasterReady) {
+                      console.log('[Farcaster] ⏱️ Timeout waiting for DOM, calling ready() anyway');
+                      callReady();
+                    }
+                  }, 1000);
+                }
+              } else {
+                // No document (SSR), call immediately
+                callReady();
               }
             } else {
               console.log('[Farcaster] ✅ ready() already called from layout script (early attempt), skipping duplicate call');

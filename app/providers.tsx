@@ -5,7 +5,7 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { injected } from "wagmi/connectors";
-import { useState, useEffect } from "react";
+// Removed unused imports after removing mounted state
 import { FarcasterProvider } from "@/components/providers/farcaster-provider";
 
 /**
@@ -78,17 +78,16 @@ const queryClient = new QueryClient({
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Removed mounted state to prevent delay in rendering
+  // Per Farcaster docs: "Call ready when your interface is ready to be displayed"
+  // Children should render immediately so ready() can be called when interface is ready
+  // The mounted state was causing delay which prevented ready() from being called at the right time
 
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <FarcasterProvider>
-          {mounted ? children : null}
+          {children}
         </FarcasterProvider>
       </QueryClientProvider>
     </WagmiProvider>
