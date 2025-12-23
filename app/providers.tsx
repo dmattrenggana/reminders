@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, createConfig, http } from "wagmi";
+import { WagmiProvider, createConfig, http, fallback } from "wagmi";
 import { base } from "wagmi/chains";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { injected } from "wagmi/connectors";
@@ -47,7 +47,18 @@ export const config = createConfig({
     injected(),
   ],
   transports: {
-    [base.id]: http("https://mainnet.base.org"),
+    // Use fallback transport to handle rate limiting (429 errors)
+    // Fallback will try next RPC if one fails or returns 429
+    [base.id]: fallback([
+      // Primary: Official Base RPC
+      http("https://mainnet.base.org"),
+      // Fallback 1: LlamaRPC (free, reliable)
+      http("https://base.llamarpc.com"),
+      // Fallback 2: PublicNode (free, reliable)
+      http("https://base-rpc.publicnode.com"),
+      // Fallback 3: Alternative public RPC
+      http("https://base.gateway.tenderly.co"),
+    ]),
   },
 });
 
