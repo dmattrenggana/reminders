@@ -31,7 +31,9 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
         
         console.log('[Farcaster] Environment detection:', {
           isInMiniApp,
-          userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A'
+          userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A',
+          hasFarcasterGlobal: typeof window !== 'undefined' ? 'Farcaster' in window : false,
+          hasFarcasterWindow: typeof window !== 'undefined' ? !!(window as any).Farcaster : false
         });
         
         setIsMiniApp(isInMiniApp);
@@ -45,7 +47,11 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
           try {
             const sdkModule = await import("@farcaster/miniapp-sdk");
             sdk = sdkModule.sdk;
-            console.log('[Farcaster] SDK imported successfully');
+            console.log('[Farcaster] ✅ SDK imported successfully', {
+              hasSdk: !!sdk,
+              hasActions: !!(sdk?.actions),
+              hasReady: !!(sdk?.actions?.ready)
+            });
             
             // Store SDK instance for later use
             (window as any).__farcasterSDK = sdk;
@@ -74,27 +80,43 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
             
             if (!alreadyCalled) {
               console.log('[Farcaster] ⚡⚡⚡ PRIMARY: Calling sdk.actions.ready() (per React useEffect best practices)...');
+              console.log('[Farcaster] SDK details:', {
+                sdkType: typeof sdk,
+                actionsType: typeof sdk.actions,
+                readyType: typeof sdk.actions.ready
+              });
+              
               try {
                 // Call ready() with empty object as per Farcaster docs
-                // IMPORTANT: Don't await - call it and let it run in background
+                // IMPORTANT: Call it immediately - don't await to ensure it's called
                 // This ensures ready() is called even if there are errors later
                 // Per docs: "Call ready when your interface is ready to be displayed"
-                sdk.actions.ready({}).then(() => {
-                  console.log('[Farcaster] ✅✅✅ ready() called successfully (PRIMARY - per React docs) - splash screen should dismiss NOW');
+                const readyPromise = sdk.actions.ready({});
+                console.log('[Farcaster] ready() promise created:', !!readyPromise);
+                
+                readyPromise.then(() => {
+                  console.log('[Farcaster] ✅✅✅✅✅ ready() SUCCESS - splash screen should dismiss NOW');
                   (window as any).__farcasterReady = true;
                 }).catch((readyError: any) => {
                   console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", {
                     error: readyError?.message || readyError,
                     name: readyError?.name,
-                    stack: readyError?.stack
+                    stack: readyError?.stack,
+                    toString: readyError?.toString()
                   });
                   // Mark as ready anyway so app can continue
                   (window as any).__farcasterReady = true;
                 });
                 // Also set flag immediately to prevent blocking
                 (window as any).__farcasterReady = true;
+                console.log('[Farcaster] ✅ ready() called, flag set');
               } catch (syncError: any) {
                 console.error("[Farcaster] ❌❌❌ Sync ready() call failed:", syncError);
+                console.error("[Farcaster] Error details:", {
+                  message: syncError?.message,
+                  name: syncError?.name,
+                  stack: syncError?.stack
+                });
                 // Try async call as fallback
                 try {
                   sdk.actions.ready({}).catch((e: any) => {
@@ -113,6 +135,7 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
             console.error("[Farcaster] ❌❌❌ SDK or sdk.actions.ready() not available!");
             console.error("[Farcaster] SDK object:", sdk);
             console.error("[Farcaster] sdk.actions:", sdk?.actions);
+            console.error("[Farcaster] sdk.actions.ready:", sdk?.actions?.ready);
             // Mark as ready anyway to prevent infinite splash screen
             // Per Agents Checklist: "Ensure the app calls ready() after initialization"
             (window as any).__farcasterReady = true;
