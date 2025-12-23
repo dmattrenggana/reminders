@@ -5,7 +5,6 @@ import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { Button } from "@/components/ui/button";
 import { Loader2, Wallet, LogOut } from "lucide-react";
 import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
-import Image from "next/image";
 
 export function ConnectWalletButton() {
   const { user, isLoaded, isMiniApp } = useFarcaster();
