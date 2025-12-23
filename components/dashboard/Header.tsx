@@ -33,6 +33,20 @@ export function Header({
   const [pfpError, setPfpError] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
+  // Debug logging for miniapp user info
+  useEffect(() => {
+    if (isMiniApp && providerUser) {
+      console.log("[Header] Miniapp user info:", {
+        isMiniApp,
+        hasProviderUser: !!providerUser,
+        username,
+        pfpUrl,
+        displayName: providerUser?.displayName,
+        userObject: providerUser
+      });
+    }
+  }, [isMiniApp, providerUser, username, pfpUrl]);
+
   // Handle image loading errors
   const handlePfpError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     e.preventDefault();
