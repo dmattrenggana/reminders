@@ -1,5 +1,6 @@
 "use client";
 
+import { sdk } from "@farcaster/miniapp-sdk";
 import { useState, useEffect, useMemo } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { formatUnits } from "viem";
