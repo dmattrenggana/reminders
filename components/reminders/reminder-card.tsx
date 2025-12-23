@@ -95,36 +95,6 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   // Determine actual feed type (override if reminder is user's own)
   const actualFeedType = isMyReminder ? "my" : feedType
 
-  const handleAction = async (actionType: string, actionFn: () => Promise<void>, successMsg: string) => {
-    if (!service) {
-      toast({
-        variant: "destructive",
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet first",
-      })
-      return
-    }
-    setLoadingAction(actionType)
-    try {
-      await actionFn()
-      toast({
-        variant: "success",
-        title: "Success!",
-        description: successMsg,
-      })
-      window.location.reload()
-    } catch (error: any) {
-      console.error(`Error during ${actionType}:`, error)
-      toast({
-        variant: "destructive",
-        title: `Failed to ${actionType}`,
-        description: error.message || `Failed to ${actionType}`,
-      })
-    } finally {
-      setLoadingAction(null)
-    }
-  }
-
   const handleHelpRemindMe = async () => {
     if (onHelpRemind) {
       onHelpRemind(reminder);
