@@ -3,14 +3,19 @@
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { Button } from "@/components/ui/button";
-import { Loader2, Wallet } from "lucide-react";
+import { Loader2, Wallet, LogOut } from "lucide-react";
 import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
+import Image from "next/image";
 
 export function ConnectWalletButton() {
-  const { user, isLoaded } = useFarcaster();
+  const { user, isLoaded, isMiniApp } = useFarcaster();
   const { address, isConnected, isConnecting } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+
+  // Get user info from Farcaster
+  const username = user?.username || user?.displayName;
+  const pfpUrl = user?.pfpUrl || user?.pfp;
 
   /**
    * Handle manual wallet connection
@@ -64,26 +69,75 @@ export function ConnectWalletButton() {
         variant="ghost" 
         size="sm" 
         onClick={() => disconnect()} 
-        className="rounded-full h-10 bg-white shadow-sm border border-slate-200 text-xs font-black px-5 text-slate-700 hover:text-red-500 transition-colors"
+        className="flex items-center gap-2 rounded-full h-10 bg-white shadow-sm border border-slate-200 text-xs font-black px-4 text-slate-700 hover:text-red-500 transition-colors"
       >
-        {user?.username ? `@${user.username}` : (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connected")}
+        {pfpUrl ? (
+          <img 
+            src={pfpUrl} 
+            alt={username || "User"} 
+            className="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-50" 
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <Wallet className="h-4 w-4 text-indigo-500" />
+        )}
+        <span>
+          {username ? `@${username}` : (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connected")}
+        </span>
+        <LogOut className="h-3 w-3 opacity-50" />
       </Button>
     );
   }
 
-  // State 3: Wallet belum terhubung (Tampilan Default Brand Purple)
+  // State 3: Wallet belum terhubung
+  // Di Farcaster miniapp, jika user sudah login tapi wallet belum connect, tampilkan user info
+  if (isMiniApp && user && !isConnected) {
+    return (
+      <Button 
+        onClick={handleConnect}
+        disabled={isConnecting}
+        className="flex items-center gap-2 rounded-full bg-[#4f46e5] hover:opacity-90 h-10 px-5 font-bold text-white shadow-lg shadow-[#4f46e5]/30 transition-all active:scale-95"
+      >
+        {isConnecting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Connecting...</span>
+          </>
+        ) : (
+          <>
+            {pfpUrl && (
+              <img 
+                src={pfpUrl} 
+                alt={username || "User"} 
+                className="w-5 h-5 rounded-full object-cover ring-1 ring-white/20" 
+                referrerPolicy="no-referrer"
+              />
+            )}
+            <span>{username ? `Connect @${username}` : "Connect Wallet"}</span>
+          </>
+        )}
+      </Button>
+    );
+  }
+
+  // State 3: Wallet belum terhubung (Web browser atau no user)
   return (
     <Button 
       onClick={handleConnect}
       disabled={isConnecting}
-      className="rounded-full bg-[#4f46e5] hover:opacity-90 h-10 px-6 font-bold text-white shadow-lg shadow-[#4f46e5]/30 transition-all active:scale-95"
+      className="flex items-center gap-2 rounded-full bg-[#4f46e5] hover:opacity-90 h-10 px-6 font-bold text-white shadow-lg shadow-[#4f46e5]/30 transition-all active:scale-95"
     >
       {isConnecting ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Connecting...</span>
+        </>
       ) : (
-        <Wallet className="mr-2 h-4 w-4" />
+        <>
+          <Wallet className="h-4 w-4" />
+          <span>Connect Wallet</span>
+        </>
       )}
-      Connect Wallet
     </Button>
   );
 }
