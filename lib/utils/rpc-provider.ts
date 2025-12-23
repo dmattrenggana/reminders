@@ -124,7 +124,7 @@ export async function batchRpcCalls<T>(
     batchDelay = 100, // 100ms delay between batches
   } = options;
 
-  const results: T[] = [];
+  const results: (T | null)[] = [];
   const errors: Error[] = [];
 
   // Process in batches
@@ -135,7 +135,7 @@ export async function batchRpcCalls<T>(
     const batchPromises = batch.map((call) =>
       executeRpcCall(call, options).catch((error) => {
         errors.push(error);
-        return null;
+        return null as T | null;
       })
     );
 
