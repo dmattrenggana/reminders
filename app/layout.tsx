@@ -43,6 +43,42 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* CRITICAL: Call ready() immediately if in Farcaster miniapp */}
+        {/* This must be called BEFORE React mounts to dismiss splash screen */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window !== 'undefined' && ('Farcaster' in window || window.Farcaster)) {
+                  try {
+                    // Try to get SDK from window if already available
+                    const sdk = window.Farcaster?.sdk || window.__farcasterSDK;
+                    if (sdk && sdk.actions && sdk.actions.ready) {
+                      console.log('[Layout Script] ⚡⚡⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY from layout...');
+                      // Call ready() immediately without await
+                      sdk.actions.ready({}).then(() => {
+                        console.log('[Layout Script] ✅✅✅ ready() called successfully from layout');
+                        window.__farcasterReady = true;
+                      }).catch((error) => {
+                        console.error('[Layout Script] ❌ ready() call failed:', error);
+                        window.__farcasterReady = true; // Mark as ready anyway
+                      });
+                      window.__farcasterReady = true; // Set immediately
+                    } else {
+                      // SDK not available yet, will be called from FarcasterProvider
+                      console.log('[Layout Script] SDK not available yet, will call from FarcasterProvider');
+                    }
+                  } catch (error) {
+                    console.error('[Layout Script] Error calling ready():', error);
+                    window.__farcasterReady = true; // Mark as ready anyway
+                  }
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={inter.className}>
         <Providers>
           {children}

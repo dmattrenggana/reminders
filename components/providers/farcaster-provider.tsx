@@ -65,38 +65,46 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
           // CRITICAL: Call ready() IMMEDIATELY after SDK is available to dismiss splash screen
           // Per Farcaster docs: "After your app loads, you must call sdk.actions.ready() to hide the splash screen"
           // This MUST be called or splash screen will persist
+          // NOTE: ready() may have been called from layout.tsx script tag, but we call it here too as backup
           if (sdk && sdk.actions && sdk.actions.ready) {
-            console.log('[Farcaster] ⚡⚡⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY to dismiss splash screen...');
-            try {
-              // Call ready() with empty object as per Farcaster docs
-              // IMPORTANT: Don't await - call it and let it run in background
-              // This ensures ready() is called even if there are errors later
-              sdk.actions.ready({}).then(() => {
-                console.log('[Farcaster] ✅✅✅✅✅ ready() called successfully - splash screen should dismiss NOW');
-                (window as any).__farcasterReady = true;
-              }).catch((readyError: any) => {
-                console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", {
-                  error: readyError?.message || readyError,
-                  name: readyError?.name,
-                  stack: readyError?.stack
+            // Check if ready() was already called from layout script
+            const alreadyCalled = typeof window !== 'undefined' && (window as any).__farcasterReady;
+            
+            if (!alreadyCalled) {
+              console.log('[Farcaster] ⚡⚡⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY to dismiss splash screen...');
+              try {
+                // Call ready() with empty object as per Farcaster docs
+                // IMPORTANT: Don't await - call it and let it run in background
+                // This ensures ready() is called even if there are errors later
+                sdk.actions.ready({}).then(() => {
+                  console.log('[Farcaster] ✅✅✅✅✅ ready() called successfully - splash screen should dismiss NOW');
+                  (window as any).__farcasterReady = true;
+                }).catch((readyError: any) => {
+                  console.error("[Farcaster] ❌❌❌ Ready call failed (CRITICAL):", {
+                    error: readyError?.message || readyError,
+                    name: readyError?.name,
+                    stack: readyError?.stack
+                  });
+                  // Mark as ready anyway so app can continue
+                  (window as any).__farcasterReady = true;
                 });
+                // Also set flag immediately to prevent blocking
+                (window as any).__farcasterReady = true;
+              } catch (syncError: any) {
+                console.error("[Farcaster] ❌❌❌ Sync ready() call failed:", syncError);
+                // Try async call as fallback
+                try {
+                  sdk.actions.ready({}).catch((e: any) => {
+                    console.error("[Farcaster] Async ready() also failed:", e);
+                  });
+                } catch (retryError) {
+                  console.error("[Farcaster] Cannot call ready():", retryError);
+                }
                 // Mark as ready anyway so app can continue
                 (window as any).__farcasterReady = true;
-              });
-              // Also set flag immediately to prevent blocking
-              (window as any).__farcasterReady = true;
-            } catch (syncError: any) {
-              console.error("[Farcaster] ❌❌❌ Sync ready() call failed:", syncError);
-              // Try async call as fallback
-              try {
-                sdk.actions.ready({}).catch((e: any) => {
-                  console.error("[Farcaster] Async ready() also failed:", e);
-                });
-              } catch (retryError) {
-                console.error("[Farcaster] Cannot call ready():", retryError);
               }
-              // Mark as ready anyway so app can continue
-              (window as any).__farcasterReady = true;
+            } else {
+              console.log('[Farcaster] ✅ ready() already called from layout script, skipping duplicate call');
             }
           } else {
             console.error("[Farcaster] ❌❌❌ SDK or sdk.actions.ready() not available!");
