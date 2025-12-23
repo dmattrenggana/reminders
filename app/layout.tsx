@@ -85,29 +85,55 @@ export default function RootLayout({
                   }
                 };
                 
-                if (typeof window !== 'undefined' && ('Farcaster' in window || window.Farcaster)) {
-                  try {
-                    // Try to get SDK from window if already available
+                // Poll for SDK availability with timeout
+                // Per Farcaster docs: Call ready() after SDK is available and interface is ready
+                if (typeof window !== 'undefined') {
+                  let attempts = 0;
+                  const maxAttempts = 30; // 3 seconds max (30 * 100ms)
+                  
+                  const tryReady = setInterval(function() {
+                    attempts++;
+                    
+                    // Check if Farcaster environment
+                    const isFarcasterEnv = 'Farcaster' in window || window.Farcaster;
+                    if (!isFarcasterEnv) {
+                      if (attempts >= maxAttempts) {
+                        clearInterval(tryReady);
+                        console.log('[Layout Script] Not in Farcaster miniapp environment');
+                      }
+                      return;
+                    }
+                    
+                    // Try to get SDK
                     const sdk = window.Farcaster?.sdk || window.__farcasterSDK;
                     if (sdk && sdk.actions && sdk.actions.ready) {
-                      console.log('[Layout Script] ⚡⚡⚡ CRITICAL: Calling sdk.actions.ready() IMMEDIATELY from layout...');
-                      // Call ready() immediately without await
-                      sdk.actions.ready({}).then(() => {
-                        console.log('[Layout Script] ✅✅✅ ready() called successfully from layout');
-                        window.__farcasterReady = true;
-                      }).catch((error) => {
-                        console.error('[Layout Script] ❌ ready() call failed:', error);
+                      clearInterval(tryReady);
+                      console.log('[Layout Script] ✅ SDK found, calling ready()...');
+                      
+                      try {
+                        // Call ready() immediately - per Farcaster docs: call as soon as possible
+                        sdk.actions.ready({}).then(function() {
+                          console.log('[Layout Script] ✅✅✅ ready() called successfully from layout');
+                          window.__farcasterReady = true;
+                        }).catch(function(error) {
+                          console.error('[Layout Script] ❌ ready() call failed:', error);
+                          window.__farcasterReady = true; // Mark as ready anyway
+                        });
+                        window.__farcasterReady = true; // Set immediately
+                      } catch (error) {
+                        console.error('[Layout Script] Error calling ready():', error);
                         window.__farcasterReady = true; // Mark as ready anyway
-                      });
-                      window.__farcasterReady = true; // Set immediately
-                    } else {
-                      // SDK not available yet, will be called from FarcasterProvider
-                      console.log('[Layout Script] SDK not available yet, will call from FarcasterProvider');
+                      }
+                      return;
                     }
-                  } catch (error) {
-                    console.error('[Layout Script] Error calling ready():', error);
-                    window.__farcasterReady = true; // Mark as ready anyway
-                  }
+                    
+                    // Timeout after max attempts
+                    if (attempts >= maxAttempts) {
+                      clearInterval(tryReady);
+                      console.log('[Layout Script] ⏱️ Timeout waiting for SDK, will call from FarcasterProvider');
+                      // Don't set __farcasterReady here - let FarcasterProvider handle it
+                    }
+                  }, 100); // Check every 100ms
                 }
               })();
             `,
