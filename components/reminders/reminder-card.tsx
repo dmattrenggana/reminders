@@ -49,47 +49,40 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   const canInteract = useMemo(() => {
     if (reminder.isResolved) return false
     
+    // Check if we're in the T-1 hour window
     const now = Math.floor(Date.now() / 1000)
+    const reminderTime = typeof reminder.reminderTime === 'number' 
+      ? reminder.reminderTime 
+      : Math.floor(new Date(reminder.reminderTime).getTime() / 1000)
     
-    // Get reminderTime in seconds
-    let reminderTime = 0
-    if (reminder.deadline) {
-      reminderTime = typeof reminder.deadline === 'number' ? reminder.deadline : 0
-    } else if (reminder.reminderTime) {
-      if (reminder.reminderTime instanceof Date) {
-        reminderTime = Math.floor(reminder.reminderTime.getTime() / 1000)
-      } else if (typeof reminder.reminderTime === 'number') {
-        // Check if it's in seconds or milliseconds
-        reminderTime = reminder.reminderTime > 1e12 
-          ? Math.floor(reminder.reminderTime / 1000) 
-          : reminder.reminderTime
-      }
-    }
-    
-    if (!reminderTime) return false
-    
-    // T-1 hour window: from (reminderTime - 3600) to confirmationDeadline
-    const oneHourBefore = reminderTime - 3600
-    
-    // Get confirmationDeadline in seconds
-    let confirmationDeadline = reminderTime + 3600 // Default 1 hour after reminderTime
-    if (reminder.confirmationDeadline) {
-      if (reminder.confirmationDeadline instanceof Date) {
-        confirmationDeadline = Math.floor(reminder.confirmationDeadline.getTime() / 1000)
-      } else if (typeof reminder.confirmationDeadline === 'number') {
-        confirmationDeadline = reminder.confirmationDeadline > 1e12 
-          ? Math.floor(reminder.confirmationDeadline / 1000) 
-          : reminder.confirmationDeadline
-      }
-    }
+    const oneHourBefore = reminderTime - 3600 // T-1 hour
+    const confirmationDeadline = reminder.confirmationDeadline 
+      ? (typeof reminder.confirmationDeadline === 'number'
+          ? reminder.confirmationDeadline
+          : Math.floor(new Date(reminder.confirmationDeadline).getTime() / 1000))
+      : reminderTime + 3600 // Default: T+1 hour
     
     return now >= oneHourBefore && now <= confirmationDeadline
   }, [reminder])
 
-  // Check if this is user's own reminder
+  // Format reminder time
+  const formattedTime = useMemo(() => {
+    const time = reminder.reminderTime
+    if (!time) return "Unknown"
+    
+    const date = typeof time === 'number' ? new Date(time * 1000) : new Date(time)
+    
+    try {
+      return formatDistanceToNow(date, { addSuffix: true })
+    } catch {
+      return date.toLocaleString()
+    }
+  }, [reminder.reminderTime])
+
+  // Check if reminder is created by current user
   const isMyReminder = useMemo(() => {
     if (!address || !reminder.creator) return false
-    return reminder.creator.toLowerCase() === address.toLowerCase()
+    return address.toLowerCase() === reminder.creator.toLowerCase()
   }, [address, reminder.creator])
 
   // Determine actual feed type (override if reminder is user's own)
@@ -132,191 +125,120 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
 
   const getStatusConfig = () => {
     if (reminder.isResolved && reminder.isCompleted) {
-      return { icon: CheckCircle2, label: "Completed", color: "bg-green-100 text-green-700", border: "border-green-200" }
+      return {
+        icon: <CheckCircle2 className="h-4 w-4" />,
+        label: "Completed",
+        color: "bg-green-50 text-green-700 border-green-100",
+        iconColor: "text-green-600"
+      }
     }
     if (reminder.isResolved && !reminder.isCompleted) {
-      return { icon: Flame, label: "Burned", color: "bg-red-100 text-red-700", border: "border-red-200" }
+      return {
+        icon: <Flame className="h-4 w-4" />,
+        label: "Burned",
+        color: "bg-red-50 text-red-700 border-red-100",
+        iconColor: "text-red-600"
+      }
     }
     if (reminder.isDangerZone) {
-      return { icon: AlertCircle, label: "Active", color: "bg-purple-100 text-purple-700", border: "border-purple-200" }
+      return {
+        icon: <AlertCircle className="h-4 w-4" />,
+        label: "Danger Zone (T-1 Hour)",
+        color: "bg-orange-50 text-orange-700 border-orange-200",
+        iconColor: "text-orange-600"
+      }
     }
     if (reminder.isExpired) {
-      return { icon: Flame, label: "Expired", color: "bg-red-100 text-red-700", border: "border-red-200" }
+      return {
+        icon: <AlertCircle className="h-4 w-4" />,
+        label: "Expired",
+        color: "bg-gray-50 text-gray-700 border-gray-200",
+        iconColor: "text-gray-600"
+      }
     }
-    return { icon: Clock, label: "Waiting", color: "bg-slate-100 text-slate-600", border: "border-slate-200" }
+    return {
+      icon: <Clock className="h-4 w-4" />,
+      label: "Active",
+      color: "bg-blue-50 text-blue-700 border-blue-100",
+      iconColor: "text-blue-600"
+    }
   }
 
-  const config = getStatusConfig()
-  const StatusIcon = config.icon
-
-  // Get reminder time for display
-  const reminderTimeDate = useMemo(() => {
-    if (reminder.reminderTime instanceof Date) return reminder.reminderTime
-    if (typeof reminder.reminderTime === 'number') {
-      // Check if it's in seconds or milliseconds
-      return new Date(reminder.reminderTime > 1e12 ? reminder.reminderTime : reminder.reminderTime * 1000)
-    }
-    if (reminder.deadline) {
-      return new Date(reminder.deadline * 1000)
-    }
-    return new Date()
-  }, [reminder.reminderTime, reminder.deadline])
-
-  // Get token amount for display
-  const tokenAmount = reminder.tokenAmount || Number(reminder.rewardPool || 0) || 0
+  const statusConfig = getStatusConfig()
 
   return (
-    <div className={`bg-white rounded-2xl border ${config.border} p-5 shadow-sm space-y-4 transition-all`}>
-      <div className="flex justify-between items-start">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.color}`}>
-              <StatusIcon className="h-3 w-3" />
-              {config.label}
-            </span>
-            {reminder.canConfirm && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 animate-pulse uppercase tracking-wider">
-                Action Required
-              </span>
-            )}
+    <div className="group bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-sm hover:shadow-lg hover:border-[#4f46e5] transition-all overflow-hidden">
+      {/* Header dengan status badge */}
+      <div className="p-6 pb-4 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${statusConfig.color}`}>
+            <span className={statusConfig.iconColor}>{statusConfig.icon}</span>
+            {statusConfig.label}
           </div>
-          <h3 className="font-bold text-slate-800 leading-tight">{reminder.description}</h3>
+          
+          {/* Feed type indicator */}
+          <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+            actualFeedType === "my" 
+              ? "bg-indigo-50 text-indigo-700 border-indigo-100"
+              : "bg-slate-50 text-slate-600 border-slate-200"
+          }`}>
+            {actualFeedType === "my" ? "My Task" : "Public"}
+          </div>
         </div>
-        <div className="text-right">
-          <div className="flex items-center justify-end gap-1 text-purple-600 font-bold">
-            <Coins className="h-4 w-4" />
-            <span>{Math.floor(tokenAmount)}</span>
+
+        {/* Description */}
+        <h3 className="text-lg font-black text-slate-800 leading-tight mb-2 line-clamp-2">
+          {reminder.description || "No description"}
+        </h3>
+
+        {/* Time and reward */}
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 text-slate-500">
+            <Clock className="h-3.5 w-3.5" />
+            <span className="font-bold">{formattedTime}</span>
           </div>
-          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">{TOKEN_SYMBOL} STAKED</p>
+          <div className="flex items-center gap-1.5 text-[#4f46e5] font-black">
+            <Coins className="h-3.5 w-3.5" />
+            <span>{reminder.rewardPool || reminder.tokenAmount || 0} {TOKEN_SYMBOL}</span>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 py-3 border-y border-slate-50">
-        <div className="space-y-0.5">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Target Time</p>
-          <p className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {(() => {
-              try {
-                if (isNaN(reminderTimeDate.getTime())) {
-                  return "Invalid date";
-                }
-                return formatDistanceToNow(reminderTimeDate, { addSuffix: true });
-              } catch (error) {
-                console.error("[ReminderCard] Error formatting reminderTime:", error, reminder);
-                return "Invalid date";
-              }
-            })()}
-          </p>
-        </div>
-        {reminder.confirmationDeadline && !reminder.isResolved && (
-          <div className="space-y-0.5 text-right">
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Deadline</p>
-            <p className="text-xs font-semibold text-red-500">
-              {(() => {
-                try {
-                  const deadlineDate = reminder.confirmationDeadline instanceof Date 
-                    ? reminder.confirmationDeadline 
-                    : new Date(typeof reminder.confirmationDeadline === 'number' 
-                        ? (reminder.confirmationDeadline > 1e12 ? reminder.confirmationDeadline : reminder.confirmationDeadline * 1000)
-                        : Date.now());
-                  if (isNaN(deadlineDate.getTime())) {
-                    return "Invalid date";
-                  }
-                  return formatDistanceToNow(deadlineDate, { addSuffix: true });
-                } catch (error) {
-                  console.error("[ReminderCard] Error formatting confirmationDeadline:", error, reminder);
-                  return "Invalid date";
-                }
-              })()}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Action Area */}
-      <div className="flex flex-col gap-2 pt-2">
-        {/* Public Feed: Help Remind Me button */}
+      {/* Body - Action buttons */}
+      <div className="p-6 pt-4 space-y-3">
+        {/* Tombol Help Remind Me (untuk Public Feed) */}
         {actualFeedType === "public" && !reminder.isResolved && (
           <button
             onClick={handleHelpRemindMe}
-            disabled={!canInteract || !!loadingAction || !address}
-            className={`
-              w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-95
-              ${canInteract && address
-                ? "bg-[#4f46e5] hover:bg-[#4338ca] text-white"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed"
-              }
-              disabled:opacity-50
-            `}
+            disabled={!canInteract || !!loadingAction}
+            className={`w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${
+              canInteract && !loadingAction
+                ? "bg-[#4f46e5] hover:opacity-90 text-white"
+                : "bg-slate-100 text-slate-400 cursor-not-allowed"
+            }`}
           >
-            {loadingAction === "help" ? (
-              "Processing..."
-            ) : canInteract ? (
-              <>
-                <Bell className="inline h-4 w-4 mr-2" />
-                Help Remind Me
-              </>
-            ) : (
-              "Help Remind Me (Available T-1 hour)"
+            {loadingAction === "help" ? "Processing..." : (
+              canInteract ? "Help Remind Me" : "Help available at T-1 hour"
             )}
           </button>
         )}
 
-        {/* My Feed: Confirm Reminder button */}
+        {/* Tombol Confirm Reminder (untuk My Feed) */}
         {actualFeedType === "my" && !reminder.isResolved && (
           <button
             onClick={handleConfirmReminder}
-            disabled={!canInteract || !!loadingAction || !address}
-            className={`
-              w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-95
-              ${canInteract && address
-                ? "bg-purple-600 hover:bg-purple-700 text-white"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed"
-              }
-              disabled:opacity-50
-            `}
+            disabled={!canInteract || !!loadingAction}
+            className={`w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${
+              canInteract && !loadingAction
+                ? "bg-green-600 hover:bg-green-700 text-white"
+                : "bg-slate-100 text-slate-400 cursor-not-allowed"
+            }`}
           >
-            {loadingAction === "confirm" ? (
-              "Processing..."
-            ) : canInteract ? (
-              "Confirm Reminder"
-            ) : (
-              "Confirm Reminder (Available T-1 hour)"
+            {loadingAction === "confirm" ? "Processing..." : (
+              canInteract 
+                ? "Confirm Reminder" 
+                : "Confirm Reminder (Available T-1 hour)"
             )}
-          </button>
-        )}
-
-        {/* Legacy: Tombol Confirm (for backward compatibility) */}
-        {reminder.canConfirm && service && actualFeedType !== "my" && (
-          <button
-            onClick={() => handleAction("confirm", () => service!.confirmReminder(reminder.id), "Success! Stake reclaimed.")}
-            disabled={!!loadingAction}
-            className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
-          >
-            {loadingAction === "confirm" ? "Processing..." : "Confirm & Reclaim Stake"}
-          </button>
-        )}
-
-        {/* Tombol Burn */}
-        {reminder.canBurn && service && (
-          <button
-            onClick={() => handleAction("burn", () => service!.burnMissedReminder(reminder.id), "Reminder burned successfully.")}
-            disabled={!!loadingAction}
-            className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-all disabled:opacity-50"
-          >
-            {loadingAction === "burn" ? "Burning..." : "Burn Missed Reminder"}
-          </button>
-        )}
-
-        {/* Tombol Withdraw Unclaimed */}
-        {reminder.canWithdrawUnclaimed && service && (
-          <button
-            onClick={() => handleAction("withdraw", () => service!.withdrawUnclaimedRewards(reminder.id), "Rewards withdrawn.")}
-            disabled={!!loadingAction}
-            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-all disabled:opacity-50"
-          >
-            {loadingAction === "withdraw" ? "Withdrawing..." : `Withdraw Unclaimed ${TOKEN_SYMBOL}`}
           </button>
         )}
 
