@@ -46,22 +46,29 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   const { toast } = useToast()
 
   // Calculate if reminder is in T-1 hour window (can be helped/confirmed)
+  // T = reminderTime (deadline waktu yang di input ketika create reminder)
+  // T-1 hour = 1 jam sebelum deadline (reminderTime - 3600)
+  // Window: dari T-1 hour sampai confirmationDeadline (T+1 hour)
   const canInteract = useMemo(() => {
     if (reminder.isResolved) return false
     
-    // Check if we're in the T-1 hour window
+    // T = reminderTime (deadline)
     const now = Math.floor(Date.now() / 1000)
     const reminderTime = typeof reminder.reminderTime === 'number' 
       ? reminder.reminderTime 
       : Math.floor(new Date(reminder.reminderTime).getTime() / 1000)
     
+    // T-1 hour = 1 jam sebelum deadline
     const oneHourBefore = reminderTime - 3600 // T-1 hour
+    
+    // confirmationDeadline = T+1 hour (reminderTime + 1 hour)
     const confirmationDeadline = reminder.confirmationDeadline 
       ? (typeof reminder.confirmationDeadline === 'number'
           ? reminder.confirmationDeadline
           : Math.floor(new Date(reminder.confirmationDeadline).getTime() / 1000))
       : reminderTime + 3600 // Default: T+1 hour
     
+    // Can interact from T-1 hour until confirmationDeadline
     return now >= oneHourBefore && now <= confirmationDeadline
   }, [reminder])
 
@@ -229,7 +236,7 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
             }`}
           >
             {loadingAction === "help" ? "Processing..." : (
-              canInteract ? "Help Remind Me" : "Help available at T-1 hour"
+              canInteract ? "Help to remind" : "Waiting to remind"
             )}
           </button>
         )}
@@ -245,11 +252,7 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
           >
-            {loadingAction === "confirm" ? "Processing..." : (
-              canInteract 
-                ? "Confirm Reminder" 
-                : "Help available at T-1 hour"
-            )}
+            {loadingAction === "confirm" ? "Processing..." : "Confirm Reminder"}
           </button>
         )}
 

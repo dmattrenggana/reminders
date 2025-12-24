@@ -31,28 +31,29 @@ export async function GET(request: NextRequest) {
     // According to Neynar docs: https://docs.neynar.com/docs/neynar-user-quality-score
     // Score is available in user.profile.score (0.0 to 1.0 range)
     // Score is calculated weekly based on user activity on the network
-    let neynarScore = 0;
+    // DO NOT use manual calculation - must get from API
     const userAny = user as any;
     
-    // Try to get score from profile.score (official Neynar User Quality Score)
-    if (userAny.profile?.score !== undefined && userAny.profile?.score !== null) {
-      neynarScore = Number(userAny.profile.score);
-      console.log(`[Neynar Score] Using official Neynar User Quality Score: ${neynarScore}`);
-    } else {
-      // Fallback: Calculate score manually
-      // Power badge users get high score (0.9-1.0)
-      // Others based on follower count with diminishing returns
-      if (userAny.power_badge) {
-        neynarScore = 0.95; // Power badge = premium users
-      } else {
-        // Logarithmic scale for followers (diminishing returns)
-        // 100 followers = ~0.4, 1000 = ~0.6, 10000 = ~0.8
-        const followerCount = user.follower_count || 0;
-        neynarScore = Math.min(Math.log10(followerCount + 1) / 5, 0.89);
-      }
-      console.log(`[Neynar Score] Using calculated score (fallback): ${neynarScore}`);
+    // Get score from profile.score (official Neynar User Quality Score)
+    if (userAny.profile?.score === undefined || userAny.profile?.score === null) {
+      return NextResponse.json({ 
+        error: "Neynar User Quality Score not available",
+        message: "Unable to fetch Neynar User Quality Score from API. Please try again later."
+      }, { status: 500 });
     }
-
+    
+    const neynarScore = Number(userAny.profile.score);
+    
+    // Validate score is within valid range (0.0 to 1.0)
+    if (isNaN(neynarScore) || neynarScore < 0 || neynarScore > 1) {
+      return NextResponse.json({ 
+        error: "Invalid Neynar User Quality Score",
+        message: `Invalid score value: ${neynarScore}. Score must be between 0.0 and 1.0.`
+      }, { status: 500 });
+    }
+    
+    console.log(`[Neynar Score] Using official Neynar User Quality Score: ${neynarScore}`);
+    
     // Normalize to 0-1 range (ensure it's within bounds)
     const normalizedScore = Math.max(0, Math.min(1, neynarScore));
 
