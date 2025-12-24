@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { NeynarAPIClient } from "@neynar/nodejs-sdk";
 
 /**
  * Get Farcaster FID from wallet address
  * Uses Neynar API to lookup user by verified address
+ * Reference: https://docs.neynar.com/reference/user-by-verification
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -18,13 +18,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "NEYNAR_API_KEY not configured" }, { status: 500 });
   }
 
-  const client = new NeynarAPIClient({ apiKey });
-
   try {
-    // Fetch user by wallet address
-    const response = await client.lookupUserByVerification(address as `0x${string}`);
+    // Use Neynar API directly to lookup user by verification address
+    // API endpoint: https://api.neynar.com/v2/farcaster/user/by_verification
+    const response = await fetch(
+      `https://api.neynar.com/v2/farcaster/user/by_verification?verification_address=${address}`,
+      {
+        method: "GET",
+        headers: {
+          "api_key": apiKey,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      // If 404, user not found (not an error)
+      if (response.status === 404) {
+        return NextResponse.json({ 
+          fid: null,
+          user: null,
+          message: "No Farcaster user found for this wallet address"
+        });
+      }
+      
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Neynar API error: ${response.status}`);
+    }
+
+    const data = await response.json();
     
-    if (!response || !response.result) {
+    if (!data || !data.result || !data.result.user) {
       return NextResponse.json({ 
         fid: null,
         user: null,
@@ -32,7 +56,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const user = response.result.user;
+    const user = data.result.user;
     
     return NextResponse.json({ 
       fid: user.fid,
@@ -48,7 +72,7 @@ export async function GET(request: NextRequest) {
     console.error("Neynar lookup error:", error);
     
     // If user not found, return null (not an error)
-    if (error.message?.includes("not found") || error.status === 404) {
+    if (error.message?.includes("not found") || error.message?.includes("404")) {
       return NextResponse.json({ 
         fid: null,
         user: null,
