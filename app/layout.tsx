@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import Script from 'next/script';
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
