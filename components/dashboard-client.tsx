@@ -271,8 +271,9 @@ export default function DashboardClient() {
   // Help remind handler - Use FID from providerUser or walletFarcasterUser
   const handleHelpRemindMe = async (reminder: any) => {
     // Try to get FID from farcasterUser (providerUser or walletFarcasterUser)
-    if (farcasterFid) {
-      helpRemind(reminder, isMiniApp, farcasterFid);
+    const fid = farcasterUser?.fid;
+    if (fid) {
+      helpRemind(reminder, isMiniApp, fid);
       return;
     }
 
