@@ -21,7 +21,7 @@ export function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
           value="public" 
           className="
             h-10 md:h-11 px-3 md:px-5 rounded-xl md:rounded-2xl 
-            font-bold text-xs md:text-sm uppercase tracking-wide 
+            font-bold text-[10px] md:text-xs uppercase tracking-wide 
             transition-all duration-200 flex-1 min-w-0
             data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-slate-50
             data-[state=inactive]:hover:bg-slate-100 data-[state=inactive]:hover:text-slate-700
@@ -32,14 +32,13 @@ export function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
           "
         >
           <Users className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2 flex-shrink-0" />
-          <span className="truncate hidden sm:inline">Public Feed</span>
-          <span className="truncate sm:hidden">Public</span>
+          <span className="truncate">Public Feed</span>
         </TabsTrigger>
         <TabsTrigger 
           value="my" 
           className="
             h-10 md:h-11 px-3 md:px-5 rounded-xl md:rounded-2xl 
-            font-bold text-xs md:text-sm uppercase tracking-wide 
+            font-bold text-[10px] md:text-xs uppercase tracking-wide 
             transition-all duration-200 flex-1 min-w-0
             data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-slate-50
             data-[state=inactive]:hover:bg-slate-100 data-[state=inactive]:hover:text-slate-700
@@ -50,8 +49,7 @@ export function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
           "
         >
           <User className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2 flex-shrink-0" />
-          <span className="truncate hidden sm:inline">My Feed</span>
-          <span className="truncate sm:hidden">My</span>
+          <span className="truncate">My Feed</span>
         </TabsTrigger>
       </TabsList>
       <Button 
