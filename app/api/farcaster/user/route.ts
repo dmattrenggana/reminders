@@ -48,9 +48,10 @@ export async function GET(request: NextRequest) {
   try {
     // Fetch user data by FID
     // According to Neynar docs: fetchBulkUsers({ fids, viewerFid })
-    const fids = [parseInt(fid)];
+    // fids parameter must be a comma-separated string, not an array
+    // Note: TypeScript types may show array, but actual API expects comma-separated string
     const response = await client.fetchBulkUsers({ 
-      fids,
+      fids: fid as any, // Comma-separated string (TypeScript types may be incorrect)
       viewerFid: viewerFid ? parseInt(viewerFid) : undefined
     });
 

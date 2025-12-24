@@ -31,15 +31,17 @@ export async function GET(request: NextRequest) {
 
   try {
     // Use Neynar SDK method: fetchBulkUsersByEthOrSolAddress
-    // This is the correct method according to Neynar documentation
-    // addresses parameter requires an array of strings
-    // Response structure: array of users (User[])
+    // According to Neynar documentation:
+    // - addresses parameter must be a comma-separated string, not an array
+    // - Response structure: object with address as key, value is array of users
+    // Note: TypeScript types may show array, but actual API expects comma-separated string
     const response = await client.fetchBulkUsersByEthOrSolAddress({
-      addresses: [address], // Array of addresses (single address in array)
-    });
+      addresses: address as any, // Comma-separated string (TypeScript types may be incorrect)
+    }) as any; // Type assertion for response structure
 
-    // Response is an array of users - get first user if available
-    if (!response || !Array.isArray(response) || response.length === 0) {
+    // Response structure: { [address: string]: User[] }
+    // Get users for the requested address
+    if (!response || typeof response !== 'object' || !response[address]) {
       return NextResponse.json({ 
         fid: null,
         user: null,
@@ -47,7 +49,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const user = response[0]; // Get first user from array
+    const users = response[address];
+    if (!Array.isArray(users) || users.length === 0) {
+      return NextResponse.json({ 
+        fid: null,
+        user: null,
+        message: "No Farcaster user found for this wallet address"
+      });
+    }
+
+    const user = users[0]; // Get first user from array
     const userAny = user as any; // Type assertion for properties that may not be in type definition
     
     // Return normalized user data according to Neynar user structure

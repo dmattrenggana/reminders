@@ -26,9 +26,11 @@ export async function GET(request: NextRequest) {
   const client = new NeynarAPIClient(config); 
 
   try {
-    const fids = [parseInt(fid)];
-    // Menggunakan user bulk untuk mendapatkan skor/data user
-    const users = await client.fetchBulkUsers({ fids });
+    // According to Neynar docs: fids parameter must be a comma-separated string, not an array
+    // Note: TypeScript types may show array, but actual API expects comma-separated string
+    const users = await client.fetchBulkUsers({ 
+      fids: fid as any // Comma-separated string (TypeScript types may be incorrect)
+    });
     
     return NextResponse.json({ 
       score: users.users[0] || null 

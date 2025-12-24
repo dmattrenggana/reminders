@@ -27,8 +27,10 @@ export async function GET(request: NextRequest) {
   const client = new NeynarAPIClient(config);
 
   try {
+    // According to Neynar docs: fids parameter must be a comma-separated string, not an array
+    // Note: TypeScript types may show array, but actual API expects comma-separated string
     const response = await client.fetchBulkUsers({ 
-      fids: [parseInt(fid)] 
+      fids: fid as any // Comma-separated string (TypeScript types may be incorrect)
     });
 
     const user = response.users[0];
