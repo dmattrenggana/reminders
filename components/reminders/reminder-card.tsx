@@ -186,14 +186,16 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   }
 
   const getStatusConfig = () => {
+    // Check if reminder is confirmed (completed)
     if (reminder.isResolved && reminder.isCompleted) {
       return {
         icon: <CheckCircle2 className="h-4 w-4" />,
-        label: "Completed",
+        label: "Confirmed",
         color: "bg-green-50 text-green-700 border-green-100",
         iconColor: "text-green-600"
       }
     }
+    // Check if reminder is burned (missed deadline)
     if (reminder.isResolved && !reminder.isCompleted) {
       return {
         icon: <Flame className="h-4 w-4" />,
@@ -246,12 +248,19 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
           {reminder.description || "No description"}
         </h3>
 
-        {/* Time and reward */}
+        {/* Time and reward - Hide time if reminder is confirmed */}
         <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 text-slate-500">
-            <Clock className="h-3.5 w-3.5" />
-            <span className="font-bold">{formattedTime}</span>
-          </div>
+          {!reminder.isResolved || !reminder.isCompleted ? (
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <Clock className="h-3.5 w-3.5" />
+              <span className="font-bold">{formattedTime}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-green-600">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span className="font-bold">Confirmed</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 text-[#4f46e5] font-black">
             <Coins className="h-3.5 w-3.5" />
             <span>{reminder.rewardPool || reminder.tokenAmount || 0} {TOKEN_SYMBOL}</span>

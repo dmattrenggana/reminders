@@ -42,13 +42,15 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
     }
     
     try {
+      // Call onConfirm and wait for result
       const result = await onConfirm(description, amount, deadline);
       
       // If successful, show success animation and close
+      // Don't wait for toast - it's non-blocking
       if (result?.success) {
         setShowSuccess(true);
         
-        // Close form after success animation
+        // Close form after success animation (non-blocking)
         setTimeout(() => {
           setIsOpen(false);
           setShowSuccess(false);
@@ -59,8 +61,10 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
         }, 2000); // Show success for 2 seconds
       }
     } catch (error) {
-      // Error handling is done in onConfirm
+      // Error handling is done in onConfirm via toast
+      // Don't block here - just log
       console.error("Create reminder error:", error);
+      // Don't close form on error - let user retry
     }
   };
 

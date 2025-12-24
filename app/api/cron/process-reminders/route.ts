@@ -110,11 +110,26 @@ export async function GET(request: NextRequest) {
         // Skip already processed reminders
         if (confirmed || burned) continue
 
-        // Check if deadline has passed
-        if (currentTime > Number(confirmationDeadline)) {
-          const deadlineDate = new Date(Number(confirmationDeadline) * 1000).toISOString()
+        // Check if reminderTime (deadline) has passed
+        // burnMissedReminder can only be called after confirmationDeadline
+        // But we check reminderTime to know when deadline is reached
+        const reminderTimePassed = currentTime > Number(reminderTime)
+        const confirmationDeadlinePassed = currentTime > Number(confirmationDeadline)
+        
+        // Only burn if confirmationDeadline has passed (as per contract requirement)
+        // But we log when reminderTime (deadline) is reached
+        if (reminderTimePassed && !confirmationDeadlinePassed) {
           console.log(
-            `[v0] Cron: Deadline passed for reminder ${i} (deadline: ${deadlineDate}, current: ${new Date().toISOString()})`
+            `[v0] Cron: Reminder ${i} deadline (reminderTime) reached but confirmationDeadline not yet passed. Waiting...`
+          )
+          continue
+        }
+        
+        if (confirmationDeadlinePassed) {
+          const deadlineDate = new Date(Number(reminderTime) * 1000).toISOString()
+          const confirmationDeadlineDate = new Date(Number(confirmationDeadline) * 1000).toISOString()
+          console.log(
+            `[v0] Cron: Confirmation deadline passed for reminder ${i} (reminderTime: ${deadlineDate}, confirmationDeadline: ${confirmationDeadlineDate}, current: ${new Date().toISOString()})`
           )
           console.log(`[v0] Cron: Burning expired reminder ${i} for ${farcasterUsername || "wallet user"}`)
 
