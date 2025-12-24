@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/auth/connect-wallet-button";
+import { Button } from "@/components/ui/button";
 import { Wallet, LogOut } from "lucide-react";
 import { createImageErrorHandler } from "@/lib/utils/image-error-handler";
 
@@ -112,4 +112,3 @@ export function HeaderWallet({
     </Button>
   );
 }
-
