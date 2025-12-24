@@ -97,63 +97,80 @@ function FarcasterProviderInner({ children }: { children: ReactNode }) {
                 const userData = context.user as any;
                 const fid = userData.fid;
                 
-                let enhancedUserData = userData;
+                // Always fetch complete user data from Neynar API using FID
+                // Neynar API is the authoritative source for Farcaster user data
                 if (fid) {
                   try {
-                    console.log('[Farcaster] 🔄 Fetching enhanced user data from Neynar for FID:', fid);
+                    console.log('[Farcaster] 🔄 Fetching complete user data from Neynar API for FID:', fid);
                     const neynarResponse = await fetch(`/api/farcaster/user?fid=${fid}`);
                     if (neynarResponse.ok) {
                       const neynarData = await neynarResponse.json();
                       if (neynarData.user) {
-                        // Merge comprehensive user data from Neynar
-                        enhancedUserData = {
-                          ...userData,
-                          // Basic info
+                        // Use Neynar data as primary source (most complete and accurate)
+                        const normalizedUser = {
+                          // Identity
                           fid: fid,
-                          username: neynarData.user.username || userData.username,
-                          displayName: neynarData.user.display_name || userData.displayName,
-                          display_name: neynarData.user.display_name || userData.displayName,
-                          // Profile pictures
-                          pfpUrl: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
-                          pfp_url: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
-                          pfp: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
+                          username: neynarData.user.username,
+                          displayName: neynarData.user.display_name,
+                          display_name: neynarData.user.display_name,
+                          
+                          // Profile
+                          pfpUrl: neynarData.user.pfp_url,
+                          pfp_url: neynarData.user.pfp_url,
+                          pfp: neynarData.user.pfp_url,
+                          bio: neynarData.user.bio,
+                          
                           // Profile data
-                          bio: neynarData.user.bio || userData.bio,
-                          profile: neynarData.user.profile || userData.profile,
-                          // Verification data
-                          verifications: neynarData.user.verifications || userData.verifications || [],
-                          verifiedAddresses: neynarData.user.verifiedAddresses || neynarData.user.verifications || [],
-                          verified_addresses: neynarData.user.verified_addresses || userData.verified_addresses,
-                          verified_accounts: neynarData.user.verified_accounts || userData.verified_accounts,
+                          profile: neynarData.user.profile,
+                          
+                          // Verification
+                          verifications: neynarData.user.verifications || [],
+                          verifiedAddresses: neynarData.user.verifications || [],
+                          verified_addresses: neynarData.user.verified_addresses,
+                          verified_accounts: neynarData.user.verified_accounts,
+                          
                           // Addresses
-                          custody_address: neynarData.user.custody_address || userData.custody_address,
+                          custody_address: neynarData.user.custody_address,
+                          
                           // Social stats
-                          follower_count: neynarData.user.follower_count || userData.follower_count,
-                          following_count: neynarData.user.following_count || userData.following_count,
+                          follower_count: neynarData.user.follower_count,
+                          following_count: neynarData.user.following_count,
+                          
                           // Badge
-                          power_badge: neynarData.user.power_badge || userData.power_badge,
+                          power_badge: neynarData.user.power_badge,
                         };
-                        console.log('[Farcaster] ✅ Enhanced user data fetched:', {
+                        
+                        console.log('[Farcaster] ✅ User data fetched from Neynar API:', {
                           fid,
-                          username: enhancedUserData.username,
-                          displayName: enhancedUserData.displayName,
-                          hasPfp: !!enhancedUserData.pfpUrl,
-                          verifiedAddresses: enhancedUserData.verifications?.length || 0,
+                          username: normalizedUser.username,
+                          displayName: normalizedUser.displayName,
+                          hasPfp: !!normalizedUser.pfpUrl,
+                          verifiedAddresses: normalizedUser.verifications?.length || 0,
+                          powerBadge: normalizedUser.power_badge,
                         });
+                        
+                        setUser(normalizedUser);
+                        return; // Exit early after setting user from Neynar
                       }
                     } else {
                       console.warn('[Farcaster] Neynar API returned non-OK status:', neynarResponse.status);
                     }
                   } catch (neynarError: any) {
-                    console.warn('[Farcaster] Neynar fetch failed (non-critical):', neynarError?.message);
+                    console.error('[Farcaster] ❌ Neynar API fetch failed:', neynarError?.message);
                   }
                 }
                 
+                // Fallback: Use SDK context data if Neynar fetch fails
+                console.log('[Farcaster] ⚠️ Using SDK context data as fallback');
                 const normalizedUser = {
-                  ...enhancedUserData,
-                  username: enhancedUserData.username || "Farcaster User",
-                  pfpUrl: enhancedUserData.pfpUrl || enhancedUserData.pfp || "",
-                  pfp_url: enhancedUserData.pfpUrl || enhancedUserData.pfp || "",
+                  ...userData,
+                  fid: fid,
+                  username: userData.username || "Farcaster User",
+                  displayName: userData.displayName || userData.display_name || userData.username,
+                  display_name: userData.display_name || userData.displayName || userData.username,
+                  pfpUrl: userData.pfpUrl || userData.pfp || "",
+                  pfp_url: userData.pfpUrl || userData.pfp || "",
+                  pfp: userData.pfpUrl || userData.pfp || "",
                 };
                 
                 setUser(normalizedUser);
