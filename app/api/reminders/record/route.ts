@@ -82,7 +82,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 2: Get Neynar score
+    // Step 2: Get Neynar User Quality Score
+    // According to Neynar docs: https://docs.neynar.com/docs/neynar-user-quality-score
+    // Score is available in user.profile.score (0.0 to 1.0 range)
+    // Score is calculated weekly based on user activity on the network
     const userdata = await neynarClient.fetchBulkUsers({ 
       fids: [Number(helperFid)] 
     });
@@ -92,23 +95,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Calculate Neynar score (0-1 range) - same logic as app/api/neynar/score/route.ts
-    // Power badge users get high score (0.9-1.0)
-    // Others based on follower count with diminishing returns
+    // Get Neynar User Quality Score from API
+    // Score is in user.profile.score (0.0 to 1.0)
+    // Fallback to manual calculation if not available
     let neynarScore = 0;
+    const userAny = user as any;
     
-    // Type assertion untuk power_badge (optional property)
-    const userWithPowerBadge = user as any;
-    if (userWithPowerBadge.power_badge) {
-      neynarScore = 0.95; // Power badge = premium users
+    // Try to get score from profile.score (official Neynar User Quality Score)
+    if (userAny.profile?.score !== undefined && userAny.profile?.score !== null) {
+      neynarScore = Number(userAny.profile.score);
+      console.log(`[Record] Using Neynar User Quality Score from API: ${neynarScore}`);
     } else {
-      // Logarithmic scale for followers (diminishing returns)
-      // 100 followers = ~0.4, 1000 = ~0.6, 10000 = ~0.8
-      const followerCount = user.follower_count || 0;
-      neynarScore = Math.min(Math.log10(followerCount + 1) / 5, 0.89);
+      // Fallback: Calculate score manually (same logic as app/api/neynar/score/route.ts)
+      // Power badge users get high score (0.9-1.0)
+      // Others based on follower count with diminishing returns
+      if (userAny.power_badge) {
+        neynarScore = 0.95; // Power badge = premium users
+      } else {
+        // Logarithmic scale for followers (diminishing returns)
+        // 100 followers = ~0.4, 1000 = ~0.6, 10000 = ~0.8
+        const followerCount = user.follower_count || 0;
+        neynarScore = Math.min(Math.log10(followerCount + 1) / 5, 0.89);
+      }
+      console.log(`[Record] Using calculated score (fallback): ${neynarScore}`);
     }
 
-    // Normalize to 0-1 range
+    // Normalize to 0-1 range (ensure it's within bounds)
     const normalizedScore = Math.max(0, Math.min(1, neynarScore));
 
     // Step 3: Get reminder data from contract to calculate estimated reward
