@@ -11,8 +11,9 @@ import { getPendingVerificationById } from "@/lib/utils/pending-verifications";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  context: { params: Promise<{ token: string }> }
 ) {
+  const params = await context.params;
   try {
     const token = params.token;
 
