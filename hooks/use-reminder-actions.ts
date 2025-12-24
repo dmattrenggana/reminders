@@ -546,12 +546,48 @@ export function useReminderActions({
         hour12: true
       });
 
-      // Step 2: Create post template with mention using the specified template
-      const creatorUsername = reminder.farcasterUsername || reminder.creatorUsername || "creator";
+      // Step 2: Get creator username - fetch from creator address if not available in reminder
+      let creatorUsername = reminder.farcasterUsername || reminder.creatorUsername;
+      
+      // If username not found in reminder, fetch from creator address
+      if (!creatorUsername && reminder.creator) {
+        try {
+          console.log('[HelpRemind] Fetching creator username from address:', reminder.creator);
+          const creatorResponse = await fetch(`/api/farcaster/fid-by-address?address=${reminder.creator}`);
+          const creatorData = await creatorResponse.json();
+          
+          if (creatorData.user?.username) {
+            creatorUsername = creatorData.user.username;
+            console.log('[HelpRemind] ✅ Creator username fetched:', creatorUsername);
+          } else {
+            console.warn('[HelpRemind] ⚠️ Creator username not found, using fallback');
+            creatorUsername = reminder.creator.slice(0, 6) + "..." + reminder.creator.slice(-4);
+          }
+        } catch (error) {
+          console.error('[HelpRemind] Failed to fetch creator username:', error);
+          creatorUsername = reminder.creator.slice(0, 6) + "..." + reminder.creator.slice(-4);
+        }
+      }
+      
+      // Fallback if still no username
+      if (!creatorUsername) {
+        creatorUsername = reminder.creator 
+          ? (reminder.creator.slice(0, 6) + "..." + reminder.creator.slice(-4))
+          : "creator";
+      }
+      
       const reminderDescription = reminder.description || "reminder";
       const appUrl = "https://remindersbase.vercel.app/";
       
+      // Create post template with mention using the specified template
       const postText = `Tick-tock, @${creatorUsername} ! ⏰ Don't forget your ${reminderDescription} is approaching at ${formattedDeadline}. Beat the clock and get it done now! ${appUrl}`;
+      
+      console.log('[HelpRemind] Post template created:', {
+        creatorUsername,
+        reminderDescription,
+        formattedDeadline,
+        postText: postText.substring(0, 100) + '...',
+      });
 
       // Step 3: Post to Farcaster (if in miniapp)
       if (isMiniApp && typeof window !== 'undefined' && (window as any).Farcaster?.sdk) {
