@@ -5,7 +5,7 @@ import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
 import { Button } from "@/components/ui/button";
 import { Loader2, Wallet, LogOut } from "lucide-react";
-import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
+import { findFarcasterConnector, findBaseAppConnector, detectEnvironment } from "@/lib/utils/farcaster-connector";
 
 export function ConnectWalletButton() {
   const { user, isLoaded, isMiniApp } = useFarcaster();
@@ -29,11 +29,13 @@ export function ConnectWalletButton() {
 
   /**
    * Handle manual wallet connection
+   * Supports: Browser, Farcaster Miniapp, BaseApp
+   * 
    * Per Farcaster docs: https://miniapps.farcaster.xyz/docs/guides/wallets
    * "It's possible a user doesn't have a connected wallet so you should always check 
    * for a connection and prompt them to connect if they aren't already connected."
    * 
-   * Note: In miniapp, Farcaster client handles wallet selection - no dialog needed
+   * Note: In miniapp/BaseApp, the client handles wallet selection - no dialog needed
    */
   const handleConnect = () => {
     console.log("[ConnectWallet] Manual connect requested");
@@ -41,22 +43,37 @@ export function ConnectWalletButton() {
       connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
     );
     
-    // Use centralized utility to find Farcaster connector
-    const fcConnector = findFarcasterConnector(connectors);
+    const currentEnv = detectEnvironment();
     
-    if (fcConnector) {
-      console.log("[ConnectWallet] ✅ Found Farcaster connector:", {
-        id: fcConnector.id,
-        name: fcConnector.name,
-        type: fcConnector.type
-      });
+    if (currentEnv === 'farcaster-miniapp' || currentEnv === 'base-app') {
+      // Try environment-specific connector first
+      let connector: any = null;
       
-      // Per Farcaster docs: "Your Mini App won't need to show a wallet selection dialog"
-      // Farcaster client will handle wallet connection
-      connect({ connector: fcConnector });
+      if (currentEnv === 'base-app') {
+        connector = findBaseAppConnector(connectors) || findFarcasterConnector(connectors);
+      } else {
+        connector = findFarcasterConnector(connectors);
+      }
+      
+      if (connector) {
+        console.log("[ConnectWallet] ✅ Found connector:", {
+          id: connector.id,
+          name: connector.name,
+          type: connector.type,
+          environment: currentEnv
+        });
+        
+        // Miniapp/BaseApp client will handle wallet connection
+        connect({ connector });
+      } else {
+        // Fallback to injected if no miniapp connector found
+        console.log("[ConnectWallet] Miniapp connector not found, using injected connector");
+        const injectedConnector = connectors.find((c) => c.id === "injected");
+        connect({ connector: injectedConnector || connectors[0] });
+      }
     } else {
-      // Fallback untuk web browser (Injected/MetaMask)
-      console.log("[ConnectWallet] Farcaster connector not found, using injected connector");
+      // Browser mode - use injected connector (MetaMask, etc)
+      console.log("[ConnectWallet] Browser mode - using injected connector");
       const injectedConnector = connectors.find((c) => c.id === "injected");
       connect({ connector: injectedConnector || connectors[0] });
     }

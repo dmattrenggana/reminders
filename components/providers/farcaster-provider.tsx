@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { isFarcasterMiniApp } from "@/lib/utils/farcaster-connector";
+import { detectEnvironment, type EnvironmentType, getEnvironmentName } from "@/lib/utils/farcaster-connector";
 import { NeynarContextProvider, Theme, useNeynarContext } from "@neynar/react";
 import "@neynar/react/dist/style.css";
 
@@ -10,6 +10,7 @@ interface FarcasterContextType {
   isLoaded: boolean;
   error: string | null;
   isMiniApp: boolean;
+  environment: EnvironmentType;
 }
 
 const FarcasterContext = createContext<FarcasterContextType>({
@@ -17,33 +18,39 @@ const FarcasterContext = createContext<FarcasterContextType>({
   isLoaded: false,
   error: null,
   isMiniApp: false,
+  environment: 'browser',
 });
 
-// Inner provider yang menggabungkan Mini App SDK + SIWN
+// Inner provider yang menggabungkan Mini App SDK + SIWN + BaseApp
 function FarcasterProviderInner({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isMiniApp, setIsMiniApp] = useState(false);
+  const [environment, setEnvironment] = useState<EnvironmentType>('browser');
 
   // Dapatkan user dari SIWN (untuk browser biasa)
   const { user: siwnUser } = useNeynarContext();
+  
+  // isMiniApp is true for both Farcaster Miniapp and BaseApp (they both use miniapp-like behavior)
+  const isMiniApp = environment === 'farcaster-miniapp' || environment === 'base-app';
 
   useEffect(() => {
     const init = async () => {
       try {
-        const isInMiniApp = isFarcasterMiniApp();
+        const detectedEnv = detectEnvironment();
+        const envName = getEnvironmentName();
         
-        console.log('[Farcaster] Environment detection:', {
-          isInMiniApp,
+        console.log('[Environment] Detection:', {
+          environment: detectedEnv,
+          environmentName: envName,
           userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A',
           hasFarcasterGlobal: typeof window !== 'undefined' ? 'Farcaster' in window : false,
-          hasFarcasterWindow: typeof window !== 'undefined' ? !!(window as any).Farcaster : false
+          hasBaseApp: typeof window !== 'undefined' ? !!(window as any).base || !!(window as any).Base : false,
         });
         
-        setIsMiniApp(isInMiniApp);
+        setEnvironment(detectedEnv);
 
-        if (isInMiniApp) {
+        if (detectedEnv === 'farcaster-miniapp') {
           // === MINI APP MODE ===
           console.log('[Farcaster] 🚀 Running in miniapp mode - initializing SDK...');
           
@@ -127,9 +134,28 @@ function FarcasterProviderInner({ children }: { children: ReactNode }) {
           }
           
           setIsLoaded(true);
+        } else if (detectedEnv === 'base-app') {
+          // === BASEAPP MODE ===
+          console.log('[BaseApp] 🚀 Running in BaseApp mode');
+          
+          // BaseApp may have similar features to Farcaster miniapp
+          // Check if there's user context available
+          if (typeof window !== 'undefined') {
+            const baseApp = (window as any).base || (window as any).Base;
+            if (baseApp?.user) {
+              const baseUser = baseApp.user;
+              setUser({
+                ...baseUser,
+                username: baseUser.username || baseUser.displayName,
+                pfpUrl: baseUser.pfpUrl || baseUser.pfp,
+              });
+            }
+          }
+          
+          setIsLoaded(true);
         } else {
           // === WEB BROWSER MODE ===
-          console.log('[Farcaster] Running in web browser mode');
+          console.log('[Environment] Running in web browser mode');
           setIsLoaded(true);
         }
       } catch (e: any) {
@@ -155,7 +181,8 @@ function FarcasterProviderInner({ children }: { children: ReactNode }) {
       user: currentUser, 
       isLoaded, 
       error, 
-      isMiniApp 
+      isMiniApp,
+      environment
     }}>
       {children}
     </FarcasterContext.Provider>

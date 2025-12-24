@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useConnect } from "wagmi";
-import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
+import { findFarcasterConnector, findBaseAppConnector, detectEnvironment } from "@/lib/utils/farcaster-connector";
 
 interface UseAutoConnectProps {
   isMiniApp: boolean;
@@ -84,46 +84,86 @@ export function useAutoConnect({
       }
       
       // Only manually connect if still not connected (auto-connect didn't happen)
+      const currentEnv = detectEnvironment();
+      
       if (isMiniApp) {
-        console.log("[Auto-Connect] 🔍 Detected Farcaster Miniapp");
-        console.log("[Auto-Connect] 📋 Available connectors:", 
-          connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
-        );
-        
-        // Use centralized utility to find Farcaster connector
-        const fcConnector = findFarcasterConnector(connectors);
-        
-        if (fcConnector) {
-          console.log("[Auto-Connect] ✅ Found Farcaster connector:", {
-            id: fcConnector.id,
-            name: fcConnector.name,
-            type: fcConnector.type
-          });
-          
-          // Per Farcaster docs: "If a user already has a connected wallet the connector will automatically connect"
-          // We only manually connect if auto-connect didn't happen
-          // Note: Connector doesn't have a 'ready' property in Wagmi types, so we proceed with connect
-          try {
-            console.log("[Auto-Connect] 🚀 Manual connect (auto-connect didn't happen):", fcConnector.id);
-            connect({ connector: fcConnector });
-            console.log("[Auto-Connect] ✅ Connect call executed");
-          } catch (err: any) {
-            console.error("[Auto-Connect] ❌ Connection failed:", {
-              error: err?.message || err,
-              code: err?.code,
-              name: err?.name
-            });
-            console.log("[Auto-Connect] User can connect manually via Connect Wallet button");
-          }
-        } else {
-          console.error("[Auto-Connect] ❌ Farcaster connector NOT FOUND!");
-          console.error("[Auto-Connect] Available connectors:", 
+        if (currentEnv === 'farcaster-miniapp') {
+          console.log("[Auto-Connect] 🔍 Detected Farcaster Miniapp");
+          console.log("[Auto-Connect] 📋 Available connectors:", 
             connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
           );
-          console.error("[Auto-Connect] This is a CRITICAL issue - connector should be available in miniapp");
-          console.log("[Auto-Connect] User will need to connect manually via Connect Wallet button");
+          
+          // Use centralized utility to find Farcaster connector
+          const fcConnector = findFarcasterConnector(connectors);
+          
+          if (fcConnector) {
+            console.log("[Auto-Connect] ✅ Found Farcaster connector:", {
+              id: fcConnector.id,
+              name: fcConnector.name,
+              type: fcConnector.type
+            });
+            
+            // Per Farcaster docs: "If a user already has a connected wallet the connector will automatically connect"
+            // We only manually connect if auto-connect didn't happen
+            try {
+              console.log("[Auto-Connect] 🚀 Manual connect (auto-connect didn't happen):", fcConnector.id);
+              connect({ connector: fcConnector });
+              console.log("[Auto-Connect] ✅ Connect call executed");
+            } catch (err: any) {
+              console.error("[Auto-Connect] ❌ Connection failed:", {
+                error: err?.message || err,
+                code: err?.code,
+                name: err?.name
+              });
+              console.log("[Auto-Connect] User can connect manually via Connect Wallet button");
+            }
+          } else {
+            console.error("[Auto-Connect] ❌ Farcaster connector NOT FOUND!");
+            console.error("[Auto-Connect] Available connectors:", 
+              connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
+            );
+            console.log("[Auto-Connect] User will need to connect manually via Connect Wallet button");
+          }
+        } else if (currentEnv === 'base-app') {
+          console.log("[Auto-Connect] 🔍 Detected BaseApp");
+          console.log("[Auto-Connect] 📋 Available connectors:", 
+            connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
+          );
+          
+          // Try to find BaseApp connector first, fallback to Farcaster if available
+          const baseConnector = findBaseAppConnector(connectors);
+          const fcConnector = findFarcasterConnector(connectors);
+          const connector = baseConnector || fcConnector;
+          
+          if (connector) {
+            console.log("[Auto-Connect] ✅ Found connector:", {
+              id: connector.id,
+              name: connector.name,
+              type: connector.type,
+              source: baseConnector ? 'BaseApp' : 'Farcaster'
+            });
+            
+            try {
+              console.log("[Auto-Connect] 🚀 Manual connect (auto-connect didn't happen):", connector.id);
+              connect({ connector });
+              console.log("[Auto-Connect] ✅ Connect call executed");
+            } catch (err: any) {
+              console.error("[Auto-Connect] ❌ Connection failed:", {
+                error: err?.message || err,
+                code: err?.code,
+                name: err?.name
+              });
+              console.log("[Auto-Connect] User can connect manually via Connect Wallet button");
+            }
+          } else {
+            console.warn("[Auto-Connect] ⚠️ No BaseApp or Farcaster connector found");
+            console.log("[Auto-Connect] Available connectors:", 
+              connectors.map(c => ({ id: c.id, name: c.name, type: c.type }))
+            );
+            console.log("[Auto-Connect] User will need to connect manually via Connect Wallet button");
+          }
         }
-      } else if (!isMiniApp && !isConnected) {
+      } else if (!isMiniApp && !isConnected && currentEnv === 'browser') {
         // Fallback to injected for web browser
         const injectedConnector = connectors.find((c) => c.id === "injected");
         if (injectedConnector) {
