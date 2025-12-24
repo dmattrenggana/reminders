@@ -454,34 +454,9 @@ export function useReminderActions({
           throw new Error("Reclaim reminder transaction failed");
         }
       } else {
-        // At deadline or after: Use confirmReminder (returns 30% commitment)
-        const confirmTxHash = await writeContractAsync({
-          address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
-          abi: REMINDER_VAULT_ABI,
-          functionName: 'confirmReminder',
-          args: [BigInt(id)],
-          chainId: 8453,
-        });
-
-        setTxStatus("Waiting for confirmation transaction...");
-        const confirmReceipt = await publicClient.waitForTransactionReceipt({
-          hash: confirmTxHash,
-          timeout: 60000,
-        });
-
-        if (confirmReceipt.status === "success") {
-          setTxStatus("");
-          toast({
-            variant: "default",
-            title: "✅ Reminder Confirmed!",
-            description: "Reminder confirmed! 30% commitment returned.",
-            duration: 2000,
-          });
-          refreshReminders();
-          refreshBalance();
-        } else {
-          throw new Error("Confirm reminder transaction failed");
-        }
+        // V5: Always use reclaimReminder (no confirmReminder in V5)
+        // reclaimReminder returns commit amount + unclaimed rewards
+        throw new Error("Reminder deadline has passed. Use burnMissedReminder instead.");
       }
     } catch (error: any) {
       console.error("Confirm reminder error:", error);
