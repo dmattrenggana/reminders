@@ -63,15 +63,20 @@ export function useTokenBalance() {
     console.warn("[TokenBalance] Error fetching balance:", error);
   }
 
-  // Debug logging
+  // Extract results with better error handling
   const balanceResult = data?.[0]?.result;
+  const balanceStatus = data?.[0]?.status;
+  const balanceError = data?.[0]?.error;
+  
   const symbolResult = (data?.[1]?.result as string) || "RMNDtest";
+  const symbolStatus = data?.[1]?.status;
+  const symbolError = data?.[1]?.error;
   
   // Log balance for debugging
   useEffect(() => {
     if (address && isConnected) {
       if (error) {
-        console.error("[TokenBalance] Error details:", {
+        console.error("[TokenBalance] Query error:", {
           error,
           address,
           isConnected,
@@ -79,29 +84,75 @@ export function useTokenBalance() {
         });
       }
       
-      if (balanceResult !== undefined) {
-        console.log("[TokenBalance] Balance data:", {
+      // Log contract call status
+      if (data && data.length > 0) {
+        console.log("[TokenBalance] Contract call status:", {
+          balanceStatus,
+          balanceError,
+          balanceResult: balanceResult?.toString(),
+          symbolStatus,
+          symbolError,
+          symbolResult,
+          address,
+          isLoading,
+          dataLength: data.length
+        });
+      }
+      
+      if (balanceResult !== undefined && balanceResult !== null) {
+        console.log("[TokenBalance] ✅ Balance fetched:", {
           raw: balanceResult?.toString(),
           type: typeof balanceResult,
           isBigInt: balanceResult instanceof BigInt || typeof balanceResult === 'bigint',
           address,
-          symbol: symbolResult,
-          isLoading
+          symbol: symbolResult
+        });
+      } else if (!isLoading && balanceStatus === 'success') {
+        // Status is success but result is undefined - might be zero balance
+        console.log("[TokenBalance] ⚠️ Status success but result undefined - treating as zero balance");
+      } else if (!isLoading && balanceStatus === 'failure') {
+        console.error("[TokenBalance] ❌ Contract call failed:", {
+          balanceError,
+          address,
+          contract: TOKEN_CONTRACT
         });
       } else if (!isLoading) {
-        console.warn("[TokenBalance] Balance is undefined but not loading:", {
+        console.warn("[TokenBalance] ⚠️ Balance is undefined but not loading:", {
           address,
           isConnected,
-          data,
-          error
+          balanceStatus,
+          balanceError,
+          data: data?.map((d: any) => ({ status: d?.status, error: d?.error, result: d?.result }))
         });
       }
     }
-  }, [address, isConnected, balanceResult, symbolResult, isLoading, error, data]);
+  }, [address, isConnected, balanceResult, balanceStatus, balanceError, symbolResult, symbolStatus, symbolError, isLoading, error, data]);
+
+  // Handle case where contract call succeeds but returns undefined/null
+  // This can happen if the contract doesn't exist or ABI doesn't match
+  let finalBalance: bigint = BigInt(0);
+  if (balanceResult !== undefined && balanceResult !== null) {
+    if (typeof balanceResult === 'bigint') {
+      finalBalance = balanceResult;
+    } else if (typeof balanceResult === 'string') {
+      try {
+        finalBalance = BigInt(balanceResult);
+      } catch {
+        console.warn("[TokenBalance] Invalid balance string:", balanceResult);
+        finalBalance = BigInt(0);
+      }
+    } else {
+      console.warn("[TokenBalance] Unexpected balance type:", typeof balanceResult, balanceResult);
+      finalBalance = BigInt(0);
+    }
+  } else if (balanceStatus === 'failure' || balanceError) {
+    // Contract call failed - return zero but log error
+    console.error("[TokenBalance] Contract call failed, returning zero balance");
+    finalBalance = BigInt(0);
+  }
 
   return {
-    // Menggunakan BigInt(0) agar lolos build Vercel
-    balance: balanceResult ?? BigInt(0), 
+    balance: finalBalance,
     symbol: symbolResult,
     isLoading,
     refresh: refetch

@@ -93,13 +93,20 @@ export default function RootLayout({
                   return false;
                 };
                 
-                // Suppress unhandled promise rejections from image loading errors
+                // Suppress unhandled promise rejections from image loading errors and postMessage
                 const originalUnhandledRejection = window.onunhandledrejection;
                 window.onunhandledrejection = function(event) {
-                  // Suppress image loading errors (harmless - handled by onError handlers)
+                  // Suppress postMessage origin mismatch errors from Farcaster connector
                   if (event.reason && typeof event.reason === 'object') {
                     const reason = event.reason;
-                    // Check if it's an Event object from image error
+                    const reasonStr = reason?.message || reason?.toString() || '';
+                    if (reasonStr.includes('postMessage') && 
+                        (reasonStr.includes('farcaster.xyz') || reasonStr.includes('wallet.farcaster.xyz'))) {
+                      // Error is harmless - Farcaster connector handles this internally
+                      event.preventDefault(); // Suppress error
+                      return;
+                    }
+                    // Suppress image loading errors (harmless - handled by onError handlers)
                     if (reason.type === 'error' && reason.target && reason.target.tagName === 'IMG') {
                       event.preventDefault(); // Suppress error
                       return;
@@ -109,6 +116,21 @@ export default function RootLayout({
                   if (originalUnhandledRejection) {
                     return originalUnhandledRejection.call(this, event);
                   }
+                };
+                
+                // Also suppress console errors for postMessage (some libraries log to console.error)
+                const originalConsoleError = console.error;
+                console.error = function(...args) {
+                  const message = args.join(' ');
+                  // Suppress postMessage origin mismatch errors
+                  if (typeof message === 'string' && 
+                      message.includes('postMessage') && 
+                      (message.includes('farcaster.xyz') || message.includes('wallet.farcaster.xyz'))) {
+                    // Suppress this error - it's harmless
+                    return;
+                  }
+                  // Call original console.error for other errors
+                  originalConsoleError.apply(console, args);
                 };
                 
                 // Early attempt to call ready() if SDK is already available
