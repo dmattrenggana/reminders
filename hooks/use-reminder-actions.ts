@@ -723,32 +723,74 @@ export function useReminderActions({
       }
 
       // Step 6: Auto claim reward immediately after recording
-      setTxStatus("Claiming reward... Please confirm in wallet.");
-      const claimTxHash = await writeContractAsync({
-        address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
-        abi: REMINDER_VAULT_ABI,
-        functionName: 'claimReward',
-        args: [BigInt(reminder.id)],
-        chainId: 8453,
-      });
+      // Note: Per V4 contract, claimReward requires reminder.confirmed OR block.timestamp > confirmationDeadline
+      // Since we just recorded, reminder is not confirmed yet, so we need to wait
+      // However, we can try to claim if confirmationDeadline has passed
+      try {
+        // Check if we can claim (reminder confirmed or deadline passed)
+        const currentTime = Math.floor(Date.now() / 1000);
+        const confirmationDeadline = reminder.confirmationDeadline 
+          ? (typeof reminder.confirmationDeadline === 'number' 
+              ? reminder.confirmationDeadline 
+              : Math.floor(new Date(reminder.confirmationDeadline).getTime() / 1000))
+          : null;
+        
+        const canClaimNow = reminder.isCompleted || reminder.isConfirmed || 
+          (confirmationDeadline && currentTime > confirmationDeadline);
+        
+        if (canClaimNow) {
+          setTxStatus("Claiming reward... Please confirm in wallet.");
+          const claimTxHash = await writeContractAsync({
+            address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
+            abi: REMINDER_VAULT_ABI,
+            functionName: 'claimReward',
+            args: [BigInt(reminder.id)],
+            chainId: 8453,
+          });
 
-      setTxStatus("Waiting for claim transaction confirmation...");
-      const claimReceipt = await publicClient.waitForTransactionReceipt({
-        hash: claimTxHash,
-        timeout: 60000,
-      });
+          setTxStatus("Waiting for claim transaction confirmation...");
+          const claimReceipt = await publicClient.waitForTransactionReceipt({
+            hash: claimTxHash,
+            timeout: 60000,
+          });
 
-      if (claimReceipt.status === "success") {
+          if (claimReceipt.status === "success") {
+            setTxStatus("");
+            toast({
+              variant: "default",
+              title: "✅ Success!",
+              description: `Reminder recorded and reward claimed! You earned ${data.estimatedReward || "tokens"}`,
+            });
+            refreshReminders();
+            refreshBalance();
+            return; // Exit successfully
+          } else {
+            throw new Error("Claim reward transaction failed");
+          }
+        } else {
+          // Cannot claim yet - reminder not confirmed and deadline not passed
+          // This is expected behavior - helper can claim later when reminder is confirmed
+          setTxStatus("");
+          toast({
+            variant: "default",
+            title: "✅ Reminder Recorded!",
+            description: `Your reminder post was verified! Reward: ${data.estimatedReward || "tokens"}. You can claim when the reminder is confirmed.`,
+          });
+          refreshReminders();
+          refreshBalance();
+        }
+      } catch (claimError: any) {
+        // If claim fails (e.g., reminder not confirmed yet), that's okay
+        // Helper can claim later when reminder is confirmed
+        console.warn("[HelpRemind] Claim reward failed (may need to wait for confirmation):", claimError);
         setTxStatus("");
         toast({
-          variant: "success",
-          title: "Success!",
-          description: `Reminder recorded and reward claimed! You earned ${data.estimatedReward || "tokens"}`,
+          variant: "default",
+          title: "✅ Reminder Recorded!",
+          description: `Your reminder post was verified! Reward: ${data.estimatedReward || "tokens"}. You can claim when the reminder is confirmed.`,
         });
         refreshReminders();
         refreshBalance();
-      } else {
-        throw new Error("Claim reward transaction failed");
       }
     } catch (error: any) {
       console.error("Help remind error:", error);
