@@ -107,11 +107,13 @@ export function useReminderActions({
           console.log("[CreateReminder] Approval transaction sent:", approveTxHash);
           setTxStatus("Waiting for approval confirmation...");
           
-          // Wait for approval to be confirmed with timeout
+          // Wait for approval to be confirmed with shorter timeout and polling fallback
+          let approvalConfirmed = false;
           try {
+            // Try to wait for receipt with shorter timeout (30 seconds)
             const approveReceipt = await publicClient.waitForTransactionReceipt({
               hash: approveTxHash,
-              timeout: 120000, // 2 minutes timeout
+              timeout: 30000, // 30 seconds timeout (reduced from 2 minutes)
             });
             
             console.log("[CreateReminder] Approval receipt received:", {
@@ -123,25 +125,78 @@ export function useReminderActions({
               throw new Error("Approval transaction failed");
             }
             
+            approvalConfirmed = true;
             setTxStatus("Approval confirmed! Creating reminder...");
           } catch (waitError: any) {
-            // If waitForTransactionReceipt fails, check if transaction exists
-            console.warn("[CreateReminder] Wait for receipt failed, checking transaction status:", waitError?.message || waitError);
+            // If waitForTransactionReceipt fails or times out, verify transaction was sent
+            console.warn("[CreateReminder] Wait for receipt failed/timeout, verifying transaction:", waitError?.message || waitError);
             
-            // Try to get transaction to verify it was sent
+            // Verify transaction exists in mempool/blockchain
             try {
               const tx = await publicClient.getTransaction({ hash: approveTxHash });
               if (tx) {
-                console.log("[CreateReminder] Transaction found, proceeding (receipt may be delayed)");
-                setTxStatus("Approval sent! Creating reminder...");
-                // Proceed anyway - transaction was sent, receipt may be delayed
+                console.log("[CreateReminder] Transaction found in mempool, waiting for confirmation...");
+                setTxStatus("Approval transaction sent, waiting for confirmation...");
+                
+                // Poll for allowance instead of waiting for receipt
+                // This is more reliable as it checks the actual state
+                let attempts = 0;
+                const maxAttempts = 20; // 20 attempts = ~40 seconds
+                const pollInterval = 2000; // Check every 2 seconds
+                
+                while (attempts < maxAttempts && !approvalConfirmed) {
+                  await new Promise(resolve => setTimeout(resolve, pollInterval));
+                  
+                  try {
+                    // Check if allowance was updated
+                    const currentAllowance = await publicClient.readContract({
+                      address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
+                      abi: COMMIT_TOKEN_ABI,
+                      functionName: 'allowance',
+                      args: [address as `0x${string}`, CONTRACTS.REMINDER_VAULT as `0x${string}`],
+                    }) as bigint;
+                    
+                    console.log("[CreateReminder] Checking allowance:", {
+                      current: currentAllowance.toString(),
+                      required: amountInWei.toString(),
+                      sufficient: currentAllowance >= amountInWei
+                    });
+                    
+                    if (currentAllowance >= amountInWei) {
+                      console.log("[CreateReminder] ✅ Allowance confirmed via polling!");
+                      approvalConfirmed = true;
+                      setTxStatus("Approval confirmed! Creating reminder...");
+                      break;
+                    }
+                  } catch (allowanceError: any) {
+                    console.warn("[CreateReminder] Allowance check failed during polling:", allowanceError?.message);
+                    // Continue polling
+                  }
+                  
+                  attempts++;
+                }
+                
+                if (!approvalConfirmed) {
+                  // Transaction was sent but allowance not updated yet
+                  // Proceed anyway - transaction is in mempool and will be confirmed
+                  console.log("[CreateReminder] ⚠️ Allowance not confirmed yet, but transaction is in mempool. Proceeding...");
+                  setTxStatus("Approval sent! Creating reminder...");
+                  // Wait a bit more for transaction to be included
+                  await new Promise(resolve => setTimeout(resolve, 3000));
+                }
               } else {
-                throw new Error("Transaction not found");
+                throw new Error("Transaction not found in mempool");
               }
             } catch (txError: any) {
+              console.error("[CreateReminder] Failed to verify transaction:", txError);
               // If we can't verify, throw original error
               throw waitError;
             }
+          }
+          
+          // Small delay to ensure state is updated
+          if (approvalConfirmed) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         } catch (approveError: any) {
           if (approveError.message?.includes("User rejected") || approveError.code === 4001) {
