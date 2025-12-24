@@ -50,40 +50,102 @@ export function useFarcasterUser() {
 
       try {
         console.log('[useFarcasterUser] 🔄 Fetching Farcaster user for wallet:', address);
-        const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
         
-        if (!response.ok) {
-          throw new Error(`API returned status ${response.status}`);
-        }
-
-        const data = await response.json();
+        // Add timeout and better error handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
-        if (data.fid && data.user) {
-          console.log('[useFarcasterUser] ✅ Farcaster user fetched:', {
-            fid: data.fid,
-            username: data.user.username,
+        try {
+          const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`, {
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+            },
           });
           
-          setWalletFarcasterUser({
-            ...data.user,
-            fid: data.fid,
-            username: data.user.username,
-            displayName: data.user.displayName || data.user.display_name,
-            display_name: data.user.display_name || data.user.displayName,
-            pfpUrl: data.user.pfpUrl || data.user.pfp_url,
-            pfp_url: data.user.pfp_url || data.user.pfpUrl,
-            pfp: data.user.pfp_url || data.user.pfpUrl,
-          });
-          setWalletUserError(null);
-        } else {
-          console.log('[useFarcasterUser] ℹ️ No Farcaster user found for wallet');
-          setWalletFarcasterUser(null);
-          setWalletUserError(null);
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            // Handle different error statuses
+            if (response.status === 404) {
+              // User not found is not an error - just no Farcaster account linked
+              console.log('[useFarcasterUser] ℹ️ No Farcaster user found for wallet (404)');
+              setWalletFarcasterUser(null);
+              setWalletUserError(null);
+              return;
+            }
+            
+            const errorText = await response.text();
+            let errorData;
+            try {
+              errorData = JSON.parse(errorText);
+            } catch {
+              errorData = { message: errorText || `HTTP ${response.status}` };
+            }
+            
+            throw new Error(errorData.message || errorData.error || `API returned status ${response.status}`);
+          }
+
+          const data = await response.json();
+          
+          // Check for error in response data
+          if (data.error) {
+            console.log('[useFarcasterUser] ℹ️ API returned error:', data.error);
+            setWalletFarcasterUser(null);
+            setWalletUserError(null); // Don't treat "not found" as error
+            return;
+          }
+          
+          if (data.fid && data.user) {
+            console.log('[useFarcasterUser] ✅ Farcaster user fetched:', {
+              fid: data.fid,
+              username: data.user.username,
+            });
+            
+            setWalletFarcasterUser({
+              ...data.user,
+              fid: data.fid,
+              username: data.user.username,
+              displayName: data.user.displayName || data.user.display_name,
+              display_name: data.user.display_name || data.user.displayName,
+              pfpUrl: data.user.pfpUrl || data.user.pfp_url,
+              pfp_url: data.user.pfp_url || data.user.pfpUrl,
+              pfp: data.user.pfp_url || data.user.pfpUrl,
+            });
+            setWalletUserError(null);
+          } else {
+            console.log('[useFarcasterUser] ℹ️ No Farcaster user found for wallet');
+            setWalletFarcasterUser(null);
+            setWalletUserError(null);
+          }
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          
+          // Handle abort (timeout)
+          if (fetchError.name === 'AbortError') {
+            console.warn('[useFarcasterUser] ⏱️ Request timeout');
+            throw new Error('Request timeout - please try again');
+          }
+          
+          throw fetchError;
         }
       } catch (error: any) {
-        console.error('[useFarcasterUser] ❌ Failed to fetch Farcaster user:', error);
-        setWalletFarcasterUser(null);
-        setWalletUserError(error?.message || 'Failed to fetch Farcaster user');
+        // Only log and set error for actual failures, not "not found" cases
+        if (error?.message?.includes('not found') || error?.message?.includes('404')) {
+          console.log('[useFarcasterUser] ℹ️ No Farcaster user found:', error.message);
+          setWalletFarcasterUser(null);
+          setWalletUserError(null);
+        } else {
+          console.error('[useFarcasterUser] ❌ Failed to fetch Farcaster user:', {
+            error: error?.message || error,
+            name: error?.name,
+            stack: error?.stack,
+          });
+          setWalletFarcasterUser(null);
+          // Don't set error state for network failures - they're often transient
+          // User can retry by reconnecting wallet or refreshing
+          setWalletUserError(null);
+        }
       } finally {
         setIsLoadingWalletUser(false);
       }
@@ -177,22 +239,59 @@ export function useFarcasterUser() {
     setWalletUserError(null);
 
     try {
-      const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
-      const data = await response.json();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      if (data.fid && data.user) {
-        setWalletFarcasterUser({
-          ...data.user,
-          fid: data.fid,
-          username: data.user.username,
-          displayName: data.user.displayName || data.user.display_name,
-          pfpUrl: data.user.pfpUrl || data.user.pfp_url,
+      try {
+        const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`, {
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
-      } else {
-        setWalletFarcasterUser(null);
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            setWalletFarcasterUser(null);
+            return;
+          }
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.error) {
+          setWalletFarcasterUser(null);
+          return;
+        }
+        
+        if (data.fid && data.user) {
+          setWalletFarcasterUser({
+            ...data.user,
+            fid: data.fid,
+            username: data.user.username,
+            displayName: data.user.displayName || data.user.display_name,
+            pfpUrl: data.user.pfpUrl || data.user.pfp_url,
+          });
+        } else {
+          setWalletFarcasterUser(null);
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timeout');
+        }
+        throw fetchError;
       }
     } catch (error: any) {
-      setWalletUserError(error?.message || 'Failed to refresh');
+      // Don't set error for "not found" or network issues
+      if (!error?.message?.includes('not found') && !error?.message?.includes('404')) {
+        console.warn('[useFarcasterUser] Refresh failed:', error?.message || error);
+      }
+      setWalletFarcasterUser(null);
+      setWalletUserError(null);
     } finally {
       setIsLoadingWalletUser(false);
     }
