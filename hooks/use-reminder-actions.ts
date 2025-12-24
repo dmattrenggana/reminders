@@ -336,10 +336,13 @@ export function useReminderActions({
       
       if (createReceipt.status === "success") {
         setTxStatus("");
+        
+        // Show success toast with alarm clock animation
         toast({
-          variant: "success",
-          title: "Success!",
-          description: "Reminder created successfully! Transaction confirmed.",
+          variant: "default",
+          title: "✅ Reminder Created!",
+          description: "Your reminder has been successfully created and locked.",
+          duration: 5000,
         });
         
         // Wait for blockchain state to update (optimized to save quota)
@@ -350,6 +353,9 @@ export function useReminderActions({
         }, 3000); // Single refresh after 3 seconds (reduced from multiple refreshes)
         
         setIsSubmitting(false);
+        
+        // Return success to allow FloatingCreate to close
+        return { success: true, receipt: createReceipt };
       } else {
         throw new Error("Transaction reverted");
       }

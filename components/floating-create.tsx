@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Plus, X, Calendar, Target, Loader2, Clock } from "lucide-react";
+import { Plus, X, Calendar, Target, Loader2, Clock, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 
 interface FloatingCreateProps {
   symbol: string;
   isSubmitting: boolean;
-  onConfirm: (desc: string, amt: string, dl: string) => void;
+  onConfirm: (desc: string, amt: string, dl: string) => Promise<any>;
   status?: string;
 }
 
@@ -20,6 +20,7 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const brandPurple = "bg-[#4f46e5]";
   const brandShadow = "shadow-[#4f46e5]/30";
@@ -34,6 +35,42 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
     setDeadline(formatted);
   };
 
+  // Handle form submission
+  const handleSubmit = async () => {
+    if (!description || !amount || !deadline) {
+      return;
+    }
+    
+    try {
+      const result = await onConfirm(description, amount, deadline);
+      
+      // If successful, show success animation and close
+      if (result?.success) {
+        setShowSuccess(true);
+        
+        // Close form after success animation
+        setTimeout(() => {
+          setIsOpen(false);
+          setShowSuccess(false);
+          // Reset form
+          setDescription("");
+          setAmount("");
+          setDeadline("");
+        }, 2000); // Show success for 2 seconds
+      }
+    } catch (error) {
+      // Error handling is done in onConfirm
+      console.error("Create reminder error:", error);
+    }
+  };
+
+  // Reset success state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowSuccess(false);
+    }
+  }, [isOpen]);
+
   return (
     /* FIX POSISI: Menggunakan left-1/2 dan -translate-x-1/2 agar presisi di tengah miniapp */
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-[420px]">
@@ -46,11 +83,31 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
           <span>New Reminder</span>
         </Button>
       ) : (
-        <Card className="p-6 rounded-[2.5rem] shadow-2xl border-slate-100 bg-white animate-in slide-in-from-bottom-10 duration-500">
+        <Card className={`p-6 rounded-[2.5rem] shadow-2xl border-slate-100 bg-white animate-in slide-in-from-bottom-10 duration-500 relative overflow-hidden ${showSuccess ? "bg-gradient-to-br from-green-50 to-white border-green-200" : ""}`}>
+          {/* Success Animation Overlay */}
+          {showSuccess && (
+            <div className="absolute inset-0 bg-gradient-to-br from-green-50/90 to-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center animate-in fade-in duration-300">
+              {/* Animated Alarm Clock Icon */}
+              <div className="relative mb-4">
+                <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center animate-bounce">
+                  <Clock className="w-12 h-12 text-green-600 animate-pulse" />
+                </div>
+                {/* Ring animation */}
+                <div className="absolute inset-0 rounded-full border-4 border-green-400 animate-ping opacity-20"></div>
+              </div>
+              <h3 className="text-2xl font-black text-green-700 mb-2 animate-in slide-in-from-bottom-4 duration-500">
+                Reminder Created! ⏰
+              </h3>
+              <p className="text-sm font-bold text-green-600 animate-in slide-in-from-bottom-4 duration-700">
+                Your reminder is locked and ready
+              </p>
+            </div>
+          )}
+          
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
-              {/* Logo App */}
-              <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-slate-100 shadow-sm">
+              {/* Logo App with animation when success */}
+              <div className={`relative w-10 h-10 rounded-xl overflow-hidden border border-slate-100 shadow-sm transition-all ${showSuccess ? "animate-spin-slow scale-110" : ""}`}>
                 <Image src="/logo.jpg" alt="Logo" fill className="object-cover" />
               </div>
               <div>
@@ -58,7 +115,18 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Never miss what matters</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-full hover:bg-slate-50 text-slate-400">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                setIsOpen(false);
+                setDescription("");
+                setAmount("");
+                setDeadline("");
+              }} 
+              className="rounded-full hover:bg-slate-50 text-slate-400"
+              disabled={showSuccess}
+            >
               <X className="w-5 h-5" />
             </Button>
           </div>
@@ -135,11 +203,15 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
               </div>
             )}
             <Button
-              disabled={isSubmitting}
-              onClick={() => onConfirm(description, amount, deadline)}
-              className={`w-full h-14 rounded-2xl ${brandPurple} text-white font-black uppercase tracking-widest text-xs shadow-lg ${brandShadow} active:scale-95 transition-all mt-2`}
+              disabled={isSubmitting || showSuccess}
+              onClick={handleSubmit}
+              className={`w-full h-14 rounded-2xl ${showSuccess ? "bg-green-600" : brandPurple} text-white font-black uppercase tracking-widest text-xs shadow-lg ${brandShadow} active:scale-95 transition-all mt-2`}
             >
-              {isSubmitting ? (
+              {showSuccess ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5 animate-bounce mr-2" /> Success!
+                </>
+              ) : isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" /> {status || "Processing..."}
                 </>

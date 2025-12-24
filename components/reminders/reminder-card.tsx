@@ -52,39 +52,94 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   const canInteract = useMemo(() => {
     if (reminder.isResolved) return false
     
-    // T = reminderTime (deadline)
+    // T = reminderTime (deadline) - bisa dari reminderTime atau deadline field
     const now = Math.floor(Date.now() / 1000)
-    const reminderTime = typeof reminder.reminderTime === 'number' 
-      ? reminder.reminderTime 
-      : Math.floor(new Date(reminder.reminderTime).getTime() / 1000)
+    
+    // Try to get deadline from multiple possible fields
+    let reminderTime: number
+    if (reminder.deadline && typeof reminder.deadline === 'number') {
+      reminderTime = reminder.deadline
+    } else if (typeof reminder.reminderTime === 'number') {
+      reminderTime = reminder.reminderTime
+    } else if (reminder.reminderTime) {
+      reminderTime = Math.floor(new Date(reminder.reminderTime).getTime() / 1000)
+    } else {
+      return false // No valid deadline found
+    }
     
     // T-1 hour = 1 jam sebelum deadline
     const oneHourBefore = reminderTime - 3600 // T-1 hour
     
     // confirmationDeadline = T+1 hour (reminderTime + 1 hour)
-    const confirmationDeadline = reminder.confirmationDeadline 
-      ? (typeof reminder.confirmationDeadline === 'number'
-          ? reminder.confirmationDeadline
-          : Math.floor(new Date(reminder.confirmationDeadline).getTime() / 1000))
-      : reminderTime + 3600 // Default: T+1 hour
+    let confirmationDeadline: number
+    if (reminder.confirmationDeadline) {
+      confirmationDeadline = typeof reminder.confirmationDeadline === 'number'
+        ? reminder.confirmationDeadline
+        : Math.floor(new Date(reminder.confirmationDeadline).getTime() / 1000)
+    } else {
+      confirmationDeadline = reminderTime + 3600 // Default: T+1 hour
+    }
     
     // Can interact from T-1 hour until confirmationDeadline
-    return now >= oneHourBefore && now <= confirmationDeadline
+    const canInteractNow = now >= oneHourBefore && now <= confirmationDeadline
+    
+    // Debug logging (remove in production if needed)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ReminderCard] T-1 hour check:', {
+        reminderId: reminder.id,
+        now,
+        reminderTime,
+        oneHourBefore,
+        confirmationDeadline,
+        canInteract: canInteractNow,
+        timeUntilT1: oneHourBefore - now,
+      })
+    }
+    
+    return canInteractNow
   }, [reminder])
 
-  // Format reminder time
+  // Format reminder time (deadline)
   const formattedTime = useMemo(() => {
-    const time = reminder.reminderTime
-    if (!time) return "Unknown"
+    // Try to get deadline from multiple possible fields
+    let deadlineTimestamp: number | null = null
     
-    const date = typeof time === 'number' ? new Date(time * 1000) : new Date(time)
+    if (reminder.deadline && typeof reminder.deadline === 'number') {
+      deadlineTimestamp = reminder.deadline
+    } else if (typeof reminder.reminderTime === 'number') {
+      deadlineTimestamp = reminder.reminderTime
+    } else if (reminder.reminderTime) {
+      deadlineTimestamp = Math.floor(new Date(reminder.reminderTime).getTime() / 1000)
+    }
+    
+    if (!deadlineTimestamp) return "Unknown deadline"
+    
+    const date = new Date(deadlineTimestamp * 1000)
     
     try {
-      return formatDistanceToNow(date, { addSuffix: true })
-    } catch {
-      return date.toLocaleString()
+      // Format: "in 2 hours" or "2 hours ago"
+      const relative = formatDistanceToNow(date, { addSuffix: true })
+      // Also show absolute time for clarity
+      const absolute = date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+      return `${relative} (${absolute})`
+    } catch (error) {
+      // Fallback to simple format
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
     }
-  }, [reminder.reminderTime])
+  }, [reminder.reminderTime, reminder.deadline])
 
   // Check if reminder is created by current user
   const isMyReminder = useMemo(() => {
