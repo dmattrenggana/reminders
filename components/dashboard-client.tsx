@@ -63,6 +63,7 @@ export default function DashboardClient() {
     helpRemind,
     isSubmitting,
     txStatus,
+    setTxStatus,
   } = useReminderActions({
     address,
     isConnected,
