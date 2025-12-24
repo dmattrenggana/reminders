@@ -118,31 +118,43 @@ export function useReminders() {
             return null;
           }
           
-          // V5 contract returns 8 fields:
-          // [user, commitAmount, rewardPoolAmount, deadline, resolved, rewardsClaimed, description, farcasterUsername]
-          // V3/V4 returns 12 fields with reminderTime, confirmationDeadline, confirmed, burned, totalReminders, confirmationTime
+          console.log(`[useReminders] Reminder ${id} raw data:`, r);
+          console.log(`[useReminders] Data type:`, typeof r, 'isArray:', Array.isArray(r), 'length:', r.length);
+          
+          // V5 contract returns struct that ethers parses as object with both named properties AND array indices
+          // We can access via r.deadline or r[3]
           
           let reminderData: any;
           
-          if (r.length === 8) {
-            // V5 format
+          // Check if this is V5 format by checking for 'deadline' property (V5) vs 'reminderTime' property (V3/V4)
+          const isV5 = r.deadline !== undefined && r.reminderTime === undefined;
+          
+          if (isV5) {
+            // V5 format - use named properties
+            console.log(`[useReminders] ✅ Detected V5 format for reminder ${id}`);
+            console.log(`[useReminders] V5 deadline value:`, r.deadline, 'type:', typeof r.deadline);
+            
+            const deadlineValue = Number(r.deadline);
+            console.log(`[useReminders] V5 deadline converted to Number:`, deadlineValue);
+            
             reminderData = {
               id: id,
-              creator: r[0], // user
-              rewardPool: ethers.formatUnits(r[2], 18), // rewardPoolAmount
-              deadline: Number(r[3]), // deadline
-              reminderTime: Number(r[3]), // V5: use deadline as reminderTime for compatibility
-              isResolved: r[4], // resolved
-              isCompleted: false, // V5: no confirmed field, check if resolved and not burned
-              description: r[6],
-              farcasterUsername: r[7],
-              commitAmount: ethers.formatUnits(r[1], 18), // commitAmount
-              confirmationDeadline: Number(r[3]), // V5: use deadline as confirmationDeadline too
+              creator: r.user,
+              rewardPool: ethers.formatUnits(r.rewardPoolAmount, 18),
+              deadline: deadlineValue,
+              reminderTime: deadlineValue, // V5: use deadline as reminderTime for compatibility
+              isResolved: r.resolved,
+              isCompleted: false, // V5: no confirmed field
+              description: r.description,
+              farcasterUsername: r.farcasterUsername,
+              commitAmount: ethers.formatUnits(r.commitAmount, 18),
+              confirmationDeadline: deadlineValue, // V5: use deadline as confirmationDeadline too
               totalReminders: 0, // V5: no totalReminders field
-              rewardsClaimed: ethers.formatUnits(r[5], 18), // rewardsClaimed
+              rewardsClaimed: ethers.formatUnits(r.rewardsClaimed, 18),
             };
           } else {
-            // V3/V4 format (backward compatibility)
+            // V3/V4 format (backward compatibility) - use named properties
+            console.log(`[useReminders] ✅ Detected V3/V4 format for reminder ${id}`);
             reminderData = {
               id: id,
               creator: r.user,
@@ -159,6 +171,8 @@ export function useReminders() {
               rewardsClaimed: ethers.formatUnits(r.rewardsClaimed, 18),
             };
           }
+          
+          console.log(`[useReminders] Final reminderData for ${id}:`, reminderData);
           
           // Only cache valid data
           reminderCache.set(id, { data: reminderData, timestamp: now });
