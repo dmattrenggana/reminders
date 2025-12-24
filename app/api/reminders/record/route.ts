@@ -3,6 +3,7 @@ import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
 import { CONTRACTS, REMINDER_VAULT_ABI } from "@/lib/contracts/config";
 import { createRpcProvider } from "@/lib/utils/rpc-provider";
 import { ethers } from "ethers";
+import { createPendingVerification, findPendingVerification } from "@/lib/utils/pending-verifications";
 
 /**
  * Verify helper post via Neynar API
@@ -65,7 +66,7 @@ async function verifyHelperPost(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { reminderId, helperAddress, helperFid, creatorUsername } = body;
+    const { reminderId, helperAddress, helperFid, creatorUsername, useWebhook } = body;
 
     if (!reminderId || !helperAddress || !helperFid) {
       return NextResponse.json({ 
@@ -91,9 +92,47 @@ export async function POST(request: NextRequest) {
     });
     const neynarClient = new NeynarAPIClient(config);
 
+    // WEBHOOK MODE: Create pending verification and return token
+    // Frontend will poll /api/verifications/[token] to check status
+    if (useWebhook === true && creatorUsername) {
+      console.log(`[Record] Using webhook mode for helper ${helperFid}, reminder ${reminderId}`);
+      
+      // Check if there's already a pending verification
+      const existing = findPendingVerification(Number(helperFid), parseInt(reminderId));
+      
+      if (existing && existing.status === 'pending' && existing.expiresAt > new Date()) {
+        console.log(`[Record] Found existing pending verification: ${existing.id}`);
+        return NextResponse.json({
+          success: true,
+          verification_token: existing.id,
+          status: 'pending',
+          message: 'Pending verification already exists. Waiting for webhook...',
+        });
+      }
+      
+      // Create new pending verification
+      const verification = createPendingVerification({
+        reminderId: parseInt(reminderId),
+        helperFid: Number(helperFid),
+        helperAddress,
+        creatorUsername,
+        expiresInMinutes: 10, // 10 minutes to post and get webhook
+      });
+      
+      console.log(`[Record] Created pending verification ${verification.id} for webhook mode`);
+      
+      return NextResponse.json({
+        success: true,
+        verification_token: verification.id,
+        status: 'pending',
+        message: 'Pending verification created. Waiting for webhook notification...',
+      });
+    }
+
+    // POLLING MODE (default): Verify post immediately via Neynar API
     // Step 1: Verify post if creatorUsername provided
     if (creatorUsername) {
-      console.log(`[Record] Verifying post for helper ${helperFid}, creator @${creatorUsername}, reminder ${reminderId}`);
+      console.log(`[Record] Using polling mode - verifying post for helper ${helperFid}, creator @${creatorUsername}, reminder ${reminderId}`);
       const hasPosted = await verifyHelperPost(
         neynarClient,
         Number(helperFid),
