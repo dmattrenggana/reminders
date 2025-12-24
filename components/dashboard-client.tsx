@@ -232,15 +232,46 @@ export default function DashboardClient() {
     }
   };
 
-  // Help remind handler
-  const handleHelpRemindMe = (reminder: any) => {
+  // Help remind handler - Fetch FID if not available
+  const handleHelpRemindMe = async (reminder: any) => {
+    // Try to get FID from providerUser first (miniapp)
     if (providerUser?.fid) {
       helpRemind(reminder, isMiniApp, providerUser.fid);
+      return;
+    }
+
+    // If no FID from providerUser, try to fetch from wallet address
+    if (address) {
+      try {
+        setTxStatus("Fetching Farcaster user...");
+        const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
+        const data = await response.json();
+        
+        if (data.fid) {
+          setTxStatus("");
+          helpRemind(reminder, isMiniApp, data.fid);
+        } else {
+          setTxStatus("");
+          toast({
+            variant: "destructive",
+            title: "Farcaster User Not Found",
+            description: "Please connect your Farcaster account to your wallet address to help remind others.",
+          });
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch FID:", error);
+        setTxStatus("");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch Farcaster user. Please try again.",
+        });
+      }
     } else {
       toast({
         variant: "destructive",
-        title: "Farcaster User Not Available",
-        description: "Farcaster user not available",
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet first",
       });
     }
   };

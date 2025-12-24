@@ -690,5 +690,6 @@ export function useReminderActions({
     helpRemind,
     isSubmitting,
     txStatus,
+    setTxStatus,
   };
 }
