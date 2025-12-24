@@ -22,6 +22,7 @@ export const CONTRACTS = {
 /**
  * Get RPC URLs with priority order (matching rpc-provider.ts configuration)
  * Premium RPC (from env) takes highest priority if configured
+ * Safe for both client-side and server-side execution
  */
 function getRpcUrls(): string[] {
   const urls: string[] = [];
@@ -30,10 +31,31 @@ function getRpcUrls(): string[] {
   // Alchemy: https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY
   // Infura: https://base-mainnet.infura.io/v3/YOUR_API_KEY
   // QuickNode: https://YOUR-ENDPOINT-NAME.base.quiknode.pro/YOUR-API-KEY/
-  const customRpc = process.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL?.trim();
-  if (customRpc && !customRpc.includes("mainnet.base.org")) {
-    // Only add if it's not the default (which has rate limiting)
-    urls.push(customRpc);
+  // Note: NEXT_PUBLIC_ prefix makes it available in browser
+  try {
+    let customRpc: string | undefined;
+    
+    if (typeof window !== "undefined") {
+      // Client-side: access via process.env (Next.js exposes NEXT_PUBLIC_ vars at build time)
+      // Use optional chaining and type assertion for safety
+      customRpc = (typeof process !== "undefined" && process?.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL) 
+        ? String(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL).trim()
+        : undefined;
+    } else {
+      // Server-side: direct access
+      customRpc = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL
+        ? String(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL).trim()
+        : undefined;
+    }
+    
+    if (customRpc && customRpc.length > 0 && !customRpc.includes("mainnet.base.org")) {
+      // Only add if it's not the default (which has rate limiting)
+      urls.push(customRpc);
+    }
+  } catch (error) {
+    // Silently fail if process is not available (client-side in some environments)
+    // This is safe - we'll just use the free RPCs
+    console.debug("[Config] Could not access process.env, using free RPCs only");
   }
 
   // Priority 2: Free reliable RPCs (less rate limiting)
