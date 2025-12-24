@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       console.log(`[Record] Using webhook mode (PRIMARY) for helper ${helperFid}, reminder ${reminderId}`);
       
       // Check if there's already a pending verification
-      const existing = findPendingVerification(Number(helperFid), parseInt(reminderId));
+      const existing = await findPendingVerification(Number(helperFid), parseInt(reminderId));
       
       if (existing && existing.status === 'pending' && existing.expiresAt > new Date()) {
         console.log(`[Record] Found existing pending verification: ${existing.id}`);
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Create new pending verification
-      const verification = createPendingVerification({
+      const verification = await createPendingVerification({
         reminderId: parseInt(reminderId),
         helperFid: Number(helperFid),
         helperAddress,
