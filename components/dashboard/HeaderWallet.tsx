@@ -73,6 +73,9 @@ export function HeaderWallet({
     );
   }
 
+  // Show user info if logged in via Farcaster miniapp (even if wallet not connected)
+  const shouldShowUserInfo = isMiniApp && providerUser && (username || pfpUrl);
+
   return (
     <Button 
       onClick={onConnect} 
@@ -81,8 +84,7 @@ export function HeaderWallet({
         text-white h-12 px-8 shadow-lg transition-all active:scale-95
       "
     >
-      {/* Show user info if logged in via Farcaster miniapp */}
-      {isMiniApp && providerUser && (username || pfpUrl) ? (
+      {shouldShowUserInfo ? (
         <div className="flex items-center gap-2">
           {pfpUrl && !pfpError ? (
             <img 

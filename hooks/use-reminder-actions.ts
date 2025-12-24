@@ -67,18 +67,30 @@ export function useReminderActions({
         return;
       }
 
-      // Step 1: Check allowance first
+      // Step 1: Check allowance first (with error handling)
       setTxStatus("Checking token allowance...");
       if (!publicClient) {
         throw new Error("Public client not available");
       }
       
-      const allowance = await publicClient.readContract({
-        address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
-        abi: COMMIT_TOKEN_ABI,
-        functionName: 'allowance',
-        args: [address as `0x${string}`, CONTRACTS.REMINDER_VAULT as `0x${string}`],
-      }) as bigint;
+      let allowance: bigint = BigInt(0);
+      try {
+        allowance = await publicClient.readContract({
+          address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
+          abi: COMMIT_TOKEN_ABI,
+          functionName: 'allowance',
+          args: [address as `0x${string}`, CONTRACTS.REMINDER_VAULT as `0x${string}`],
+        }) as bigint;
+        
+        // If allowance is undefined or null, default to 0
+        if (!allowance && allowance !== BigInt(0)) {
+          allowance = BigInt(0);
+        }
+      } catch (allowanceError: any) {
+        console.warn("[CreateReminder] Allowance check failed, assuming 0:", allowanceError?.message || allowanceError);
+        // If allowance check fails, assume 0 and proceed with approval
+        allowance = BigInt(0);
+      }
 
       // Step 2: Approve if needed
       if (!allowance || allowance < amountInWei) {
