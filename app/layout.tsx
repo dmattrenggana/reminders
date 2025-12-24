@@ -8,7 +8,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Script 
           src="https://neynarxyz.github.io/siwn/raw/1.2.0/index.js" 
           strategy="lazyOnload"
