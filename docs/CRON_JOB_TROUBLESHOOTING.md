@@ -10,11 +10,11 @@
 - ✅ Logic: Checks `confirmationDeadline` correctly
 
 ### **Required Environment Variables:**
-```env
+\`\`\`env
 CRON_SECRET=your_secret_here
 CRON_WALLET_PRIVATE_KEY=0x...
 NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://...
-```
+\`\`\`
 
 ---
 
@@ -27,13 +27,13 @@ NEXT_PUBLIC_BASE_MAINNET_RPC_URL=https://...
 4. View execution logs
 
 ### **2. Manual Test:**
-```bash
+\`\`\`bash
 curl -X GET https://your-app.vercel.app/api/cron/process-reminders \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
-```
+\`\`\`
 
 **Expected Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "timestamp": "2025-01-XX...",
@@ -41,7 +41,7 @@ curl -X GET https://your-app.vercel.app/api/cron/process-reminders \
   "processed": 0,
   "reminders": []
 }
-```
+\`\`\`
 
 ### **3. Check On-Chain:**
 1. Go to Basescan
@@ -155,4 +155,3 @@ curl -X GET https://your-app.vercel.app/api/cron/process-reminders \
 
 **Last Updated:** January 2025  
 **Status:** Ready for production
-
