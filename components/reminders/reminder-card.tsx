@@ -163,25 +163,38 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   }
 
   const handleConfirmReminder = async () => {
-    if (onConfirm) {
-      setLoadingAction("confirm");
-      try {
-        await onConfirm(reminder.id);
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Failed to Confirm",
-          description: error.message || "Failed to confirm reminder",
-        });
-      } finally {
-        setLoadingAction(null);
-      }
-    } else {
+    // Debug: Log callback availability
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ReminderCard] handleConfirmReminder called:', {
+        reminderId: reminder.id,
+        hasOnConfirm: !!onConfirm,
+        onConfirmType: typeof onConfirm,
+        feedType: actualFeedType,
+      });
+    }
+    
+    if (!onConfirm) {
+      console.error('[ReminderCard] onConfirm callback not available for reminder:', reminder.id);
       toast({
         variant: "destructive",
         title: "Action Not Available",
-        description: "Confirm functionality requires callback",
+        description: "Confirm functionality requires callback. Please refresh the page.",
       });
+      return;
+    }
+    
+    setLoadingAction("confirm");
+    try {
+      await onConfirm(reminder.id);
+    } catch (error: any) {
+      console.error('[ReminderCard] Confirm reminder error:', error);
+      toast({
+        variant: "destructive",
+        title: "Failed to Confirm",
+        description: error.message || "Failed to confirm reminder",
+      });
+    } finally {
+      setLoadingAction(null);
     }
   }
 
