@@ -353,13 +353,13 @@ export default function DashboardClient() {
         {/* Header */}
         <Header
           isConnected={isConnected}
-          formattedBalance={formattedBalance}
+          formattedBalance={formattedBalance()}
           symbol={symbol || "RMNDtest"}
           pfpUrl={pfpUrl}
           username={username}
           address={address}
           isMiniApp={isMiniApp}
-          providerUser={providerUser}
+          providerUser={farcasterUser}
           onConnect={handleConnect}
           onDisconnect={disconnect}
         />
