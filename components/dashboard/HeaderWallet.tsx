@@ -99,7 +99,27 @@ export function HeaderWallet({
   }
 
   // Show user info if logged in via Farcaster miniapp (even if wallet not connected)
-  const shouldShowUserInfo = isMiniApp && providerUser && (username || pfpUrl);
+  // Prioritize providerUser data when in miniapp
+  const displayUsernameWhenNotConnected = isMiniApp && providerUser 
+    ? (providerUser.username || providerUser.displayName || username)
+    : (username || providerUser?.username || providerUser?.displayName);
+  
+  const displayPfpUrlWhenNotConnected = isMiniApp && providerUser
+    ? (providerUser.pfpUrl || providerUser.pfp || pfpUrl)
+    : (pfpUrl || providerUser?.pfpUrl || providerUser?.pfp);
+  
+  const shouldShowUserInfo = isMiniApp && providerUser && (displayUsernameWhenNotConnected || displayPfpUrlWhenNotConnected);
+
+  console.log("[HeaderWallet] Not connected state:", {
+    isConnected: false,
+    isMiniApp,
+    hasProviderUser: !!providerUser,
+    displayUsernameWhenNotConnected,
+    displayPfpUrlWhenNotConnected,
+    username,
+    pfpUrl,
+    providerUserKeys: providerUser ? Object.keys(providerUser) : []
+  });
 
   return (
     <Button 
@@ -111,23 +131,23 @@ export function HeaderWallet({
     >
       {shouldShowUserInfo ? (
         <div className="flex items-center gap-2">
-          {pfpUrl && !pfpError ? (
+          {displayPfpUrlWhenNotConnected && !pfpError ? (
             <img 
-              src={pfpUrl} 
-              alt={username || "User"} 
+              src={displayPfpUrlWhenNotConnected} 
+              alt={displayUsernameWhenNotConnected || "User"} 
               className="w-6 h-6 rounded-full object-cover ring-2 ring-white/30" 
               referrerPolicy="no-referrer"
               onError={handlePfpError}
             />
-          ) : username ? (
+          ) : displayUsernameWhenNotConnected ? (
             <div className="w-6 h-6 rounded-full bg-indigo-300 flex items-center justify-center text-xs font-bold text-white">
-              {username.charAt(0).toUpperCase()}
+              {displayUsernameWhenNotConnected.charAt(0).toUpperCase()}
             </div>
           ) : (
             <Wallet className="h-4 w-4" />
           )}
           <span>
-            {username ? `Connect @${username}` : "Connect Wallet"}
+            {displayUsernameWhenNotConnected ? `Connect @${displayUsernameWhenNotConnected}` : "Connect Wallet"}
           </span>
         </div>
       ) : (

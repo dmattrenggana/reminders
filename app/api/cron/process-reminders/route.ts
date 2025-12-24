@@ -33,8 +33,20 @@ export async function GET(request: NextRequest) {
     }
 
     const { ethers } = await import("ethers")
+    const { createRpcProvider } = await import("@/lib/utils/rpc-provider")
 
-    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL)
+    // Use centralized RPC provider (QuickNode only)
+    const provider = await createRpcProvider()
+    if (!provider) {
+      return NextResponse.json(
+        {
+          error: "Failed to connect to RPC endpoint",
+          details: "QuickNode RPC endpoint not available. Please check NEXT_PUBLIC_BASE_MAINNET_RPC_URL",
+        },
+        { status: 500 },
+      )
+    }
+
     const wallet = new ethers.Wallet(process.env.CRON_WALLET_PRIVATE_KEY, provider)
     const vaultContract = new ethers.Contract(CONTRACTS.REMINDER_VAULT, REMINDER_VAULT_ABI, wallet)
 
