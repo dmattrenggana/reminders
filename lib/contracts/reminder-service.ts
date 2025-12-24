@@ -377,25 +377,30 @@ export class ReminderService {
       console.log("[v0] Reminder data array length:", data.length)
       console.log("[v0] Full data array:", data)
 
-      if (data.length === 11) {
-        console.warn("[v0] ⚠️ Contract appears to be V2 (11 fields), not V3 (12 fields)")
+      // V5 contract format (8 fields):
+      // address user, uint256 commitAmount, uint256 rewardPoolAmount, uint256 deadline, 
+      // bool resolved, uint256 rewardsClaimed, string description, string farcasterUsername
+      if (data.length === 8) {
+        console.log("[v0] ✅ Contract is V5 (8 fields)")
         return {
           id: reminderId,
           user: data[0],
           commitmentAmount: data[1],
           rewardPoolAmount: data[2],
-          reminderTime: data[3],
-          confirmationDeadline: data[4],
-          confirmed: data[5],
-          burned: data[6],
-          description: data[7],
-          farcasterUsername: data[8],
-          totalReminders: Number(data[9]),
-          rewardsClaimed: data[10],
-          confirmationTime: BigInt(0), // Default value for V2
+          reminderTime: data[3], // V5: deadline field becomes reminderTime
+          confirmationDeadline: data[3], // V5: use deadline for both (no separate confirmationDeadline)
+          confirmed: false, // V5: no confirmed field, use resolved instead
+          burned: data[4], // V5: resolved field (true if reclaimed or burned)
+          description: data[6],
+          farcasterUsername: data[7],
+          totalReminders: 0, // V5: no totalReminders field
+          rewardsClaimed: data[5],
+          confirmationTime: BigInt(0), // V5: no confirmationTime field
         }
-      } else if (data.length === 12) {
-        console.log("[v0] ✅ Contract is V3 (12 fields)")
+      }
+      // V3/V4 contract format (12 fields) - backward compatibility
+      else if (data.length === 12) {
+        console.log("[v0] ✅ Contract is V3/V4 (12 fields)")
         return {
           id: reminderId,
           user: data[0],
@@ -411,8 +416,27 @@ export class ReminderService {
           rewardsClaimed: data[10],
           confirmationTime: data[11],
         }
+      }
+      // V2 contract format (11 fields) - backward compatibility
+      else if (data.length === 11) {
+        console.warn("[v0] ⚠️ Contract appears to be V2 (11 fields)")
+        return {
+          id: reminderId,
+          user: data[0],
+          commitmentAmount: data[1],
+          rewardPoolAmount: data[2],
+          reminderTime: data[3],
+          confirmationDeadline: data[4],
+          confirmed: data[5],
+          burned: data[6],
+          description: data[7],
+          farcasterUsername: data[8],
+          totalReminders: Number(data[9]),
+          rewardsClaimed: data[10],
+          confirmationTime: BigInt(0), // Default value for V2
+        }
       } else {
-        throw new Error(`Unexpected data length: ${data.length}. Expected 11 (V2) or 12 (V3)`)
+        throw new Error(`Unexpected data length: ${data.length}. Expected 8 (V5), 11 (V2), or 12 (V3/V4)`)
       }
     } catch (error) {
       console.error("[v0] Error getting reminder:", reminderId, error)
