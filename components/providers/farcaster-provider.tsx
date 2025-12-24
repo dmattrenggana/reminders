@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { isFarcasterMiniApp } from "@/lib/utils/farcaster-connector";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { NeynarContextProvider, Theme, useNeynarContext } from "@neynar/react";
 import "@neynar/react/dist/style.css";
 import { isFarcasterMiniApp } from "@/lib/utils/farcaster-connector";
