@@ -8,15 +8,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* Suppress unhandled promise rejection errors from Neynar SDK */}
+        {/* Suppress errors from Neynar SDK (UnfocusedCast image loading, etc) */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Suppress unhandled promise rejection errors from Neynar SDK
+              // 1. Suppress unhandled promise rejection errors from Neynar SDK
               window.addEventListener('unhandledrejection', function(event) {
                 // Check if error is from Neynar SDK or Farcaster components
                 const errorMessage = event.reason?.message || event.reason?.toString() || '';
                 const errorStack = event.reason?.stack || '';
+                const eventType = event.reason?.type || '';
+                const eventTarget = event.reason?.target?.tagName || '';
                 
                 // Suppress known harmless errors from Neynar SDK
                 if (
@@ -24,28 +26,56 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   errorStack.includes('UnfocusedCast') ||
                   errorMessage.includes('@neynar') ||
                   errorStack.includes('@neynar') ||
-                  errorStack.includes('neynar')
+                  errorStack.includes('neynar') ||
+                  eventType === 'error' && eventTarget === 'IMG' ||
+                  event.reason instanceof Event && event.reason.type === 'error'
                 ) {
-                  console.debug('[Suppressed] Neynar SDK unhandled promise rejection:', errorMessage);
+                  console.debug('[Suppressed] Neynar SDK unhandled promise rejection');
                   event.preventDefault(); // Prevent error from being logged
                   return false;
                 }
               });
               
-              // Also suppress console errors for the same patterns
+              // 2. Suppress console errors for the same patterns
               const originalConsoleError = console.error;
               console.error = function(...args) {
                 const errorStr = args.join(' ');
+                const firstArg = args[0];
+                
+                // Check if this is an Event object (image loading error)
+                if (firstArg && typeof firstArg === 'object' && firstArg.type === 'error' && firstArg.target && firstArg.target.tagName === 'IMG') {
+                  console.debug('[Suppressed] Neynar SDK image loading error');
+                  return;
+                }
+                
                 if (
                   errorStr.includes('UnfocusedCast') ||
                   errorStr.includes('Uncaught (in promise)') ||
                   (errorStr.includes('Event') && errorStr.includes('UnfocusedCast'))
                 ) {
-                  console.debug('[Suppressed] Neynar SDK console error:', errorStr);
+                  console.debug('[Suppressed] Neynar SDK console error');
                   return;
                 }
                 originalConsoleError.apply(console, args);
               };
+              
+              // 3. Global error handler for image loading errors (last resort)
+              window.addEventListener('error', function(event) {
+                // Check if this is an image loading error from Neynar components
+                if (event.target && event.target.tagName === 'IMG') {
+                  const imgSrc = event.target.src || '';
+                  // Suppress Neynar-related image errors
+                  if (
+                    imgSrc.includes('neynar') ||
+                    imgSrc.includes('warpcast') ||
+                    imgSrc.includes('farcaster')
+                  ) {
+                    console.debug('[Suppressed] Image loading error from Neynar/Farcaster:', imgSrc.substring(0, 100));
+                    event.preventDefault();
+                    return false;
+                  }
+                }
+              }, true); // Use capture phase to catch errors early
             `,
           }}
         />
