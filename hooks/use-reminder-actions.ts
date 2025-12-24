@@ -28,7 +28,7 @@ export function useReminderActions({
   const [txStatus, setTxStatus] = useState<string>("");
   const { toast } = useToast();
 
-  // Create reminder function (V4)
+  // Create reminder function (V5)
   const createReminder = async (desc: string, amt: string, dl: string) => {
     if (!isConnected || !address) {
       toast({
@@ -795,105 +795,73 @@ export function useReminderActions({
       
       const data = verificationData;
 
-      // Step 6: Call recordReminder contract with Neynar score
-      setTxStatus("✅ Post verified! Recording reminder...");
+      // Step 6: Get signature and claim reward directly (V5 contract)
+      setTxStatus("✅ Post verified! Getting claim signature...");
       if (!publicClient) {
         throw new Error("Public client not available");
       }
 
-      // Neynar score is 0-1.0, but contract expects 0-10000 (multiply by 10000)
-      const neynarScore = Math.floor((data.neynarScore || 0.5) * 10000);
+      // Neynar score is 0-1.0, contract expects 0-100 (multiply by 100)
+      const neynarScore = Math.floor((data.neynarScore || 0.5) * 100);
       
-      const recordTxHash = await writeContractAsync({
+      // Get signature from backend
+      let signature: string;
+      try {
+        const signResponse = await fetch("/api/sign-claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            helperAddress: address,
+            reminderId: reminder.id,
+            neynarScore: neynarScore,
+          }),
+        });
+
+        if (!signResponse.ok) {
+          throw new Error(`Failed to get signature: ${signResponse.status}`);
+        }
+
+        const signData = await signResponse.json();
+        if (!signData.success || !signData.signature) {
+          throw new Error("Invalid signature response");
+        }
+
+        signature = signData.signature;
+        console.log('[HelpRemind] ✅ Got claim signature from backend');
+      } catch (signError: any) {
+        console.error('[HelpRemind] Failed to get signature:', signError);
+        throw new Error(`Failed to get claim signature: ${signError.message}`);
+      }
+
+      // Call claimReward with signature (V5 contract)
+      setTxStatus("Claiming reward... Please confirm in wallet.");
+      
+      const claimTxHash = await writeContractAsync({
         address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
         abi: REMINDER_VAULT_ABI,
-        functionName: 'recordReminder',
-        args: [BigInt(reminder.id), BigInt(neynarScore)],
+        functionName: 'claimReward',
+        args: [BigInt(reminder.id), BigInt(neynarScore), signature as `0x${string}`],
         chainId: 8453,
       });
 
-      setTxStatus("Confirming record transaction...");
-      const recordReceipt = await publicClient.waitForTransactionReceipt({
-        hash: recordTxHash,
+      setTxStatus("Confirming claim transaction...");
+      const claimReceipt = await publicClient.waitForTransactionReceipt({
+        hash: claimTxHash,
         timeout: 120000,
       });
 
-      if (recordReceipt.status !== "success") {
-        throw new Error("Record reminder transaction failed");
-      }
-
-      // Step 6: Auto claim reward immediately after recording
-      // Note: Per V4 contract, claimReward requires reminder.confirmed OR block.timestamp > confirmationDeadline
-      // Since we just recorded, reminder is not confirmed yet, so we need to wait
-      // However, we can try to claim if confirmationDeadline has passed
-      try {
-        // Check if we can claim (reminder confirmed or deadline passed)
-        const currentTime = Math.floor(Date.now() / 1000);
-        const confirmationDeadline = reminder.confirmationDeadline 
-          ? (typeof reminder.confirmationDeadline === 'number' 
-              ? reminder.confirmationDeadline 
-              : Math.floor(new Date(reminder.confirmationDeadline).getTime() / 1000))
-          : null;
-        
-        const canClaimNow = reminder.isCompleted || reminder.isConfirmed || 
-          (confirmationDeadline && currentTime > confirmationDeadline);
-        
-        if (canClaimNow) {
-          setTxStatus("Claiming reward... Please confirm in wallet.");
-          const claimTxHash = await writeContractAsync({
-            address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
-            abi: REMINDER_VAULT_ABI,
-            functionName: 'claimReward',
-            args: [BigInt(reminder.id)],
-            chainId: 8453,
-          });
-
-          setTxStatus("Waiting for claim transaction confirmation...");
-          const claimReceipt = await publicClient.waitForTransactionReceipt({
-            hash: claimTxHash,
-            timeout: 60000,
-          });
-
-          if (claimReceipt.status === "success") {
-            setTxStatus("");
-            toast({
-              variant: "default",
-              title: "✅ Reward Claimed!",
-              description: `Reminder recorded and reward claimed! You earned ${data.estimatedReward || "tokens"}`,
-              duration: 2000,
-            });
-            refreshReminders();
-            refreshBalance();
-            return; // Exit successfully
-          } else {
-            throw new Error("Claim reward transaction failed");
-          }
-        } else {
-          // Cannot claim yet - reminder not confirmed and deadline not passed
-          // This is expected behavior - helper can claim later when reminder is confirmed
-          setTxStatus("");
-          toast({
-            variant: "default",
-            title: "✅ Reminder Recorded!",
-            description: `Your reminder post was verified! Reward: ${data.estimatedReward || "tokens"}. You can claim when the reminder is confirmed.`,
-            duration: 2000,
-          });
-          refreshReminders();
-          refreshBalance();
-        }
-      } catch (claimError: any) {
-        // If claim fails (e.g., reminder not confirmed yet), that's okay
-        // Helper can claim later when reminder is confirmed
-        console.warn("[HelpRemind] Claim reward failed (may need to wait for confirmation):", claimError);
+      if (claimReceipt.status === "success") {
         setTxStatus("");
         toast({
           variant: "default",
-          title: "✅ Reminder Recorded!",
-          description: `Your reminder post was verified! Reward: ${data.estimatedReward || "tokens"}. You can claim when the reminder is confirmed.`,
+          title: "✅ Reward claimed!",
+          description: `Post verified and reward claimed successfully!`,
           duration: 2000,
         });
         refreshReminders();
         refreshBalance();
+      } else {
+        throw new Error("Claim reward transaction failed");
       }
     } catch (error: any) {
       console.error("Help remind error:", error);

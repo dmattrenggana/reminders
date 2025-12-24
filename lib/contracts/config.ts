@@ -180,11 +180,15 @@ export const REMINDER_VAULT_V3_ABI = [
   "event UnclaimedRewardsWithdrawn(uint256 indexed reminderId, address indexed user, uint256 amount)",
 ] as const
 
-// Import V4 ABI (30/70 split with fixed tier rewards)
-import { REMINDER_VAULT_V4_ABI } from "./v4-abi"
+// Import V5 ABI (30/70 split with signature-based claim, no recordReminder)
+import { REMINDER_VAULT_V5_ABI } from "./v5-abi"
 
-// Default ABI: Use V4 (latest version)
-export const REMINDER_VAULT_ABI = REMINDER_VAULT_V4_ABI
+// Default ABI: Use V5 (latest version)
+export const REMINDER_VAULT_ABI = REMINDER_VAULT_V5_ABI
+export const REMINDER_VAULT_V5_ABI_EXPORT = REMINDER_VAULT_V5_ABI
+
+// Export V4 ABI for backward compatibility
+import { REMINDER_VAULT_V4_ABI } from "./v4-abi"
 export const REMINDER_VAULT_V4_ABI_EXPORT = REMINDER_VAULT_V4_ABI
 
 // Export aliases for backward compatibility
