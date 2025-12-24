@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Clock, CheckCircle2, Flame, Lock, AlertCircle, Info, Coins, Bell } from "lucide-react"
+import { useState, useMemo, useEffect } from "react"
+import { Clock, CheckCircle2, Flame, Lock, AlertCircle, Info, Coins, Bell, User } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { useAccount } from "wagmi"
 import { useFarcaster } from "@/components/providers/farcaster-provider"
@@ -24,6 +24,7 @@ interface Reminder {
   canWithdrawUnclaimed?: boolean
   canBurn?: boolean
   creator?: string
+  farcasterUsername?: string
   isResolved?: boolean
   isCompleted?: boolean
   isDangerZone?: boolean
@@ -41,9 +42,45 @@ interface ReminderCardProps {
 
 export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onConfirm }: ReminderCardProps) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const [creatorUsername, setCreatorUsername] = useState<string | null>(null)
+  const [isLoadingCreator, setIsLoadingCreator] = useState(false)
   const { address } = useAccount()
   const { user: providerUser, isMiniApp } = useFarcaster()
   const { toast } = useToast()
+
+  // Fetch creator username from Neynar API
+  useEffect(() => {
+    const fetchCreatorUsername = async () => {
+      // Skip if username already available from reminder data
+      if (reminder.farcasterUsername && reminder.farcasterUsername.trim() !== "" && !reminder.farcasterUsername.startsWith("wallet-") && !reminder.farcasterUsername.startsWith("0x")) {
+        setCreatorUsername(reminder.farcasterUsername.trim())
+        return
+      }
+
+      // Skip if no creator address
+      if (!reminder.creator) {
+        return
+      }
+
+      // Fetch from Neynar API using creator address
+      setIsLoadingCreator(true)
+      try {
+        const response = await fetch(`/api/farcaster/fid-by-address?address=${reminder.creator}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.user?.username) {
+            setCreatorUsername(data.user.username)
+          }
+        }
+      } catch (error) {
+        console.error('[ReminderCard] Failed to fetch creator username:', error)
+      } finally {
+        setIsLoadingCreator(false)
+      }
+    }
+
+    fetchCreatorUsername()
+  }, [reminder.creator, reminder.farcasterUsername])
 
   // Calculate if reminder is in T-1 hour window (can be helped/confirmed)
   // T = reminderTime (deadline waktu yang di input ketika create reminder)
@@ -237,7 +274,17 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   const statusConfig = getStatusConfig()
 
   return (
-    <div className="group bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-sm hover:shadow-lg hover:border-[#4f46e5] transition-all overflow-hidden">
+    <div className="group bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-sm hover:shadow-lg hover:border-[#4f46e5] transition-all overflow-hidden relative">
+      {/* Creator username - Top left corner */}
+      {creatorUsername && (
+        <div className="absolute top-4 left-4 z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200 shadow-sm">
+            <User className="h-3 w-3 text-slate-500" />
+            <span className="text-xs font-bold text-slate-700">@{creatorUsername}</span>
+          </div>
+        </div>
+      )}
+
       {/* Header dengan status badge */}
       <div className="p-6 pb-4 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
         <div className="flex items-start justify-between gap-3 mb-3">
