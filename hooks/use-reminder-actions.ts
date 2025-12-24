@@ -75,19 +75,43 @@ export function useReminderActions({
       
       let allowance: bigint = BigInt(0);
       try {
-        allowance = await publicClient.readContract({
+        const allowanceResult = await publicClient.readContract({
           address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
           abi: COMMIT_TOKEN_ABI,
           functionName: 'allowance',
           args: [address as `0x${string}`, CONTRACTS.REMINDER_VAULT as `0x${string}`],
-        }) as bigint;
+        });
         
-        // If allowance is undefined or null, default to 0
-        if (!allowance && allowance !== BigInt(0)) {
+        // Handle different return types and "0x" response
+        if (allowanceResult === null || allowanceResult === undefined) {
+          console.warn("[CreateReminder] Allowance returned null/undefined, assuming 0");
+          allowance = BigInt(0);
+        } else if (typeof allowanceResult === 'string' && allowanceResult === '0x') {
+          // Contract returned "0x" (no data) - this means allowance is 0 or contract doesn't exist
+          console.warn("[CreateReminder] Allowance returned '0x' (no data), assuming 0");
+          allowance = BigInt(0);
+        } else if (typeof allowanceResult === 'bigint') {
+          allowance = allowanceResult;
+        } else if (typeof allowanceResult === 'string') {
+          try {
+            allowance = BigInt(allowanceResult);
+          } catch {
+            console.warn("[CreateReminder] Failed to parse allowance string, assuming 0");
+            allowance = BigInt(0);
+          }
+        } else {
+          console.warn("[CreateReminder] Unexpected allowance type, assuming 0:", typeof allowanceResult);
           allowance = BigInt(0);
         }
       } catch (allowanceError: any) {
-        console.warn("[CreateReminder] Allowance check failed, assuming 0:", allowanceError?.message || allowanceError);
+        // Handle "0x" response error specifically
+        if (allowanceError?.message?.includes('returned no data') || 
+            allowanceError?.message?.includes('0x') ||
+            allowanceError?.data === '0x') {
+          console.warn("[CreateReminder] Allowance check returned '0x' (contract may not exist or no allowance), assuming 0");
+        } else {
+          console.warn("[CreateReminder] Allowance check failed, assuming 0:", allowanceError?.message || allowanceError);
+        }
         // If allowance check fails, assume 0 and proceed with approval
         allowance = BigInt(0);
       }
@@ -149,12 +173,27 @@ export function useReminderActions({
                   
                   try {
                     // Check if allowance was updated
-                    const currentAllowance = await publicClient.readContract({
+                    const allowanceResult = await publicClient.readContract({
                       address: CONTRACTS.COMMIT_TOKEN as `0x${string}`,
                       abi: COMMIT_TOKEN_ABI,
                       functionName: 'allowance',
                       args: [address as `0x${string}`, CONTRACTS.REMINDER_VAULT as `0x${string}`],
-                    }) as bigint;
+                    });
+                    
+                    // Handle "0x" response and different types
+                    let currentAllowance: bigint = BigInt(0);
+                    if (allowanceResult === null || allowanceResult === undefined || 
+                        (typeof allowanceResult === 'string' && allowanceResult === '0x')) {
+                      currentAllowance = BigInt(0);
+                    } else if (typeof allowanceResult === 'bigint') {
+                      currentAllowance = allowanceResult;
+                    } else if (typeof allowanceResult === 'string') {
+                      try {
+                        currentAllowance = BigInt(allowanceResult);
+                      } catch {
+                        currentAllowance = BigInt(0);
+                      }
+                    }
                     
                     console.log("[CreateReminder] Checking allowance:", {
                       current: currentAllowance.toString(),
@@ -169,7 +208,11 @@ export function useReminderActions({
                       break;
                     }
                   } catch (allowanceError: any) {
-                    console.warn("[CreateReminder] Allowance check failed during polling:", allowanceError?.message);
+                    // Suppress "0x" errors during polling - just continue
+                    if (!allowanceError?.message?.includes('returned no data') && 
+                        !allowanceError?.message?.includes('0x')) {
+                      console.warn("[CreateReminder] Allowance check failed during polling:", allowanceError?.message);
+                    }
                     // Continue polling
                   }
                   
@@ -216,12 +259,80 @@ export function useReminderActions({
         chainId: 8453, // Base Mainnet - explicitly specify to avoid getChainId error
       });
 
+      console.log("[CreateReminder] Create reminder transaction sent:", createTxHash);
       setTxStatus("Waiting for transaction confirmation...");
       
-      // Wait for create reminder transaction to be confirmed
-      const createReceipt = await publicClient.waitForTransactionReceipt({
-        hash: createTxHash,
-      });
+      // Wait for create reminder transaction to be confirmed with timeout
+      let createReceipt;
+      try {
+        createReceipt = await publicClient.waitForTransactionReceipt({
+          hash: createTxHash,
+          timeout: 60000, // 60 seconds timeout
+        });
+        
+        console.log("[CreateReminder] Create reminder receipt received:", {
+          status: createReceipt.status,
+          blockNumber: createReceipt.blockNumber
+        });
+      } catch (waitError: any) {
+        // If waitForTransactionReceipt fails or times out, verify transaction exists
+        console.warn("[CreateReminder] Wait for receipt failed/timeout, verifying transaction:", waitError?.message || waitError);
+        
+        // Verify transaction exists in mempool/blockchain
+        try {
+          const tx = await publicClient.getTransaction({ hash: createTxHash });
+          if (tx) {
+            console.log("[CreateReminder] Transaction found in mempool, checking status...");
+            setTxStatus("Transaction sent! Waiting for confirmation...");
+            
+            // Try to get receipt with polling
+            let attempts = 0;
+            const maxAttempts = 15; // 15 attempts = ~30 seconds
+            const pollInterval = 2000; // Check every 2 seconds
+            
+            while (attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, pollInterval));
+              
+              try {
+                const receipt = await publicClient.getTransactionReceipt({ hash: createTxHash });
+                if (receipt) {
+                  console.log("[CreateReminder] ✅ Receipt found via polling!");
+                  createReceipt = receipt;
+                  break;
+                }
+              } catch (receiptError: any) {
+                // Receipt not ready yet, continue polling
+                console.log(`[CreateReminder] Receipt not ready yet (attempt ${attempts + 1}/${maxAttempts})`);
+              }
+              
+              attempts++;
+            }
+            
+            // If still no receipt, proceed anyway - transaction is in mempool
+            if (!createReceipt) {
+              console.log("[CreateReminder] ⚠️ Receipt not found yet, but transaction is in mempool. Proceeding...");
+              setTxStatus("Transaction sent! It will be confirmed shortly.");
+              // Don't throw error - transaction was sent successfully
+              // User can check transaction status manually
+              toast({
+                title: "Reminder creation initiated",
+                description: `Transaction sent! Check status: ${createTxHash.slice(0, 10)}...`,
+              });
+              refreshReminders();
+              refreshBalance();
+              setIsSubmitting(false);
+              setTxStatus("");
+              return; // Exit early - transaction is processing
+            }
+          } else {
+            throw new Error("Transaction not found in mempool");
+          }
+        } catch (txError: any) {
+          console.error("[CreateReminder] Failed to verify transaction:", txError);
+          // If we can't verify, throw original error
+          throw waitError;
+        }
+      }
       
       if (createReceipt.status === "success") {
         setTxStatus("");
