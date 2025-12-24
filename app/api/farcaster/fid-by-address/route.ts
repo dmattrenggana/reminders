@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { NeynarAPIClient } from "@neynar/nodejs-sdk";
 
 /**
  * Get Farcaster FID from wallet address
- * Uses Neynar API to lookup user by verified address
- * Reference: https://docs.neynar.com/reference/user-by-verification
+ * Uses Neynar SDK fetchBulkUsersByEthOrSolAddress method
+ * Reference: https://docs.neynar.com/docs/fetching-farcaster-user-based-on-ethereum-address
+ * Reference: https://docs.neynar.com/nodejs-sdk/user-apis/fetchBulkUsersByEthOrSolAddress
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -18,37 +20,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "NEYNAR_API_KEY not configured" }, { status: 500 });
   }
 
+  const client = new NeynarAPIClient({ apiKey });
+
   try {
-    // Use Neynar API directly to lookup user by verification address
-    // API endpoint: https://api.neynar.com/v2/farcaster/user/by_verification
-    const response = await fetch(
-      `https://api.neynar.com/v2/farcaster/user/by_verification?verification_address=${address}`,
-      {
-        method: "GET",
-        headers: {
-          "api_key": apiKey,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // Use Neynar SDK method: fetchBulkUsersByEthOrSolAddress
+    // This is the correct method according to Neynar documentation
+    const response = await client.fetchBulkUsersByEthOrSolAddress({
+      addresses: address, // Comma separated list, but we're using single address
+    });
 
-    if (!response.ok) {
-      // If 404, user not found (not an error)
-      if (response.status === 404) {
-        return NextResponse.json({ 
-          fid: null,
-          user: null,
-          message: "No Farcaster user found for this wallet address"
-        });
-      }
-      
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Neynar API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data || !data.result || !data.result.user) {
+    // Response structure: { result: { user: { fid, username, displayName, pfp_url, ... } } }
+    if (!response || !response.result || !response.result.user) {
       return NextResponse.json({ 
         fid: null,
         user: null,
@@ -56,7 +38,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const user = data.result.user;
+    const user = response.result.user;
     
     return NextResponse.json({ 
       fid: user.fid,
@@ -65,14 +47,18 @@ export async function GET(request: NextRequest) {
         username: user.username,
         displayName: user.display_name,
         pfpUrl: user.pfp_url,
-        verifiedAddresses: user.verified_addresses
+        verifiedAddresses: user.verifications || []
       }
     });
   } catch (error: any) {
     console.error("Neynar lookup error:", error);
     
     // If user not found, return null (not an error)
-    if (error.message?.includes("not found") || error.message?.includes("404")) {
+    // Neynar SDK may throw error if user not found
+    if (error.message?.includes("not found") || 
+        error.message?.includes("404") ||
+        error.response?.status === 404 ||
+        error.status === 404) {
       return NextResponse.json({ 
         fid: null,
         user: null,
@@ -81,7 +67,7 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: "Failed to fetch Farcaster user", details: error.message },
+      { error: "Failed to fetch Farcaster user", details: error.message || String(error) },
       { status: 500 }
     );
   }

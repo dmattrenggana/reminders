@@ -220,6 +220,41 @@ export default function DashboardClient() {
     };
   }, [reminders, address]);
 
+  // State untuk Farcaster user dari wallet address
+  const [walletFarcasterUser, setWalletFarcasterUser] = useState<any>(null);
+
+  // Fetch Farcaster user ketika wallet connected
+  useEffect(() => {
+    const fetchWalletFarcasterUser = async () => {
+      // Skip if already have providerUser (miniapp) or no address
+      if (providerUser?.fid || !address || !isConnected) {
+        return;
+      }
+
+      try {
+        console.log('[Dashboard] Fetching Farcaster user for wallet:', address);
+        const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
+        const data = await response.json();
+        
+        if (data.fid && data.user) {
+          console.log('[Dashboard] Farcaster user fetched:', {
+            fid: data.fid,
+            username: data.user.username
+          });
+          setWalletFarcasterUser(data.user);
+        } else {
+          console.log('[Dashboard] No Farcaster user found for wallet');
+          setWalletFarcasterUser(null);
+        }
+      } catch (error) {
+        console.error('[Dashboard] Failed to fetch Farcaster user:', error);
+        setWalletFarcasterUser(null);
+      }
+    };
+
+    fetchWalletFarcasterUser();
+  }, [address, isConnected, providerUser?.fid]);
+
   // Connect handler
   const handleConnect = () => {
     const fcConnector = findFarcasterConnector(connectors);
@@ -233,15 +268,15 @@ export default function DashboardClient() {
     }
   };
 
-  // Help remind handler - Fetch FID if not available
+  // Help remind handler - Use FID from providerUser or walletFarcasterUser
   const handleHelpRemindMe = async (reminder: any) => {
-    // Try to get FID from providerUser first (miniapp)
-    if (providerUser?.fid) {
-      helpRemind(reminder, isMiniApp, providerUser.fid);
+    // Try to get FID from farcasterUser (providerUser or walletFarcasterUser)
+    if (farcasterFid) {
+      helpRemind(reminder, isMiniApp, farcasterFid);
       return;
     }
 
-    // If no FID from providerUser, try to fetch from wallet address
+    // If still no FID, try to fetch from wallet address (fallback)
     if (address) {
       try {
         setTxStatus("Fetching Farcaster user...");
@@ -250,6 +285,8 @@ export default function DashboardClient() {
         
         if (data.fid) {
           setTxStatus("");
+          // Update walletFarcasterUser state
+          setWalletFarcasterUser(data.user);
           helpRemind(reminder, isMiniApp, data.fid);
         } else {
           setTxStatus("");
