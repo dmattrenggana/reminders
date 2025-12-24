@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       // Check if there's already a pending verification
       const existing = await findPendingVerification(Number(helperFid), parseInt(reminderId));
       
-      if (existing && existing.status === 'pending' && existing.expiresAt > new Date()) {
+      if (existing && existing.status === 'pending' && new Date(existing.expires_at) > new Date()) {
         console.log(`[Record] Found existing pending verification: ${existing.id}`);
         return NextResponse.json({
           success: true,
