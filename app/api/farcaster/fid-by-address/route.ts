@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     }
 
     const user = response[0]; // Get first user from array
+    const userAny = user as any; // Type assertion for properties that may not be in type definition
     
     // Return normalized user data according to Neynar user structure
     return NextResponse.json({ 
@@ -66,8 +67,8 @@ export async function GET(request: NextRequest) {
         verifications: user.verifications || [],
         verified_addresses: user.verified_addresses,
         verified_accounts: user.verified_accounts,
-        power_badge: user.power_badge,
-        bio: user.profile?.bio?.text || user.bio,
+        power_badge: userAny.power_badge, // May not be in type definition but exists in API response
+        bio: user.profile?.bio?.text || userAny.bio,
         verifiedAddresses: user.verifications || [] // Alias for compatibility
       }
     });
