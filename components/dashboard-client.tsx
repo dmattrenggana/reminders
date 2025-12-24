@@ -9,6 +9,7 @@ import { formatUnits } from "viem";
 import { useReminders } from "@/hooks/useReminders";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useFarcaster } from "@/components/providers/farcaster-provider";
+import { useFarcasterUser } from "@/hooks/use-farcaster-user";
 import { useAutoConnect } from "@/hooks/use-auto-connect";
 import { useReminderActions } from "@/hooks/use-reminder-actions";
 import { findFarcasterConnector } from "@/lib/utils/farcaster-connector";
@@ -32,6 +33,18 @@ export default function DashboardClient() {
     isLoaded: isFarcasterLoaded, 
     isMiniApp
   } = useFarcaster();
+
+  // Farcaster user hook - provides comprehensive user data for workflows
+  const {
+    user: farcasterUser,
+    hasFid,
+    displayName: farcasterDisplayName,
+    username: farcasterUsername,
+    fid: farcasterFid,
+    pfpUrl: farcasterPfpUrl,
+    isLoading: isLoadingFarcasterUser,
+    refreshWalletUser,
+  } = useFarcasterUser();
 
   // Wagmi hooks
   const { address, isConnected } = useAccount();
@@ -74,9 +87,6 @@ export default function DashboardClient() {
 
   const { toast } = useToast();
 
-  // State untuk Farcaster user dari wallet address
-  const [walletFarcasterUser, setWalletFarcasterUser] = useState<any>(null);
-
   // Mount effect
   useEffect(() => {
     setMounted(true);
@@ -98,98 +108,31 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // Fetch Farcaster user ketika wallet connected atau ketika address berubah
+  // Use farcasterUser from hook (already includes all logic for provider/wallet priority)
+  // Fallback values for compatibility with existing code
+  const username = farcasterUsername || farcasterDisplayName;
+  const pfpUrl = farcasterPfpUrl;
+
+  // Debug logging for user info
   useEffect(() => {
-    const fetchWalletFarcasterUser = async () => {
-      // Skip if already have providerUser (miniapp) dengan FID yang valid
-      if (providerUser?.fid) {
-        console.log('[Dashboard] Skipping wallet Farcaster fetch - already have miniapp user:', providerUser.fid);
-        setWalletFarcasterUser(null); // Clear wallet user since we have miniapp user
-        return;
-      }
-
-      // Skip if no address or not connected
-      if (!address || !isConnected) {
-        console.log('[Dashboard] Skipping wallet Farcaster fetch - no address or not connected');
-        setWalletFarcasterUser(null);
-        return;
-      }
-
-      try {
-        console.log('[Dashboard] 🔄 Fetching Farcaster user for wallet:', address);
-        const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
-        
-        if (!response.ok) {
-          console.warn('[Dashboard] Farcaster user API returned non-OK status:', response.status);
-          setWalletFarcasterUser(null);
-          return;
-        }
-
-        const data = await response.json();
-        
-        if (data.fid && data.user) {
-          console.log('[Dashboard] ✅ Farcaster user fetched successfully:', {
-            fid: data.fid,
-            username: data.user.username,
-            displayName: data.user.displayName || data.user.display_name,
-            hasPfp: !!data.user.pfpUrl || !!data.user.pfp_url,
-            verifiedAddresses: data.user.verifications?.length || 0,
-            powerBadge: data.user.power_badge,
-          });
-          
-          // Store comprehensive user data
-          setWalletFarcasterUser({
-            ...data.user,
-            // Ensure normalized field names
-            fid: data.fid,
-            username: data.user.username,
-            displayName: data.user.displayName || data.user.display_name,
-            display_name: data.user.display_name || data.user.displayName,
-            pfpUrl: data.user.pfpUrl || data.user.pfp_url,
-            pfp_url: data.user.pfp_url || data.user.pfpUrl,
-            pfp: data.user.pfp_url || data.user.pfpUrl,
-          });
-        } else {
-          console.log('[Dashboard] ℹ️ No Farcaster user found for wallet address:', address);
-          setWalletFarcasterUser(null);
-        }
-      } catch (error: any) {
-        console.error('[Dashboard] ❌ Failed to fetch Farcaster user:', {
-          error: error?.message || error,
-          address,
-        });
-        setWalletFarcasterUser(null);
-      }
-    };
-
-    // Debounce to avoid excessive calls
-    const timeoutId = setTimeout(() => {
-      fetchWalletFarcasterUser();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [address, isConnected, providerUser?.fid]);
-
-  // Computed values - prioritize Farcaster user info from provider (miniapp) or wallet lookup
-  // Priority: providerUser (miniapp) > walletFarcasterUser (wallet lookup) > null
-  const farcasterUser = providerUser || walletFarcasterUser;
-  const username = farcasterUser?.username || farcasterUser?.displayName;
-  const pfpUrl = farcasterUser?.pfpUrl || farcasterUser?.pfp;
-
-  // Debug logging for user info (moved from HeaderWallet)
-  useEffect(() => {
-    if (isMiniApp && providerUser) {
-      console.log("[DashboardClient] User info computed:", {
-        isMiniApp,
-        hasProviderUser: !!providerUser,
+    if (farcasterUser) {
+      console.log("[DashboardClient] ✅ Farcaster user available:", {
+        fid: farcasterFid,
         username,
-        pfpUrl,
-        displayName: providerUser?.displayName,
-        providerUserKeys: providerUser ? Object.keys(providerUser) : [],
-        fullUser: providerUser
+        displayName: farcasterDisplayName,
+        hasPfp: !!pfpUrl,
+        source: farcasterUser._source,
+        environment: farcasterUser._environment,
+        hasVerifiedAddress: farcasterUser.verifiedAddresses?.length > 0,
+        powerBadge: farcasterUser.power_badge,
+      });
+    } else if (isConnected && address) {
+      console.log("[DashboardClient] ⚠️ Wallet connected but no Farcaster user found:", {
+        address,
+        isLoading: isLoadingFarcasterUser,
       });
     }
-  }, [isMiniApp, providerUser, username, pfpUrl]);
+  }, [farcasterUser, farcasterFid, username, farcasterDisplayName, pfpUrl, isConnected, address, isLoadingFarcasterUser]);
   
   // Format balance with proper handling (memoized to prevent re-renders)
   const formattedBalance = useMemo(() => {
