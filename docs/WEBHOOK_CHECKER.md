@@ -38,17 +38,17 @@ Cari webhook dengan:
 
 Jalankan script otomatis yang sudah disediakan:
 
-```bash
+\`\`\`bash
 # Pastikan environment variable sudah di-set
 # Di file .env.local:
 # NEYNAR_API_KEY=your_api_key_here
 
 # Jalankan script
 npx tsx scripts/setup-neynar-webhook.ts
-```
+\`\`\`
 
 **Output yang diharapkan:**
-```
+\`\`\`
 🚀 Setting up Neynar webhook...
 Webhook URL: https://remindersbase.vercel.app/api/webhooks/neynar-cast
 ✅ Webhook created successfully!
@@ -61,7 +61,7 @@ Webhook response: {
 1. Test webhook dengan membuat cast yang match criteria
 2. Check webhook logs di Neynar Dashboard
 3. Monitor application logs untuk webhook events
-```
+\`\`\`
 
 **Jika ada error "already exists":**
 - Webhook sudah ada, cek di dashboard
@@ -107,9 +107,9 @@ Beberapa dashboard Neynar menyediakan fitur "Test Webhook":
 
 1. **Buat test reminder** di app (untuk dapat creator username)
 2. **Post cast di Warpcast/Farcaster** dengan format:
-   ```
+   \`\`\`
    Tick-tock, @creator ! ⏰ Don't forget your reminder is approaching. Beat the clock! https://remindersbase.vercel.app/
-   ```
+   \`\`\`
 3. **Tunggu beberapa detik**
 4. **Cek logs:**
    - Neynar Dashboard → Webhooks → Logs
@@ -125,12 +125,12 @@ Beberapa dashboard Neynar menyediakan fitur "Test Webhook":
 5. Cari log: `[Webhook] Received Neynar webhook`
 
 **Expected logs jika webhook berfungsi:**
-```
+\`\`\`
 [Webhook] Received Neynar webhook: { type: 'cast.created', timestamp: '...' }
 [Webhook] Processing cast: { hash: '...', authorFid: 12345, ... }
 [Webhook] ✅ Cast matches verification requirements for reminder X
 [Webhook] ✅ Successfully verified reminder X for helper FID 12345
-```
+\`\`\`
 
 ---
 
@@ -152,9 +152,9 @@ Beberapa dashboard Neynar menyediakan fitur "Test Webhook":
 ### **2. Webhook returns error**
 
 **Cek Vercel logs:**
-```
+\`\`\`
 [Webhook] Error processing webhook: ...
-```
+\`\`\`
 
 **Common errors:**
 - `NEYNAR_API_KEY not configured` → Set environment variable
@@ -184,21 +184,21 @@ Beberapa dashboard Neynar menyediakan fitur "Test Webhook":
 - Debug failed webhooks
 
 ### **Vercel Logs:**
-```bash
+\`\`\`bash
 # Via Vercel CLI
 vercel logs --follow
 
 # Filter untuk webhook
 vercel logs --follow | grep "Webhook"
-```
+\`\`\`
 
 ### **Application Logs (Frontend):**
-```javascript
+\`\`\`javascript
 // Di browser console
 // Cek polling status:
 [HelpRemind] Polling verification status (attempt 5/120). Token: xxx
 [HelpRemind] ✅ Post verified via webhook!
-```
+\`\`\`
 
 ---
 
@@ -236,4 +236,3 @@ vercel logs --follow | grep "Webhook"
 3. **Test dengan real cast** (bukan hanya test event)
 4. **Simplify pattern** jika terlalu banyak false negatives
 5. **Use webhook logs** di Neynar untuk debug
-

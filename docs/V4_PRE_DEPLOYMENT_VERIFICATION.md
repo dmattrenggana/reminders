@@ -17,14 +17,14 @@ Memverifikasi semua fungsi kontrak dan app berjalan dengan mulus **SEBELUM** dep
 ### 1. ✅ **createReminder** (Creator Flow)
 
 **Fungsi Kontrak:**
-```solidity
+\`\`\`solidity
 function createReminder(
     uint256 totalAmount,
     uint256 reminderTime,
     string memory description,
     string memory farcasterUsername
 ) external returns (uint256)
-```
+\`\`\`
 
 **Yang Perlu Di-verify:**
 - [ ] Wallet dapat connect dengan baik
@@ -54,12 +54,12 @@ function createReminder(
 ### 2. ✅ **recordReminder** (Helper Flow - Part 1)
 
 **Fungsi Kontrak:**
-```solidity
+\`\`\`solidity
 function recordReminder(
     uint256 reminderId,
     uint256 neynarScore
 ) external nonReentrant
-```
+\`\`\`
 
 **Yang Perlu Di-verify:**
 - [ ] Button "Help to remind" enable di T-1 hour
@@ -93,13 +93,13 @@ function recordReminder(
 ### 3. ✅ **claimReward** (Helper Flow - Part 2) - **SAAT INI**
 
 **Fungsi Kontrak:**
-```solidity
+\`\`\`solidity
 function claimReward(uint256 reminderId) external nonReentrant {
     require(reminder.confirmed || block.timestamp > reminder.confirmationDeadline, 
         "Cannot claim yet");
     // ... rest of logic
 }
-```
+\`\`\`
 
 **Yang Perlu Di-verify (Workflow Saat Ini):**
 - [ ] Helper **TIDAK BISA** claim langsung setelah `recordReminder`
@@ -137,13 +137,13 @@ function claimReward(uint256 reminderId) external nonReentrant {
 ### 4. ✅ **confirmReminder** (Creator Flow)
 
 **Fungsi Kontrak:**
-```solidity
+\`\`\`solidity
 function confirmReminder(uint256 reminderId) external nonReentrant {
     require(block.timestamp >= reminder.reminderTime - 1 hours, "Too early");
     require(block.timestamp <= reminder.confirmationDeadline, "Deadline passed");
     // Returns 30% commitment
 }
-```
+\`\`\`
 
 **Yang Perlu Di-verify:**
 - [ ] Button "Confirm Reminder" enable di T-1 hour
@@ -175,13 +175,13 @@ function confirmReminder(uint256 reminderId) external nonReentrant {
 ### 5. ✅ **reclaimReminder** (Creator Flow - Alternative)
 
 **Fungsi Kontrak:**
-```solidity
+\`\`\`solidity
 function reclaimReminder(uint256 reminderId) external nonReentrant {
     require(block.timestamp >= reminder.reminderTime - 1 hours, "Too early");
     require(block.timestamp < reminder.reminderTime, "Deadline passed");
     // Returns 30% commitment + unclaimed 70% reward pool
 }
-```
+\`\`\`
 
 **Yang Perlu Di-verify:**
 - [ ] Dipanggil otomatis jika creator confirm di T-1 hour (sebelum deadline)
@@ -209,12 +209,12 @@ function reclaimReminder(uint256 reminderId) external nonReentrant {
 ### 6. ✅ **burnMissedReminder** (Cron Job)
 
 **Fungsi Kontrak:**
-```solidity
+\`\`\`solidity
 function burnMissedReminder(uint256 reminderId) external nonReentrant {
     require(block.timestamp > reminder.confirmationDeadline, "Deadline not passed");
     // Burns 30% commitment, returns unclaimed 70% reward pool
 }
-```
+\`\`\`
 
 **Yang Perlu Di-verify:**
 - [ ] Cron job berjalan setiap 15 menit (`*/15 * * * *`)
@@ -243,12 +243,12 @@ function burnMissedReminder(uint256 reminderId) external nonReentrant {
 ### 7. ✅ **View Functions**
 
 **Fungsi Kontrak:**
-```solidity
+\`\`\`solidity
 function getHelpersFor(uint256 reminderId) external view returns (address[] memory)
 function getUserReminders(address user) external view returns (uint256[] memory)
 function canRemind(uint256 reminderId) external view returns (bool)
 function getActiveReminders() external view returns (uint256[] memory)
-```
+\`\`\`
 
 **Yang Perlu Di-verify:**
 - [ ] `getHelpersFor` return list helpers yang benar
@@ -529,4 +529,3 @@ function getActiveReminders() external view returns (uint256[] memory)
 6. Test workflow baru (1 hari)
 
 **Total: ~5-7 hari untuk complete process**
-

@@ -100,7 +100,7 @@ Menggunakan service pihak ketiga atau membuat custom webhook listener.
 3. Database untuk store pending verifications
 
 **Implementation:**
-```typescript
+\`\`\`typescript
 // Backend service (Node.js/Express)
 import { HubClient } from '@farcaster/hub-nodejs';
 
@@ -119,7 +119,7 @@ hubClient.subscribe({
     // Send webhook to our API
   }
 });
-```
+\`\`\`
 
 **Kompleksitas:** ⚠️ **High**
 - Perlu maintain separate backend service
@@ -157,9 +157,9 @@ Warpcast mungkin menyediakan webhook untuk casts (perlu verifikasi).
 - ❌ Localhost (tidak bisa digunakan)
 
 **Example Endpoint:**
-```
+\`\`\`
 POST https://remindersbase.vercel.app/api/webhooks/farcaster-cast
-```
+\`\`\`
 
 ---
 
@@ -176,7 +176,7 @@ POST https://remindersbase.vercel.app/api/webhooks/farcaster-cast
 - Reject jika signature tidak valid
 
 **Example:**
-```typescript
+\`\`\`typescript
 import crypto from 'crypto';
 
 function verifyWebhookSignature(
@@ -194,7 +194,7 @@ function verifyWebhookSignature(
     Buffer.from(expectedSignature)
   );
 }
-```
+\`\`\`
 
 ---
 
@@ -206,7 +206,7 @@ function verifyWebhookSignature(
 - Track verification status
 
 **Schema:**
-```sql
+\`\`\`sql
 CREATE TABLE pending_verifications (
   id UUID PRIMARY KEY,
   reminder_id INTEGER NOT NULL,
@@ -219,7 +219,7 @@ CREATE TABLE pending_verifications (
   verified_at TIMESTAMP,
   webhook_received_at TIMESTAMP
 );
-```
+\`\`\`
 
 **Alternatives:**
 - Redis (untuk temporary storage, TTL)
@@ -231,7 +231,7 @@ CREATE TABLE pending_verifications (
 ### **4. Webhook Event Processing**
 
 **Process Flow:**
-```
+\`\`\`
 1. Webhook received → Verify signature
 2. Extract cast data (fid, text, timestamp)
 3. Query pending_verifications table
@@ -239,7 +239,7 @@ CREATE TABLE pending_verifications (
 5. Verify post content (mention + keywords)
 6. Update status to 'verified'
 7. Notify frontend (via WebSocket/SSE/polling fallback)
-```
+\`\`\`
 
 ---
 
@@ -270,7 +270,7 @@ CREATE TABLE pending_verifications (
 
 Kombinasi webhook + polling fallback:
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Helper clicks "Help to remind"                          │
 └──────────────────────────┬──────────────────────────────────┘
@@ -302,7 +302,7 @@ Kombinasi webhook + polling fallback:
 │ 5. Frontend receives notification (WebSocket/SSE/polling)  │
 │    → Call recordReminder() contract                        │
 └─────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ---
 
@@ -312,7 +312,7 @@ Kombinasi webhook + polling fallback:
 
 **File:** `app/api/webhooks/farcaster-cast/route.ts`
 
-```typescript
+\`\`\`typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature } from '@/lib/utils/webhook-verification';
 import { db } from '@/lib/db'; // Your database client
@@ -396,7 +396,7 @@ function verifyPostContent(text: string, creatorUsername: string): boolean {
   
   return mentionPattern.test(text) && reminderPattern.test(text);
 }
-```
+\`\`\`
 
 ---
 
@@ -404,7 +404,7 @@ function verifyPostContent(text: string, creatorUsername: string): boolean {
 
 **File:** `app/api/reminders/record/route.ts`
 
-```typescript
+\`\`\`typescript
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -436,7 +436,7 @@ export async function POST(request: NextRequest) {
     // ... error handling
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -444,7 +444,7 @@ export async function POST(request: NextRequest) {
 
 **File:** `app/api/verifications/[token]/route.ts`
 
-```typescript
+\`\`\`typescript
 export async function GET(
   request: NextRequest,
   { params }: { params: { token: string } }
@@ -478,7 +478,7 @@ export async function GET(
     }),
   });
 }
-```
+\`\`\`
 
 ---
 
@@ -486,7 +486,7 @@ export async function GET(
 
 **File:** `lib/webhooks/farcaster-subscriber.ts`
 
-```typescript
+\`\`\`typescript
 // Service untuk subscribe ke Farcaster Hub events
 // Run sebagai background service atau serverless function
 
@@ -524,7 +524,7 @@ export async function subscribeToCastEvents() {
     }
   });
 }
-```
+\`\`\`
 
 ---
 
@@ -532,7 +532,7 @@ export async function subscribeToCastEvents() {
 
 **File:** `hooks/use-reminder-actions.ts` (modify `helpRemind`)
 
-```typescript
+\`\`\`typescript
 const helpRemind = async (reminder: any, isMiniApp: boolean, fid: number) => {
   // ... existing code untuk open composer ...
 
@@ -579,7 +579,7 @@ const helpRemind = async (reminder: any, isMiniApp: boolean, fid: number) => {
   // Start polling (or WebSocket)
   pollStatus();
 };
-```
+\`\`\`
 
 ---
 
@@ -589,12 +589,12 @@ const helpRemind = async (reminder: any, isMiniApp: boolean, fid: number) => {
 
 **Critical:** Selalu verify signature sebelum process webhook.
 
-```typescript
+\`\`\`typescript
 // Never trust webhook without signature verification!
 if (!verifyWebhookSignature(payload, signature, secret)) {
   return 401; // Unauthorized
 }
-```
+\`\`\`
 
 ### **2. Rate Limiting**
 
@@ -708,4 +708,3 @@ Jika menggunakan Farcaster Hub events:
 - Neynar API Docs: https://docs.neynar.com/docs
 - Webhook Security: https://webhooks.fyi/
 - Vercel Webhooks: https://vercel.com/docs/observability/webhooks
-

@@ -19,12 +19,12 @@ Sistem melakukan verifikasi **OFF-CHAIN** via Neynar API untuk memastikan helper
   3. Tampilkan instruksi untuk post dan kembali ke app
 
 **Post Template:**
-```
+\`\`\`
 Tick-tock, @creatorUsername ! ⏰ 
 Don't forget your [reminder description] is approaching at [deadline]. 
 Beat the clock and get it done now! 
 https://remindersbase.vercel.app/
-```
+\`\`\`
 
 ---
 
@@ -39,9 +39,9 @@ Helper melakukan post di Farcaster/Warpcast dengan:
   - `remindersbase.vercel.app` (app URL)
 
 **Contoh Post yang Valid:**
-```
+\`\`\`
 Tick-tock, @alice ! ⏰ Don't forget your Finish project proposal is approaching at Dec 25, 2024, 2:00 PM. Beat the clock and get it done now! https://remindersbase.vercel.app/
-```
+\`\`\`
 
 ---
 
@@ -65,7 +65,7 @@ Tick-tock, @alice ! ⏰ Don't forget your Finish project proposal is approaching
 4. Menampilkan progress: `Verifying your post... (1/120)`
 
 **Code:**
-```typescript
+\`\`\`typescript
 // Polling loop - maksimal 2 menit
 while (verificationAttempts < 120 && !verificationSuccess) {
   await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
@@ -86,7 +86,7 @@ while (verificationAttempts < 120 && !verificationSuccess) {
   // Jika 400 (not verified yet) → continue polling
   // Jika error lain → throw error
 }
-```
+\`\`\`
 
 ---
 
@@ -97,36 +97,36 @@ while (verificationAttempts < 120 && !verificationSuccess) {
 **Proses Verifikasi:**
 
 #### **5.1. Fetch Recent Casts dari Helper**
-```typescript
+\`\`\`typescript
 // Get 20 cast terbaru dari helper (berdasarkan FID)
 const casts = await neynarClient.fetchCastsForUser({
   fid: helperFid,
   limit: 20
 });
-```
+\`\`\`
 
 #### **5.2. Pattern Matching**
 
 **Pattern 1: Mention Creator**
-```typescript
+\`\`\`typescript
 const mentionPattern = new RegExp(`@${creatorUsername}`, 'i');
 // Case-insensitive match untuk @creatorUsername
-```
+\`\`\`
 
 **Pattern 2: Reminder Keywords**
-```typescript
+\`\`\`typescript
 const reminderPattern = new RegExp(
   `remindersbase\\.vercel\\.app|Tick-tock|Beat the clock|approaching`,
   'i'
 );
 // Match salah satu keyword: URL app, "Tick-tock", "Beat the clock", atau "approaching"
-```
+\`\`\`
 
 #### **5.3. Validasi Cast**
 
 Untuk setiap cast dalam 20 cast terbaru:
 
-```typescript
+\`\`\`typescript
 for (const cast of casts.casts) {
   const text = cast.text;
   const hasMention = mentionPattern.test(text);          // Check mention
@@ -144,7 +144,7 @@ for (const cast of casts.casts) {
 }
 
 return false; // ❌ Not verified
-```
+\`\`\`
 
 **Kondisi Verifikasi Berhasil:**
 1. ✅ Cast mention creator (`@creatorUsername`)
@@ -159,7 +159,7 @@ return false; // ❌ Not verified
 
 Setelah post terverifikasi, sistem mengambil **Neynar User Quality Score**:
 
-```typescript
+\`\`\`typescript
 // Get user data dari Neynar API
 const userdata = await neynarClient.fetchBulkUsers({ 
   fids: [helperFid] 
@@ -170,7 +170,7 @@ const neynarScore = user.profile.score; // 0.0 to 1.0
 
 // Normalize score
 const normalizedScore = Math.max(0, Math.min(1, neynarScore));
-```
+\`\`\`
 
 **Score digunakan untuk:**
 - Menghitung reward percentage (tier-based):
@@ -183,7 +183,7 @@ const normalizedScore = Math.max(0, Math.min(1, neynarScore));
 ### **Step 7: Response ke Frontend**
 
 **Jika Verifikasi Berhasil:**
-```json
+\`\`\`json
 {
   "success": true,
   "message": "Reminder verified and ready to record",
@@ -191,17 +191,17 @@ const normalizedScore = Math.max(0, Math.min(1, neynarScore));
   "estimatedReward": "0.123",
   "user": "helper_username"
 }
-```
+\`\`\`
 
 **Jika Verifikasi Gagal:**
-```json
+\`\`\`json
 {
   "success": false,
   "error": "Post verification failed",
   "message": "Please post a mention of the creator (@username) with reminder keywords...",
   "status": 400
 }
-```
+\`\`\`
 
 ---
 
@@ -211,7 +211,7 @@ const normalizedScore = Math.max(0, Math.min(1, neynarScore));
 
 Setelah verifikasi berhasil, frontend memanggil contract function:
 
-```typescript
+\`\`\`typescript
 // Convert score dari 0-1.0 ke 0-100 (contract expects integer)
 const neynarScore = Math.floor((data.neynarScore || 0.5) * 100);
 
@@ -229,12 +229,12 @@ const recordReceipt = await publicClient.waitForTransactionReceipt({
   hash: recordTxHash,
   timeout: 60000,
 });
-```
+\`\`\`
 
 **Contract Function:**
-```solidity
+\`\`\`solidity
 function recordReminder(uint256 reminderId, uint256 neynarScore) external
-```
+\`\`\`
 
 ---
 
@@ -260,7 +260,7 @@ Setelah `recordReminder` berhasil, sistem check apakah bisa claim reward:
 
 ## 🎯 Flow Diagram
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Helper clicks "Help to remind"                          │
 └──────────────────────────┬──────────────────────────────────┘
@@ -326,7 +326,7 @@ Setelah `recordReminder` berhasil, sistem check apakah bisa claim reward:
 │ 10. Auto claim reward (if reminder confirmed/deadline)     │
 │     OR show toast "You can claim later"                    │
 └─────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ---
 
@@ -334,9 +334,9 @@ Setelah `recordReminder` berhasil, sistem check apakah bisa claim reward:
 
 ### **Environment Variables:**
 
-```env
+\`\`\`env
 NEYNAR_API_KEY=your_neynar_api_key_here
-```
+\`\`\`
 
 ### **Timing Configuration:**
 
@@ -363,7 +363,7 @@ NEYNAR_API_KEY=your_neynar_api_key_here
 
 ### **Frontend Logs:**
 
-```typescript
+\`\`\`typescript
 // Start polling
 [HelpRemind] Starting verification polling for reminder: 16
 
@@ -379,11 +379,11 @@ NEYNAR_API_KEY=your_neynar_api_key_here
   estimatedReward: "0.123",
   username: "helper_username"
 }
-```
+\`\`\`
 
 ### **Backend Logs:**
 
-```typescript
+\`\`\`typescript
 // Start verification
 [Record] Verifying post for helper 12345, creator @alice, reminder 16
 
@@ -399,7 +399,7 @@ NEYNAR_API_KEY=your_neynar_api_key_here
 // Final result
 [Record] ✅ Post verified for helper 12345
 [Record] ✅ Using Neynar User Quality Score from API: 0.85
-```
+\`\`\`
 
 ---
 
@@ -451,4 +451,3 @@ Setelah verifikasi berhasil, helper bisa:
 - Call `recordReminder()` on-chain dengan Neynar score
 - Auto claim reward (jika reminder sudah confirmed)
 - Atau claim nanti setelah reminder confirmed
-

@@ -10,7 +10,7 @@
 
 ### **Current Flow:**
 
-```
+\`\`\`
 1. Helper clicks "Help to remind"
    ↓
 2. Helper posts di Farcaster (mention creator + app URL)
@@ -31,7 +31,7 @@
    - Pass neynarScore yang sudah di-verify off-chain
    ↓
 8. ✅ ON-CHAIN: Contract stores helper record dengan reward amount
-```
+\`\`\`
 
 **Kesimpulan:** Verifikasi **SUDAH OFF-CHAIN**, hanya storage yang on-chain!
 
@@ -84,7 +84,7 @@
 - ⚠️ More complex architecture
 
 **Implementation:**
-```typescript
+\`\`\`typescript
 // New API endpoint: /api/reminders/verify-status
 // Check if post already verified (from database)
 
@@ -93,7 +93,7 @@
 // 2. Verify mention and keywords
 // 3. Store verified status in database
 // 4. Helper check status before calling recordReminder
-```
+\`\`\`
 
 ---
 
@@ -118,7 +118,7 @@
 - ❌ User experience buruk (perlu sign manual)
 
 **Implementation:**
-```solidity
+\`\`\`solidity
 // Contract function
 function recordReminderWithSignature(
     uint256 reminderId,
@@ -133,7 +133,7 @@ function recordReminderWithSignature(
     // Verify cast hash exists on Farcaster (via oracle or off-chain)
     // ... rest of recordReminder logic
 }
-```
+\`\`\`
 
 ---
 
@@ -274,7 +274,7 @@ function recordReminderWithSignature(
 
 ### **Verification Flow (Already Off-Chain):**
 
-```typescript
+\`\`\`typescript
 // File: app/api/reminders/record/route.ts
 
 // 1. OFF-CHAIN: Verify post via Neynar API
@@ -305,7 +305,7 @@ return { success: true, neynarScore, estimatedReward };
 
 // 4. ON-CHAIN: Frontend calls recordReminder after verification
 // (This is the only on-chain call)
-```
+\`\`\`
 
 ### **Key Points:**
 
@@ -321,22 +321,22 @@ return { success: true, neynarScore, estimatedReward };
 ### **If Neynar API becomes bottleneck:**
 
 1. **Add caching layer:**
-   ```typescript
+   \`\`\`typescript
    // Cache verified posts for 5 minutes
    // Reduce API calls for multiple verification attempts
-   ```
+   \`\`\`
 
 2. **Add database for verified status:**
-   ```typescript
+   \`\`\`typescript
    // Store verified post status in database
    // Check database first before calling Neynar API
-   ```
+   \`\`\`
 
 3. **Batch verification:**
-   ```typescript
+   \`\`\`typescript
    // Verify multiple helpers at once
    // Reduce API calls
-   ```
+   \`\`\`
 
 ### **If need fully trustless verification:**
 
@@ -360,4 +360,3 @@ Consider Opsi 4 (Oracle) but expect:
 - Rate limiting issues
 - Need for async verification
 - Need for fully trustless verification
-

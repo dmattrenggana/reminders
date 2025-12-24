@@ -60,7 +60,7 @@ QuickNode webhooks dirancang untuk **blockchain events**, bukan **social media e
 
 **File:** `app/api/webhooks/quicknode-record/route.ts`
 
-```typescript
+\`\`\`typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyQuickNodeWebhook } from '@/lib/utils/quicknode-webhook-verification';
 
@@ -126,10 +126,10 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-```
+\`\`\`
 
 **Workflow dengan QuickNode:**
-```
+\`\`\`
 1. Helper post di Farcaster
    ↓
 2. Frontend create pending verification
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
 6. Update database: Mark as recorded
    ↓
 7. Notify frontend: Transaction confirmed
-```
+\`\`\`
 
 ---
 
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
 
 ### **Architecture:**
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Helper post di Farcaster                                 │
 └──────────────────────────┬──────────────────────────────────┘
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
 ┌─────────────────────────────────────────────────────────────┐
 │ 5. Frontend receive notification → Show success toast      │
 └─────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 **Keuntungan:**
 - ✅ Neynar API untuk verifikasi post (OFF-CHAIN)
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
 
 **File:** `lib/utils/quicknode-webhook-verification.ts`
 
-```typescript
+\`\`\`typescript
 import crypto from 'crypto';
 
 export function verifyQuickNodeWebhook(
@@ -249,7 +249,7 @@ export function verifyQuickNodeWebhook(
     Buffer.from(expectedSignature)
   );
 }
-```
+\`\`\`
 
 ### **4. Contract ABI untuk Event Parsing**
 
@@ -257,7 +257,7 @@ export function verifyQuickNodeWebhook(
 
 Perlu ABI untuk parse event data:
 
-```typescript
+\`\`\`typescript
 export const RECORD_REMINDER_EVENT_ABI = [
   {
     "anonymous": false,
@@ -270,7 +270,7 @@ export const RECORD_REMINDER_EVENT_ABI = [
     "type": "event"
   }
 ];
-```
+\`\`\`
 
 ---
 
@@ -340,4 +340,3 @@ Jika ingin implement QuickNode webhooks untuk on-chain confirmation:
 Untuk verifikasi Farcaster casts, tetap gunakan:
 - **Current approach:** Neynar API polling
 - **Future enhancement:** Farcaster Hub events (jika mau self-host)
-

@@ -8,7 +8,7 @@ Dokumentasi untuk testing webhook verification flow untuk helper post.
 
 ## 🔄 Complete Flow
 
-```
+\`\`\`
 1. Helper clicks "Help to remind"
    ↓
 2. Frontend calls /api/reminders/record?useWebhook=true
@@ -28,7 +28,7 @@ Dokumentasi untuk testing webhook verification flow untuk helper post.
 9. Frontend polls /api/verifications/[token]
    ↓
 10. Frontend receives verified status → Call recordReminder()
-```
+\`\`\`
 
 ---
 
@@ -36,13 +36,13 @@ Dokumentasi untuk testing webhook verification flow untuk helper post.
 
 ### **Step 1: Setup Webhook**
 
-```bash
+\`\`\`bash
 # Run setup script
 npx tsx scripts/setup-neynar-webhook.ts
 
 # Or setup manually via Neynar Dashboard
 # https://neynar.com/dashboard/webhooks
-```
+\`\`\`
 
 **Webhook Configuration:**
 - **Name:** Reminders Base Verification
@@ -54,7 +54,7 @@ npx tsx scripts/setup-neynar-webhook.ts
 
 ### **Step 2: Test Webhook Endpoint (Manual)**
 
-```bash
+\`\`\`bash
 # Test webhook endpoint dengan curl
 curl -X POST https://remindersbase.vercel.app/api/webhooks/neynar-cast \
   -H "Content-Type: application/json" \
@@ -72,22 +72,22 @@ curl -X POST https://remindersbase.vercel.app/api/webhooks/neynar-cast \
       ]
     }
   }'
-```
+\`\`\`
 
 **Expected Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "verified": 0,
   "message": "No pending verification found"
 }
-```
+\`\`\`
 
 ---
 
 ### **Step 3: Create Pending Verification**
 
-```bash
+\`\`\`bash
 # Call record API dengan useWebhook=true
 curl -X POST https://remindersbase.vercel.app/api/reminders/record \
   -H "Content-Type: application/json" \
@@ -98,17 +98,17 @@ curl -X POST https://remindersbase.vercel.app/api/reminders/record \
     "creatorUsername": "alice",
     "useWebhook": true
   }'
-```
+\`\`\`
 
 **Expected Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "verification_token": "uuid-here",
   "status": "pending",
   "message": "Pending verification created. Waiting for webhook notification..."
 }
-```
+\`\`\`
 
 ---
 
@@ -116,7 +116,7 @@ curl -X POST https://remindersbase.vercel.app/api/reminders/record \
 
 Setelah create pending verification, test webhook lagi dengan FID yang sama:
 
-```bash
+\`\`\`bash
 curl -X POST https://remindersbase.vercel.app/api/webhooks/neynar-cast \
   -H "Content-Type: application/json" \
   -d '{
@@ -133,28 +133,28 @@ curl -X POST https://remindersbase.vercel.app/api/webhooks/neynar-cast \
       ]
     }
   }'
-```
+\`\`\`
 
 **Expected Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "verified": 1,
   "message": "Processed webhook, verified 1 pending verification(s)"
 }
-```
+\`\`\`
 
 ---
 
 ### **Step 5: Check Verification Status**
 
-```bash
+\`\`\`bash
 # Poll verification status
 curl https://remindersbase.vercel.app/api/verifications/[token]
-```
+\`\`\`
 
 **Expected Response (if verified):**
-```json
+\`\`\`json
 {
   "status": "verified",
   "reminderId": 1,
@@ -165,7 +165,7 @@ curl https://remindersbase.vercel.app/api/verifications/[token]
   "neynarScore": 0.85,
   "estimatedReward": "0.123"
 }
-```
+\`\`\`
 
 ---
 
@@ -189,13 +189,13 @@ Webhook akan verify cast jika:
 
 ### **Check Logs:**
 
-```bash
+\`\`\`bash
 # Application logs should show:
 [Webhook] Received Neynar webhook: { type: 'cast.created', ... }
 [Webhook] Processing cast: { hash: '...', authorFid: 12345, ... }
 [Webhook] ✅ Cast matches verification requirements for reminder 1
 [Webhook] ✅ Successfully verified reminder 1 for helper FID 12345
-```
+\`\`\`
 
 ### **Common Issues:**
 
@@ -225,4 +225,3 @@ Webhook akan verify cast jika:
 - [ ] Verification status API returns correct status
 - [ ] Expired verifications are handled correctly
 - [ ] Error handling works (missing data, API errors)
-

@@ -8,7 +8,7 @@ Implementasi webhook untuk verifikasi helper post menggunakan Neynar `publishWeb
 
 ## 🏗️ Architecture
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Helper clicks "Help to remind"                          │
 └──────────────────────────┬──────────────────────────────────┘
@@ -45,7 +45,7 @@ Implementasi webhook untuk verifikasi helper post menggunakan Neynar `publishWeb
 ┌─────────────────────────────────────────────────────────────┐
 │ 6. Frontend receives verified status → Call recordReminder()│
 └─────────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ---
 
@@ -55,13 +55,13 @@ Implementasi webhook untuk verifikasi helper post menggunakan Neynar `publishWeb
 
 #### **Option A: Using Setup Script (Recommended)**
 
-```bash
+\`\`\`bash
 # Install dependencies if needed
 npm install dotenv tsx
 
 # Run setup script
 npx tsx scripts/setup-neynar-webhook.ts
-```
+\`\`\`
 
 #### **Option B: Manual Setup via Dashboard**
 
@@ -71,13 +71,13 @@ npx tsx scripts/setup-neynar-webhook.ts
    - **Name:** `Reminders Base Verification`
    - **URL:** `https://remindersbase.vercel.app/api/webhooks/neynar-cast`
    - **Subscription:**
-     ```json
+     \`\`\`json
      {
        "cast.created": {
          "text": "(?i)(Tick-tock|Don't forget|Beat the clock|approaching|remindersbase\\.vercel\\.app)"
        }
      }
-     ```
+     \`\`\`
 
 ---
 
@@ -85,19 +85,19 @@ npx tsx scripts/setup-neynar-webhook.ts
 
 Pastikan environment variables sudah di-set:
 
-```env
+\`\`\`env
 NEYNAR_API_KEY=your_neynar_api_key_here
 NEYNAR_WEBHOOK_URL=https://remindersbase.vercel.app/api/webhooks/neynar-cast
-```
+\`\`\`
 
 ---
 
 ### **Step 3: Test Webhook**
 
 1. Create test cast di Farcaster dengan content:
-   ```
+   \`\`\`
    Tick-tock, @creator ! ⏰ Don't forget your reminder is approaching at Dec 25, 2024. Beat the clock! https://remindersbase.vercel.app/
-   ```
+   \`\`\`
 
 2. Check application logs untuk webhook events
 
@@ -141,7 +141,7 @@ NEYNAR_WEBHOOK_URL=https://remindersbase.vercel.app/api/webhooks/neynar-cast
 
 ### **Frontend: Enable Webhook Mode**
 
-```typescript
+\`\`\`typescript
 // In hooks/use-reminder-actions.ts
 const response = await fetch("/api/reminders/record", {
   method: "POST",
@@ -172,7 +172,7 @@ const pollStatus = async () => {
 };
 
 pollStatus();
-```
+\`\`\`
 
 ---
 
@@ -256,4 +256,3 @@ Untuk production, consider migrating ke database:
 - [ ] Frontend integration (optional, can use polling mode)
 - [ ] Monitor webhook logs
 - [ ] Error handling tested
-
