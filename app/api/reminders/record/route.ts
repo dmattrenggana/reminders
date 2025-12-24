@@ -3,7 +3,7 @@ import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
 import { CONTRACTS, REMINDER_VAULT_ABI } from "@/lib/contracts/config";
 import { createRpcProvider } from "@/lib/utils/rpc-provider";
 import { ethers } from "ethers";
-import { createPendingVerification, findPendingVerification } from "@/lib/utils/pending-verifications";
+import { createPendingVerification, findPendingVerification } from "@/lib/supabase/verification-service";
 
 /**
  * Verify helper post via Neynar API
