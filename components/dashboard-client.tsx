@@ -95,9 +95,11 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // Computed values - prioritize Farcaster user info from provider (already fetched via Neynar in farcaster-provider.tsx)
-  const username = providerUser?.username || providerUser?.displayName;
-  const pfpUrl = providerUser?.pfpUrl || providerUser?.pfp;
+  // Computed values - prioritize Farcaster user info from provider (miniapp) or wallet lookup
+  // Priority: providerUser (miniapp) > walletFarcasterUser (wallet lookup) > null
+  const farcasterUser = providerUser || walletFarcasterUser;
+  const username = farcasterUser?.username || farcasterUser?.displayName;
+  const pfpUrl = farcasterUser?.pfpUrl || farcasterUser?.pfp;
 
   // Debug logging for user info (moved from HeaderWallet)
   useEffect(() => {
