@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     let neynarScore = 0.5; // Default
     try {
       const userResponse = await client.fetchBulkUsers({ 
-        fids: `${verification.helper_fid}` 
+        fids: [verification.helper_fid] 
       });
       const users = userResponse.users || [];
       
