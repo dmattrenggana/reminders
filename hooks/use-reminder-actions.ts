@@ -598,24 +598,66 @@ export function useReminderActions({
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
 
-      // Step 4: Verify post via Neynar API and record reminder
-      setTxStatus("Verifying post and recording reminder...");
-      const response = await fetch("/api/reminders/record", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reminderId: reminder.id,
-          helperAddress: address,
-          helperFid: fid,
-          creatorUsername: creatorUsername,
-        }),
-      });
-
-      const data = await response.json();
+      // Step 4: Wait for user to post and return to app, then verify post via Neynar API
+      // When user returns to miniapp, trigger verification and claim automatically
+      setTxStatus("Waiting for you to post and return to app...");
       
-      if (!data.success) {
-        throw new Error(data.error || "Failed to record reminder");
+      // Poll for user return and verify post
+      let verificationAttempts = 0;
+      const maxVerificationAttempts = 30; // 30 attempts = ~30 seconds (poll every 1 second)
+      let verificationSuccess = false;
+      let verificationData: any = null;
+      
+      while (verificationAttempts < maxVerificationAttempts && !verificationSuccess) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between attempts
+        
+        try {
+          setTxStatus(`Verifying your post... (${verificationAttempts + 1}/${maxVerificationAttempts})`);
+          
+          // Verify post via Neynar API and get reward calculation
+          const response = await fetch("/api/reminders/record", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              reminderId: reminder.id,
+              helperAddress: address,
+              helperFid: fid,
+              creatorUsername: creatorUsername,
+            }),
+          });
+
+          const data = await response.json();
+          
+          if (data.success) {
+            verificationSuccess = true;
+            verificationData = data;
+            break; // Exit polling loop
+          } else {
+            // Post not verified yet, continue polling
+            verificationAttempts++;
+            if (verificationAttempts >= maxVerificationAttempts) {
+              throw new Error(data.message || "Post verification timeout. Please ensure you posted the reminder with mention.");
+            }
+          }
+        } catch (error: any) {
+          // If it's a verification error (not found), continue polling
+          if (error.message?.includes("verification failed") || error.message?.includes("Post verification")) {
+            verificationAttempts++;
+            if (verificationAttempts >= maxVerificationAttempts) {
+              throw new Error("Post verification timeout. Please ensure you posted the reminder and mentioned the creator.");
+            }
+            continue;
+          }
+          // Other errors should be thrown immediately
+          throw error;
+        }
       }
+      
+      if (!verificationSuccess || !verificationData) {
+        throw new Error("Post verification timeout. Please ensure you posted the reminder and mentioned the creator.");
+      }
+      
+      const data = verificationData;
 
       // Step 5: Call recordReminder contract with Neynar score
       setTxStatus("Recording reminder on-chain... Please confirm in wallet.");
