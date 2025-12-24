@@ -655,18 +655,23 @@ export function useReminderActions({
       // Step 4: Wait for user to post and return to app, then verify post via Neynar API
       // When user returns to miniapp, trigger verification and claim automatically
       setTxStatus("Waiting for you to post and return to app...");
+      console.log('[HelpRemind] Starting verification polling for reminder:', reminder.id);
       
       // Poll for user return and verify post
+      // Extended to 2 minutes to give user time to post and return to miniapp
       let verificationAttempts = 0;
-      const maxVerificationAttempts = 30; // 30 attempts = ~30 seconds (poll every 1 second)
+      const maxVerificationAttempts = 120; // 120 attempts = ~2 minutes (poll every 1 second)
       let verificationSuccess = false;
       let verificationData: any = null;
       
       while (verificationAttempts < maxVerificationAttempts && !verificationSuccess) {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between attempts
+        verificationAttempts++;
         
         try {
-          setTxStatus(`Verifying your post... (${verificationAttempts + 1}/${maxVerificationAttempts})`);
+          const progress = `${verificationAttempts}/${maxVerificationAttempts}`;
+          setTxStatus(`Verifying your post... (${progress})`);
+          console.log(`[HelpRemind] Verification attempt ${progress} for reminder ${reminder.id}`);
           
           // Verify post via Neynar API and get reward calculation
           const response = await fetch("/api/reminders/record", {
@@ -682,31 +687,38 @@ export function useReminderActions({
 
           // Check if response is OK before parsing JSON
           if (!response.ok) {
-            // Try to parse error message
-            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-            try {
-              const errorData = await response.json();
-              errorMessage = errorData.message || errorData.error || errorMessage;
-              
-              // If it's a verification error, continue polling
-              if (errorData.error?.includes("verification failed") || 
-                  errorData.message?.includes("verification failed") ||
-                  errorData.message?.includes("Please post")) {
-                console.log(`[HelpRemind] Post not verified yet (attempt ${verificationAttempts + 1}/${maxVerificationAttempts}):`, errorMessage);
-                verificationAttempts++;
-                if (verificationAttempts >= maxVerificationAttempts) {
-                  throw new Error(errorMessage || "Post verification timeout. Please ensure you posted the reminder with mention.");
-                }
-                continue; // Continue polling
+            // For 400 status (verification failed), continue polling - post might not be visible yet
+            // For other errors (500, etc), throw immediately
+            if (response.status === 400) {
+              let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+              try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorData.error || errorMessage;
+                console.log(`[HelpRemind] ⏳ Post not verified yet (attempt ${progress}):`, errorMessage);
+              } catch (parseError) {
+                console.log(`[HelpRemind] ⏳ Post not verified yet (attempt ${progress}): Unable to parse error response`);
               }
-            } catch (parseError) {
-              // If can't parse error, use default message
+              
+              // Continue polling for 400 errors (verification not found yet)
+              if (verificationAttempts >= maxVerificationAttempts) {
+                throw new Error("Post verification timeout. Please ensure you posted the reminder with mention and returned to the app.");
+              }
+              continue; // Continue polling
+            } else {
+              // For non-400 errors (500, network errors, etc), throw immediately
+              let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+              try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorData.error || errorMessage;
+              } catch (parseError) {
+                // Use default message if can't parse
+              }
+              console.error(`[HelpRemind] ❌ API error (non-400):`, errorMessage);
+              throw new Error(errorMessage);
             }
-            
-            // If not a verification error, throw immediately
-            throw new Error(errorMessage);
           }
 
+          // Response is OK, parse JSON
           const data = await response.json();
           
           // Check if verification was successful
@@ -714,28 +726,33 @@ export function useReminderActions({
             console.log('[HelpRemind] ✅ Post verified successfully:', {
               neynarScore: data.neynarScore,
               estimatedReward: data.estimatedReward,
+              username: data.user,
             });
             verificationSuccess = true;
             verificationData = data;
             break; // Exit polling loop
           } else {
-            // Post not verified yet, continue polling
-            console.log(`[HelpRemind] Post not verified yet (attempt ${verificationAttempts + 1}/${maxVerificationAttempts}):`, data.message || data.error);
-            verificationAttempts++;
+            // Post not verified yet (success: false), continue polling
+            console.log(`[HelpRemind] ⏳ Post not verified yet (attempt ${progress}):`, data.message || data.error || 'Unknown error');
             if (verificationAttempts >= maxVerificationAttempts) {
-              throw new Error(data.message || data.error || "Post verification timeout. Please ensure you posted the reminder with mention.");
+              throw new Error(data.message || data.error || "Post verification timeout. Please ensure you posted the reminder with mention and returned to the app.");
             }
+            // Continue to next iteration
           }
         } catch (error: any) {
-          // If it's a verification error (not found), continue polling
-          if (error.message?.includes("verification failed") || error.message?.includes("Post verification")) {
-            verificationAttempts++;
+          // Network errors or other non-verification errors
+          // For 400 errors, we already handled them above and continue polling
+          // For other errors (network failures, etc), check if it's worth retrying
+          if (error.message?.includes("verification") || error.message?.includes("timeout")) {
+            // Verification-related errors - continue polling if we haven't exceeded max attempts
             if (verificationAttempts >= maxVerificationAttempts) {
-              throw new Error("Post verification timeout. Please ensure you posted the reminder and mentioned the creator.");
+              throw new Error("Post verification timeout. Please ensure you posted the reminder and mentioned the creator, then returned to the app.");
             }
+            console.log(`[HelpRemind] ⏳ Retrying after error (attempt ${verificationAttempts}/${maxVerificationAttempts}):`, error.message);
             continue;
           }
-          // Other errors should be thrown immediately
+          // Other critical errors should be thrown immediately
+          console.error('[HelpRemind] ❌ Critical error during verification:', error);
           throw error;
         }
       }
@@ -841,7 +858,7 @@ export function useReminderActions({
           variant: "default",
           title: "✅ Reminder Recorded!",
           description: `Your reminder post was verified! Reward: ${data.estimatedReward || "tokens"}. You can claim when the reminder is confirmed.`,
-          duration: 5000,
+          duration: 2000,
         });
         refreshReminders();
         refreshBalance();
