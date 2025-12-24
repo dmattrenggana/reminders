@@ -15,7 +15,7 @@ export function useReminders() {
   const MIN_FETCH_INTERVAL = 60000; // Minimum 60 seconds between fetches (increased to save quota)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchReminders = useCallback(async () => {
+  const fetchReminders = useCallback(async (force = false) => {
     try {
       // Prevent multiple simultaneous fetches
       if (globalFetchInProgress) {
@@ -23,9 +23,9 @@ export function useReminders() {
         return;
       }
 
-      // Throttle: Don't fetch if last fetch was too recent
+      // Throttle: Don't fetch if last fetch was too recent (unless force refresh)
       const now = Date.now();
-      if (now - lastFetchRef.current < MIN_FETCH_INTERVAL && reminderCache.size > 0) {
+      if (!force && now - lastFetchRef.current < MIN_FETCH_INTERVAL && reminderCache.size > 0) {
         console.log("[useReminders] Throttled: Using cached data");
         // Update timeLeft for cached data without fetching
         const cachedItems = Array.from(reminderCache.values())
@@ -52,6 +52,8 @@ export function useReminders() {
       if (!VAULT_ADDRESS || VAULT_ADDRESS === "") {
         console.warn("Vault contract address not configured");
         setActiveReminders([]);
+        setLoading(false);
+        globalFetchInProgress = false;
         return;
       }
 
@@ -77,8 +79,8 @@ export function useReminders() {
         }
       }
 
-      // If all reminders are cached and fresh, use cache
-      if (idsToFetch.length === 0 && cachedReminders.length > 0) {
+      // If all reminders are cached and fresh, use cache (unless force refresh)
+      if (!force && idsToFetch.length === 0 && cachedReminders.length > 0) {
         console.log("[useReminders] Using cached data for all reminders");
         const items = cachedReminders
           .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
@@ -90,7 +92,20 @@ export function useReminders() {
           });
         setActiveReminders(items.reverse());
         setLoading(false);
+        globalFetchInProgress = false;
         return;
+      }
+
+      // Force refresh: clear cache if force is true
+      if (force) {
+        console.log("[useReminders] Force refresh: clearing cache and fetching all reminders");
+        reminderCache.clear();
+        // Rebuild idsToFetch with all reminders
+        idsToFetch.length = 0;
+        cachedReminders.length = 0;
+        for (let i = 0; i < count; i++) {
+          idsToFetch.push(i);
+        }
       }
 
       // Batch fetch remaining reminders with rate limiting
@@ -207,5 +222,10 @@ export function useReminders() {
     };
   }, [fetchReminders]);
 
-  return { activeReminders, loading, refresh: fetchReminders };
+  // Wrapper function for refresh that forces a fetch (bypasses throttle)
+  const refresh = useCallback(() => {
+    fetchReminders(true);
+  }, [fetchReminders]);
+
+  return { activeReminders, loading, refresh };
 }

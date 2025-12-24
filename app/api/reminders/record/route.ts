@@ -50,8 +50,14 @@ async function verifyHelperPost(
 
     console.log(`[Verify] ❌ No valid post found for helper ${helperFid} mentioning @${creatorUsername}`);
     return false; // ❌ No valid post found
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Verify] Verify post error:", error);
+    // Log detailed error for debugging
+    console.error("[Verify] Error details:", {
+      message: error?.message,
+      code: error?.code,
+      status: error?.status,
+    });
     return false; // Graceful fallback - don't allow if API error (strict verification)
   }
 }
@@ -63,14 +69,18 @@ export async function POST(request: NextRequest) {
 
     if (!reminderId || !helperAddress || !helperFid) {
       return NextResponse.json({ 
-        error: "reminderId, helperAddress, and helperFid are required" 
+        success: false,
+        error: "Missing required parameters",
+        message: "reminderId, helperAddress, and helperFid are required" 
       }, { status: 400 });
     }
 
     const apiKey = process.env.NEYNAR_API_KEY || "";
     if (!apiKey) {
       return NextResponse.json({ 
-        error: "NEYNAR_API_KEY not configured" 
+        success: false,
+        error: "Server configuration error",
+        message: "NEYNAR_API_KEY not configured" 
       }, { status: 500 });
     }
 
@@ -83,6 +93,7 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Verify post if creatorUsername provided
     if (creatorUsername) {
+      console.log(`[Record] Verifying post for helper ${helperFid}, creator @${creatorUsername}, reminder ${reminderId}`);
       const hasPosted = await verifyHelperPost(
         neynarClient,
         Number(helperFid),
@@ -91,12 +102,16 @@ export async function POST(request: NextRequest) {
       );
 
       if (!hasPosted) {
+        console.log(`[Record] ❌ Post verification failed for helper ${helperFid}`);
         return NextResponse.json({ 
           success: false,
           error: "Post verification failed",
-          message: "Please post a mention of the creator with the reminder ID before claiming reward"
+          message: "Please post a mention of the creator (@username) with reminder keywords (Tick-tock, Beat the clock, approaching, or app URL) before claiming reward. Make sure your post is recent (within last 10 minutes)."
         }, { status: 400 });
       }
+      console.log(`[Record] ✅ Post verified for helper ${helperFid}`);
+    } else {
+      console.log(`[Record] ⚠️ Skipping post verification - creatorUsername not provided`);
     }
 
     // Step 2: Get Neynar User Quality Score
@@ -109,7 +124,11 @@ export async function POST(request: NextRequest) {
     
     const user = userdata.users[0];
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ 
+        success: false,
+        error: "User not found",
+        message: "Farcaster user not found. Please ensure your FID is correct."
+      }, { status: 404 });
     }
 
     // Get Neynar User Quality Score from API
@@ -139,10 +158,12 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
     
-    console.log(`[Record] Using Neynar User Quality Score from API: ${neynarScore}`);
+    console.log(`[Record] ✅ Using Neynar User Quality Score from API: ${neynarScore}`);
     
     // Normalize to 0-1 range (ensure it's within bounds)
     const normalizedScore = Math.max(0, Math.min(1, neynarScore));
+    
+    console.log(`[Record] Normalized score: ${normalizedScore}`);
 
     // Step 3: Get reminder data from contract to calculate estimated reward
     let estimatedReward = "0";
@@ -174,6 +195,14 @@ export async function POST(request: NextRequest) {
       console.warn("Failed to calculate estimated reward:", contractError);
       // Continue anyway - reward calculation is optional
     }
+
+    console.log(`[Record] ✅ Verification complete for reminder ${reminderId}, helper ${helperFid}`);
+    console.log(`[Record] Response data:`, {
+      success: true,
+      neynarScore: normalizedScore,
+      estimatedReward: estimatedReward,
+      username: user.username,
+    });
 
     return NextResponse.json({ 
       success: true, 

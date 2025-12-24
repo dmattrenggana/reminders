@@ -338,17 +338,7 @@ export function useReminderActions({
         setTxStatus("");
         setIsSubmitting(false);
         
-        // Show success toast (non-blocking, don't wait for it)
-        // Use setTimeout to make it non-blocking
-        setTimeout(() => {
-          toast({
-            variant: "default",
-            title: "✅ Reminder Created!",
-            description: "Your reminder has been successfully created and locked.",
-            duration: 5000,
-          });
-        }, 100);
-        
+        // No toast notification here - FloatingCreate component shows success animation with clock icon
         // Wait for blockchain state to update (optimized to save quota)
         // Only refresh once after transaction confirmation
         setTimeout(() => {
@@ -356,8 +346,7 @@ export function useReminderActions({
           refreshBalance();
         }, 3000); // Single refresh after 3 seconds (reduced from multiple refreshes)
         
-        // Return success immediately to allow FloatingCreate to close
-        // Don't wait for toast or refresh
+        // Return success immediately to allow FloatingCreate to show success animation
         return { success: true, receipt: createReceipt };
       } else {
         throw new Error("Transaction reverted");
@@ -453,9 +442,10 @@ export function useReminderActions({
         if (reclaimReceipt.status === "success") {
           setTxStatus("");
           toast({
-            variant: "success",
-            title: "Success!",
+            variant: "default",
+            title: "✅ Reminder Reclaimed!",
             description: "Reminder reclaimed! 30% commitment + unclaimed rewards returned.",
+            duration: 2000,
           });
           refreshReminders();
           refreshBalance();
@@ -481,9 +471,10 @@ export function useReminderActions({
         if (confirmReceipt.status === "success") {
           setTxStatus("");
           toast({
-            variant: "success",
-            title: "Success!",
+            variant: "default",
+            title: "✅ Reminder Confirmed!",
             description: "Reminder confirmed! 30% commitment returned.",
+            duration: 2000,
           });
           refreshReminders();
           refreshBalance();
@@ -689,17 +680,50 @@ export function useReminderActions({
             }),
           });
 
+          // Check if response is OK before parsing JSON
+          if (!response.ok) {
+            // Try to parse error message
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.message || errorData.error || errorMessage;
+              
+              // If it's a verification error, continue polling
+              if (errorData.error?.includes("verification failed") || 
+                  errorData.message?.includes("verification failed") ||
+                  errorData.message?.includes("Please post")) {
+                console.log(`[HelpRemind] Post not verified yet (attempt ${verificationAttempts + 1}/${maxVerificationAttempts}):`, errorMessage);
+                verificationAttempts++;
+                if (verificationAttempts >= maxVerificationAttempts) {
+                  throw new Error(errorMessage || "Post verification timeout. Please ensure you posted the reminder with mention.");
+                }
+                continue; // Continue polling
+              }
+            } catch (parseError) {
+              // If can't parse error, use default message
+            }
+            
+            // If not a verification error, throw immediately
+            throw new Error(errorMessage);
+          }
+
           const data = await response.json();
           
-          if (data.success) {
+          // Check if verification was successful
+          if (data.success === true) {
+            console.log('[HelpRemind] ✅ Post verified successfully:', {
+              neynarScore: data.neynarScore,
+              estimatedReward: data.estimatedReward,
+            });
             verificationSuccess = true;
             verificationData = data;
             break; // Exit polling loop
           } else {
             // Post not verified yet, continue polling
+            console.log(`[HelpRemind] Post not verified yet (attempt ${verificationAttempts + 1}/${maxVerificationAttempts}):`, data.message || data.error);
             verificationAttempts++;
             if (verificationAttempts >= maxVerificationAttempts) {
-              throw new Error(data.message || "Post verification timeout. Please ensure you posted the reminder with mention.");
+              throw new Error(data.message || data.error || "Post verification timeout. Please ensure you posted the reminder with mention.");
             }
           }
         } catch (error: any) {
@@ -785,8 +809,9 @@ export function useReminderActions({
             setTxStatus("");
             toast({
               variant: "default",
-              title: "✅ Success!",
+              title: "✅ Reward Claimed!",
               description: `Reminder recorded and reward claimed! You earned ${data.estimatedReward || "tokens"}`,
+              duration: 2000,
             });
             refreshReminders();
             refreshBalance();
@@ -802,6 +827,7 @@ export function useReminderActions({
             variant: "default",
             title: "✅ Reminder Recorded!",
             description: `Your reminder post was verified! Reward: ${data.estimatedReward || "tokens"}. You can claim when the reminder is confirmed.`,
+            duration: 2000,
           });
           refreshReminders();
           refreshBalance();
@@ -815,6 +841,7 @@ export function useReminderActions({
           variant: "default",
           title: "✅ Reminder Recorded!",
           description: `Your reminder post was verified! Reward: ${data.estimatedReward || "tokens"}. You can claim when the reminder is confirmed.`,
+          duration: 5000,
         });
         refreshReminders();
         refreshBalance();
