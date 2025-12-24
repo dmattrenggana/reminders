@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { NeynarAPIClient } from "@neynar/nodejs-sdk";
+import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
 
 /**
- * Get Farcaster FID from wallet address
+ * Get Farcaster FID and user data from wallet address
  * Uses Neynar SDK fetchBulkUsersByEthOrSolAddress method
+ * Reference: https://docs.neynar.com/docs/getting-started-with-neynar
  * Reference: https://docs.neynar.com/docs/fetching-farcaster-user-based-on-ethereum-address
- * Reference: https://docs.neynar.com/nodejs-sdk/user-apis/fetchBulkUsersByEthOrSolAddress
+ * 
+ * Response structure: User[] (array of User objects)
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -20,7 +22,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "NEYNAR_API_KEY not configured" }, { status: 500 });
   }
 
-  const client = new NeynarAPIClient({ apiKey });
+  // Initialize Neynar client according to official documentation
+  // Reference: https://docs.neynar.com/docs/getting-started-with-neynar
+  const config = new Configuration({
+    apiKey: apiKey,
+  });
+  const client = new NeynarAPIClient(config);
 
   try {
     // Use Neynar SDK method: fetchBulkUsersByEthOrSolAddress
@@ -42,14 +49,26 @@ export async function GET(request: NextRequest) {
 
     const user = response[0]; // Get first user from array
     
+    // Return normalized user data according to Neynar user structure
     return NextResponse.json({ 
       fid: user.fid,
       user: {
         fid: user.fid,
         username: user.username,
-        displayName: user.display_name,
-        pfpUrl: user.pfp_url,
-        verifiedAddresses: user.verifications || []
+        display_name: user.display_name,
+        displayName: user.display_name, // Alias for compatibility
+        pfp_url: user.pfp_url,
+        pfpUrl: user.pfp_url, // Alias for compatibility
+        custody_address: user.custody_address,
+        profile: user.profile,
+        follower_count: user.follower_count,
+        following_count: user.following_count,
+        verifications: user.verifications || [],
+        verified_addresses: user.verified_addresses,
+        verified_accounts: user.verified_accounts,
+        power_badge: user.power_badge,
+        bio: user.profile?.bio?.text || user.bio,
+        verifiedAddresses: user.verifications || [] // Alias for compatibility
       }
     });
   } catch (error: any) {

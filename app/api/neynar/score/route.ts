@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { NeynarAPIClient } from "@neynar/nodejs-sdk";
+import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
 
+/**
+ * Fetch Neynar User Quality Score by FID
+ * Reference: https://docs.neynar.com/docs/getting-started-with-neynar
+ * Reference: https://docs.neynar.com/docs/neynar-user-quality-score
+ */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const fid = searchParams.get("fid");
@@ -14,7 +19,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Neynar API key not configured" }, { status: 500 });
   }
 
-  const client = new NeynarAPIClient({ apiKey });
+  // Initialize Neynar client according to official documentation
+  // Reference: https://docs.neynar.com/docs/getting-started-with-neynar
+  const config = new Configuration({
+    apiKey: apiKey,
+  });
+  const client = new NeynarAPIClient(config);
 
   try {
     const response = await client.fetchBulkUsers({ 

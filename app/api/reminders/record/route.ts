@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { NeynarAPIClient } from "@neynar/nodejs-sdk";
+import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
 import { CONTRACTS, REMINDER_VAULT_ABI } from "@/lib/contracts/config";
 import { createRpcProvider } from "@/lib/utils/rpc-provider";
 import { ethers } from "ethers";
@@ -62,7 +62,12 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    const neynarClient = new NeynarAPIClient({ apiKey });
+    // Initialize Neynar client according to official documentation
+    // Reference: https://docs.neynar.com/docs/getting-started-with-neynar
+    const config = new Configuration({
+      apiKey: apiKey,
+    });
+    const neynarClient = new NeynarAPIClient(config);
 
     // Step 1: Verify post if creatorUsername provided
     if (creatorUsername) {
