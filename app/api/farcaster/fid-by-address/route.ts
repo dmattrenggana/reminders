@@ -26,12 +26,13 @@ export async function GET(request: NextRequest) {
     // Use Neynar SDK method: fetchBulkUsersByEthOrSolAddress
     // This is the correct method according to Neynar documentation
     // addresses parameter requires an array of strings
+    // Response structure: array of users (User[])
     const response = await client.fetchBulkUsersByEthOrSolAddress({
       addresses: [address], // Array of addresses (single address in array)
     });
 
-    // Response structure: { result: { user: { fid, username, displayName, pfp_url, ... } } }
-    if (!response || !response.result || !response.result.user) {
+    // Response is an array of users - get first user if available
+    if (!response || !Array.isArray(response) || response.length === 0) {
       return NextResponse.json({ 
         fid: null,
         user: null,
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const user = response.result.user;
+    const user = response[0]; // Get first user from array
     
     return NextResponse.json({ 
       fid: user.fid,
