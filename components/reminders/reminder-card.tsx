@@ -140,14 +140,7 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
         iconColor: "text-red-600"
       }
     }
-    if (reminder.isDangerZone) {
-      return {
-        icon: <AlertCircle className="h-4 w-4" />,
-        label: "Danger Zone (T-1 Hour)",
-        color: "bg-orange-50 text-orange-700 border-orange-200",
-        iconColor: "text-orange-600"
-      }
-    }
+    // Removed "Danger Zone (T-1 Hour)" label - buttons are now active at T-1 hour
     if (reminder.isExpired) {
       return {
         icon: <AlertCircle className="h-4 w-4" />,
@@ -224,13 +217,13 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
 
       {/* Body - Action buttons */}
       <div className="p-6 pt-4 space-y-3">
-        {/* Tombol Help Remind Me (untuk Public Feed) */}
+        {/* Tombol Help Remind Me (untuk Public Feed) - Aktif di T-1 hour */}
         {actualFeedType === "public" && !reminder.isResolved && (
           <button
             onClick={handleHelpRemindMe}
-            disabled={!canInteract || !!loadingAction}
+            disabled={!canInteract || !!loadingAction || !address}
             className={`w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${
-              canInteract && !loadingAction
+              canInteract && !loadingAction && address
                 ? "bg-[#4f46e5] hover:opacity-90 text-white"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
@@ -241,13 +234,13 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
           </button>
         )}
 
-        {/* Tombol Confirm Reminder (untuk My Feed) */}
+        {/* Tombol Confirm Reminder (untuk My Feed) - Aktif di T-1 hour */}
         {actualFeedType === "my" && !reminder.isResolved && (
           <button
             onClick={handleConfirmReminder}
-            disabled={!canInteract || !!loadingAction}
+            disabled={!canInteract || !!loadingAction || !address}
             className={`w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${
-              canInteract && !loadingAction
+              canInteract && !loadingAction && address
                 ? "bg-green-600 hover:bg-green-700 text-white"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
@@ -255,22 +248,9 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
             {loadingAction === "confirm" ? "Processing..." : (
               canInteract 
                 ? "Confirm Reminder" 
-                : "Confirm Reminder (Available T-1 hour)"
+                : "Help available at T-1 hour"
             )}
           </button>
-        )}
-
-        {/* Status Menunggu - sebelum T-1 hour */}
-        {!reminder.isResolved && !canInteract && actualFeedType === "my" && (
-          <div className="w-full py-3 bg-slate-50 text-slate-400 rounded-xl font-bold text-center border border-slate-100 text-sm italic">
-            Waiting for reminder time (T-1 hour)...
-          </div>
-        )}
-
-        {!reminder.isResolved && !canInteract && actualFeedType === "public" && (
-          <div className="w-full py-3 bg-slate-50 text-slate-400 rounded-xl font-bold text-center border border-slate-100 text-sm italic">
-            Help available at T-1 hour before reminder
-          </div>
         )}
 
         {/* Fallback jika dompet belum konek */}

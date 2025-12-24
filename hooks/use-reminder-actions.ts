@@ -388,7 +388,7 @@ export function useReminderActions({
     }
   };
 
-  // Confirm reminder function (V4)
+  // Confirm reminder function (V4) - Calls both confirmReminder and reclaimReminder
   const confirmReminder = async (id: number) => {
     if (!isConnected || !address) {
       toast({
@@ -406,30 +406,52 @@ export function useReminderActions({
         throw new Error("Public client not available");
       }
 
-      const txHash = await writeContractAsync({
+      // Step 1: Confirm reminder (returns 30% commitment)
+      const confirmTxHash = await writeContractAsync({
         address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
         abi: REMINDER_VAULT_ABI,
         functionName: 'confirmReminder',
         args: [BigInt(id)],
-        chainId: 8453, // Base Mainnet - explicitly specify to avoid getChainId error
+        chainId: 8453,
       });
 
-      setTxStatus("Waiting for transaction confirmation...");
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
+      setTxStatus("Waiting for confirmation transaction...");
+      const confirmReceipt = await publicClient.waitForTransactionReceipt({
+        hash: confirmTxHash,
+        timeout: 60000,
       });
 
-      if (receipt.status === "success") {
+      if (confirmReceipt.status !== "success") {
+        throw new Error("Confirm reminder transaction failed");
+      }
+
+      // Step 2: Reclaim reminder (returns unclaimed 70% reward pool)
+      setTxStatus("Reclaiming unclaimed rewards... Please confirm in wallet.");
+      const reclaimTxHash = await writeContractAsync({
+        address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
+        abi: REMINDER_VAULT_ABI,
+        functionName: 'reclaimReminder',
+        args: [BigInt(id)],
+        chainId: 8453,
+      });
+
+      setTxStatus("Waiting for reclaim transaction...");
+      const reclaimReceipt = await publicClient.waitForTransactionReceipt({
+        hash: reclaimTxHash,
+        timeout: 60000,
+      });
+
+      if (reclaimReceipt.status === "success") {
         setTxStatus("");
         toast({
           variant: "success",
           title: "Success!",
-          description: "Reminder confirmed! Tokens returned.",
+          description: "Reminder confirmed and unclaimed rewards reclaimed!",
         });
         refreshReminders();
         refreshBalance();
       } else {
-        throw new Error("Transaction reverted");
+        throw new Error("Reclaim reminder transaction failed");
       }
     } catch (error: any) {
       console.error("Confirm reminder error:", error);
@@ -452,7 +474,7 @@ export function useReminderActions({
     }
   };
 
-  // Help remind function (V4)
+  // Help remind function (V4) - With Farcaster posting flow
   const helpRemind = async (reminder: any, isMiniApp: boolean, fid: number) => {
     if (!isConnected || !address) {
       toast({
@@ -463,8 +485,74 @@ export function useReminderActions({
       return;
     }
 
-    // First, call API to record reminder and get Neynar score
+    setIsSubmitting(true);
+    setTxStatus("Preparing reminder post...");
+
     try {
+      // Step 1: Format reminder time
+      const reminderTime = typeof reminder.reminderTime === 'number' 
+        ? new Date(reminder.reminderTime * 1000)
+        : new Date(reminder.reminderTime);
+      const formattedTime = reminderTime.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      // Step 2: Create post template with mention
+      const creatorUsername = reminder.farcasterUsername || reminder.creatorUsername || "creator";
+      const postText = `🔔 Reminder for @${creatorUsername}\n\n${reminder.description || "No description"}\n\n⏰ Due: ${formattedTime}\n\n#Reminder #${reminder.id}`;
+
+      // Step 3: Post to Farcaster (if in miniapp)
+      if (isMiniApp && typeof window !== 'undefined' && (window as any).Farcaster?.sdk) {
+        try {
+          setTxStatus("Opening Farcaster to post...");
+          const sdk = (window as any).Farcaster.sdk;
+          
+          // Use Farcaster SDK to open composer
+          if (sdk.actions && sdk.actions.openComposer) {
+            await sdk.actions.openComposer({
+              text: postText,
+            });
+            
+            setTxStatus("Waiting for you to post and return...");
+            toast({
+              variant: "default",
+              title: "Post in Farcaster",
+              description: "Please post the reminder and mention the creator, then return to this app.",
+            });
+            
+            // Wait a bit for user to post
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          } else {
+            // Fallback: Open Warpcast URL
+            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`;
+            window.open(warpcastUrl, '_blank');
+            setTxStatus("Please post in Warpcast and return...");
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        } catch (postError: any) {
+          console.warn("Farcaster posting error (non-critical):", postError);
+          // Continue anyway - user can post manually
+        }
+      } else {
+        // Web browser: Open Warpcast in new tab
+        const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`;
+        window.open(warpcastUrl, '_blank');
+        setTxStatus("Please post in Warpcast and return...");
+        toast({
+          variant: "default",
+          title: "Post in Warpcast",
+          description: "Please post the reminder and mention the creator, then return to this app.",
+        });
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
+      // Step 4: Verify post via Neynar API and record reminder
+      setTxStatus("Verifying post and recording reminder...");
       const response = await fetch("/api/reminders/record", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -472,79 +560,89 @@ export function useReminderActions({
           reminderId: reminder.id,
           helperAddress: address,
           helperFid: fid,
+          creatorUsername: creatorUsername,
         }),
       });
 
       const data = await response.json();
       
       if (!data.success) {
-        toast({
-          variant: "destructive",
-          title: "Failed to Record Reminder",
-          description: data.error || "Failed to record reminder",
-        });
-        return;
+        throw new Error(data.error || "Failed to record reminder");
       }
 
-      // Then claim reward
-      setIsSubmitting(true);
+      // Step 5: Call recordReminder contract with Neynar score
+      setTxStatus("Recording reminder on-chain... Please confirm in wallet.");
+      if (!publicClient) {
+        throw new Error("Public client not available");
+      }
+
+      // Neynar score is 0-1.0, but contract expects 0-100 (multiply by 100)
+      const neynarScore = Math.floor((data.neynarScore || 0.5) * 100);
+      
+      const recordTxHash = await writeContractAsync({
+        address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
+        abi: REMINDER_VAULT_ABI,
+        functionName: 'recordReminder',
+        args: [BigInt(reminder.id), BigInt(neynarScore)],
+        chainId: 8453,
+      });
+
+      setTxStatus("Waiting for record transaction confirmation...");
+      const recordReceipt = await publicClient.waitForTransactionReceipt({
+        hash: recordTxHash,
+        timeout: 60000,
+      });
+
+      if (recordReceipt.status !== "success") {
+        throw new Error("Record reminder transaction failed");
+      }
+
+      // Step 6: Auto claim reward immediately after recording
       setTxStatus("Claiming reward... Please confirm in wallet.");
-      try {
-        if (!publicClient) {
-          throw new Error("Public client not available");
-        }
+      const claimTxHash = await writeContractAsync({
+        address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
+        abi: REMINDER_VAULT_ABI,
+        functionName: 'claimReward',
+        args: [BigInt(reminder.id)],
+        chainId: 8453,
+      });
 
-        const txHash = await writeContractAsync({
-          address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
-          abi: REMINDER_VAULT_ABI,
-          functionName: 'claimReward',
-          args: [BigInt(reminder.id)],
-          chainId: 8453, // Base Mainnet - explicitly specify to avoid getChainId error
-        });
+      setTxStatus("Waiting for claim transaction confirmation...");
+      const claimReceipt = await publicClient.waitForTransactionReceipt({
+        hash: claimTxHash,
+        timeout: 60000,
+      });
 
-        setTxStatus("Waiting for transaction confirmation...");
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash,
-        });
-
-        if (receipt.status === "success") {
-          setTxStatus("");
-          toast({
-            variant: "success",
-            title: "Reward Claimed!",
-            description: `You earned ${data.data?.estimatedReward || "tokens"}`,
-          });
-          refreshReminders();
-          refreshBalance();
-        } else {
-          throw new Error("Transaction reverted");
-        }
-      } catch (error: any) {
-        console.error("Claim reward error:", error);
+      if (claimReceipt.status === "success") {
         setTxStatus("");
-        if (error.message?.includes("User rejected") || error.code === 4001) {
-          toast({
-            variant: "destructive",
-            title: "Transaction Cancelled",
-            description: "Transaction cancelled by user",
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Failed to Claim Reward",
-            description: error.shortMessage || error.message || "Failed to claim reward",
-          });
-        }
-      } finally {
-        setIsSubmitting(false);
+        toast({
+          variant: "success",
+          title: "Success!",
+          description: `Reminder recorded and reward claimed! You earned ${data.estimatedReward || "tokens"}`,
+        });
+        refreshReminders();
+        refreshBalance();
+      } else {
+        throw new Error("Claim reward transaction failed");
       }
     } catch (error: any) {
       console.error("Help remind error:", error);
-      toast({
-        variant: "destructive",
-        title: "Failed to Help Remind",
-        description: error.message || "Failed to help remind",
-      });
+      setTxStatus("");
+      if (error.message?.includes("User rejected") || error.code === 4001) {
+        toast({
+          variant: "destructive",
+          title: "Transaction Cancelled",
+          description: "Transaction cancelled by user",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to Help Remind",
+          description: error.shortMessage || error.message || "Failed to help remind",
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
