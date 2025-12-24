@@ -26,8 +26,9 @@ async function setupWebhook() {
     console.log('🚀 Setting up Neynar webhook...');
     console.log('Webhook URL:', webhookUrl);
     
+    // apiKey is guaranteed to be string here because we check and exit above
     const config = new Configuration({
-      apiKey: apiKey,
+      apiKey: apiKey as string,
     });
     const client = new NeynarAPIClient(config);
 
