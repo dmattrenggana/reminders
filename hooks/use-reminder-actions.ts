@@ -527,11 +527,17 @@ export function useReminderActions({
     setTxStatus("Preparing reminder post...");
 
     try {
-      // Step 1: Format reminder time
-      const reminderTime = typeof reminder.reminderTime === 'number' 
-        ? new Date(reminder.reminderTime * 1000)
-        : new Date(reminder.reminderTime);
-      const formattedTime = reminderTime.toLocaleString('en-US', {
+      // Step 1: Format reminder time and deadline
+      let reminderTime: Date;
+      if (typeof reminder.reminderTime === 'number') {
+        reminderTime = new Date(reminder.reminderTime * 1000);
+      } else if (reminder.deadline && typeof reminder.deadline === 'number') {
+        reminderTime = new Date(reminder.deadline * 1000);
+      } else {
+        reminderTime = new Date(reminder.reminderTime || reminder.deadline);
+      }
+      
+      const formattedDeadline = reminderTime.toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -540,9 +546,12 @@ export function useReminderActions({
         hour12: true
       });
 
-      // Step 2: Create post template with mention
+      // Step 2: Create post template with mention using the specified template
       const creatorUsername = reminder.farcasterUsername || reminder.creatorUsername || "creator";
-      const postText = `🔔 Reminder for @${creatorUsername}\n\n${reminder.description || "No description"}\n\n⏰ Due: ${formattedTime}\n\n#Reminder #${reminder.id}`;
+      const reminderDescription = reminder.description || "reminder";
+      const appUrl = "https://remindersbase.vercel.app/";
+      
+      const postText = `Tick-tock, @${creatorUsername} ! ⏰ Don't forget your ${reminderDescription} is approaching at ${formattedDeadline}. Beat the clock and get it done now! ${appUrl}`;
 
       // Step 3: Post to Farcaster (if in miniapp)
       if (isMiniApp && typeof window !== 'undefined' && (window as any).Farcaster?.sdk) {

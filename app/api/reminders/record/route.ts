@@ -20,27 +20,39 @@ async function verifyHelperPost(
       limit: 20
     });
 
-    // Check if any cast mentions creator and reminder
+    // Check if any cast mentions creator and contains reminder keywords or app URL
     const mentionPattern = new RegExp(`@${creatorUsername}`, 'i');
-    const reminderPattern = new RegExp(`#${reminderId}|reminder.*${reminderId}`, 'i');
+    // Look for mention + reminder keywords OR mention + app URL
+    const reminderPattern = new RegExp(
+      `remindersbase\\.vercel\\.app|Tick-tock|Beat the clock|approaching`,
+      'i'
+    );
 
     for (const cast of casts.casts) {
-      const text = cast.text.toLowerCase();
-      if (mentionPattern.test(text) && reminderPattern.test(text)) {
-        // Check if cast is recent (within last hour)
+      const text = cast.text;
+      const hasMention = mentionPattern.test(text);
+      const hasReminderContent = reminderPattern.test(text);
+      
+      if (hasMention && hasReminderContent) {
+        // Check if cast is recent (within last 10 minutes to allow for posting time)
         const castTime = new Date(cast.timestamp);
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
         
-        if (castTime > oneHourAgo) {
+        if (castTime > tenMinutesAgo) {
+          console.log(`[Verify] ✅ Post verified: Found cast with mention and reminder content`, {
+            castText: text.substring(0, 100),
+            castTime: castTime.toISOString(),
+          });
           return true; // ✅ Verified!
         }
       }
     }
 
+    console.log(`[Verify] ❌ No valid post found for helper ${helperFid} mentioning @${creatorUsername}`);
     return false; // ❌ No valid post found
   } catch (error) {
-    console.error("Verify post error:", error);
-    return false; // Graceful fallback - allow if API error
+    console.error("[Verify] Verify post error:", error);
+    return false; // Graceful fallback - don't allow if API error (strict verification)
   }
 }
 
