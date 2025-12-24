@@ -8,10 +8,9 @@
  */
 
 import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
-import * as dotenv from 'dotenv';
 
-// Load environment variables
-dotenv.config({ path: '.env.local' });
+// Environment variables are loaded from .env.local automatically
+// No need for dotenv in Next.js project
 
 const apiKey = process.env.NEYNAR_API_KEY;
 const webhookUrl = process.env.NEYNAR_WEBHOOK_URL || 'https://remindersbase.vercel.app/api/webhooks/neynar-cast';
