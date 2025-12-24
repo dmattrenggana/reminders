@@ -11,17 +11,25 @@ const nextConfig = {
   },
   // CSP headers moved to vercel.json for better compatibility
   // vercel.json takes precedence and has more complete configuration
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     // Fix for @metamask/sdk trying to use React Native dependencies in browser
     // @react-native-async-storage/async-storage is not needed in browser environment
     // This is a dependency of @wagmi/connectors but we only use injected() connector
     if (!isServer) {
+      // Use IgnorePlugin to completely ignore the module
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^@react-native-async-storage\/async-storage$/,
+        })
+      );
+      
+      // Also add to fallback for additional safety
       config.resolve.fallback = {
         ...config.resolve.fallback,
         '@react-native-async-storage/async-storage': false,
       };
       
-      // Ignore the module entirely to prevent build errors
+      // Add to alias as well
       config.resolve.alias = {
         ...config.resolve.alias,
         '@react-native-async-storage/async-storage': false,

@@ -254,17 +254,16 @@ export default function DashboardClient() {
     }
   };
 
-  // Help remind handler - Use FID from providerUser or walletFarcasterUser
+  // Help remind handler - Use FID from farcasterUser hook
   const handleHelpRemindMe = async (reminder: any) => {
-    // Try to get FID from farcasterUser (providerUser or walletFarcasterUser)
-    const fid = farcasterUser?.fid;
-    if (fid) {
-      helpRemind(reminder, isMiniApp, fid);
+    // Try to get FID from farcasterUser hook
+    if (farcasterFid) {
+      helpRemind(reminder, isMiniApp, farcasterFid);
       return;
     }
 
-    // If still no FID, try to fetch from wallet address (fallback)
-    if (address) {
+    // If still no FID, try fetching directly from wallet address (fallback)
+    if (address && isConnected) {
       try {
         setTxStatus("Fetching Farcaster user...");
         const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
@@ -272,8 +271,8 @@ export default function DashboardClient() {
         
         if (data.fid) {
           setTxStatus("");
-          // Update walletFarcasterUser state
-          setWalletFarcasterUser(data.user);
+          // Trigger refresh in hook for future use, but use the fetched FID immediately
+          refreshWalletUser().catch(console.error);
           helpRemind(reminder, isMiniApp, data.fid);
         } else {
           setTxStatus("");
