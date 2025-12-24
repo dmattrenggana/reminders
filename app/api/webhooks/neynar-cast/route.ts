@@ -90,9 +90,11 @@ export async function POST(request: NextRequest) {
     
     for (const pending of relevantPending) {
       // Verify cast content matches verification requirements
+      // Must have: mention creator + reminder keywords/app URL
       const mentionPattern = new RegExp(`@${pending.creatorUsername}`, 'i');
+      // Match: "Tick-tock", "Don't forget", "Beat the clock", "approaching", or app URL
       const reminderPattern = new RegExp(
-        `remindersbase\\.vercel\\.app|Tick-tock|Beat the clock|approaching`,
+        `(Tick-tock|Don't forget|Beat the clock|approaching|remindersbase\\.vercel\\.app)`,
         'i'
       );
       

@@ -33,14 +33,16 @@ async function setupWebhook() {
     const client = new NeynarAPIClient(config);
 
     // Publish webhook dengan subscription untuk cast.created events
-    // Filter: casts yang mengandung "Tick-tock" atau "Don't forget" dan URL app
+    // Filter: casts yang mengandung "Tick-tock Don't forget your" dan URL app
+    // Pattern sesuai dengan template post: "Tick-tock, @username ! ⏰ Don't forget your [description] is approaching at [deadline]. Beat the clock and get it done now! https://remindersbase.vercel.app/"
     const webhook = await client.publishWebhook({
       name: "Reminders Base Verification",
       url: webhookUrl,
       subscription: {
         "cast.created": {
-          // Match casts yang mengandung reminder keywords atau app URL
-          text: "(?i)(Tick-tock|Don't forget|Beat the clock|approaching|remindersbase\\.vercel\\.app)",
+          // Match casts yang mengandung "Tick-tock" + "Don't forget your" + app URL
+          // Pattern lebih spesifik untuk mengurangi false positives
+          text: "(?i)(Tick-tock.*Don't forget your.*https://remindersbase\\.vercel\\.app/)|(Tick-tock.*Don't forget your.*remindersbase\\.vercel\\.app)",
         },
       },
     });
