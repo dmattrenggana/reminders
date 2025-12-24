@@ -1,51 +1,10 @@
-'use client'
+"use client";
 
-import { useFarcaster } from '@/components/providers/farcaster-provider'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import type { VariantProps } from 'class-variance-authority'
-
-interface ConnectWalletButtonProps 
-  extends React.ComponentProps<'button'>,
-    VariantProps<typeof buttonVariants> {
-  onConnect?: () => void
-}
-
-export function ConnectWalletButton({
-  className,
-  variant = 'default',
-  size = 'default',
-  onConnect,
-  ...props
-}: export function ConnectWalletButton() {
-  const { user, isMiniApp } = useFarcaster();
-
-  useEffect(() => {
-    // Define callback untuk SIWN
-    (window as any).onSignInSuccess = (data: any) => {
-      console.log("SIWN success:", data);
-      // Simpan user data ke state/localStorage
-      localStorage.setItem('siwn_user', JSON.stringify(data.user));
-      window.location.reload(); // atau update state
-    };
-  }, []);
-
-  if (user) {
-    return (
-      <Button>
-        <img src={user.pfpUrl} className="h-5 w-5 rounded-full" />
-        <span>@{user.username}</span>
-      </Button>
-    );
-  }
-
-  // SIWN button (HTML)
-  return (
-    <div
-      className="neynar_signin"
-      data-client_id={process.env.NEXT_PUBLIC_NEYNAR_CLIENT_ID}
-      data-success-callback="onSignInSuccess"
-      data-theme="light"
-    />
-  );
-}
+// Re-export the actual ConnectWalletButton component
+// This file exists to maintain backward compatibility
+// The actual implementation is in components/auth/connect-wallet-button.tsx
+// 
+// NOTE: The previous implementation used @neynar/react which is not installed.
+// We use the implementation from connect-wallet-button.tsx which uses 
+// @farcaster/miniapp-sdk and our custom FarcasterProvider instead.
+export { ConnectWalletButton } from "@/components/auth/connect-wallet-button";
