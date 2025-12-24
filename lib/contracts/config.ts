@@ -19,13 +19,46 @@ export const CONTRACTS = {
   REMINDER_VAULT: process.env.NEXT_PUBLIC_VAULT_CONTRACT || "",
 }
 
+/**
+ * Get RPC URLs with priority order (matching rpc-provider.ts configuration)
+ * Premium RPC (from env) takes highest priority if configured
+ */
+function getRpcUrls(): string[] {
+  const urls: string[] = [];
+
+  // Priority 1: Premium RPC from environment (if configured)
+  // Alchemy: https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY
+  // Infura: https://base-mainnet.infura.io/v3/YOUR_API_KEY
+  // QuickNode: https://YOUR-ENDPOINT-NAME.base.quiknode.pro/YOUR-API-KEY/
+  const customRpc = process.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL?.trim();
+  if (customRpc && !customRpc.includes("mainnet.base.org")) {
+    // Only add if it's not the default (which has rate limiting)
+    urls.push(customRpc);
+  }
+
+  // Priority 2: Free reliable RPCs (less rate limiting)
+  urls.push(
+    "https://base.llamarpc.com", // LlamaRPC (free, reliable, less rate limiting)
+    "https://base-rpc.publicnode.com", // PublicNode (free, reliable)
+    "https://base.drpc.org", // dRPC (free tier, reliable)
+    "https://base-mainnet.public.blastapi.io", // BlastAPI (free tier)
+    "https://base.gateway.tenderly.co", // Tenderly Gateway
+  );
+
+  // Priority 3: Official Base RPC (moved lower due to frequent 429 rate limiting)
+  urls.push("https://mainnet.base.org");
+
+  return urls;
+}
+
 export const CHAIN_CONFIG = {
   BASE_MAINNET: {
     chainId: 8453,
     name: "Base",
+    // RPC URLs with priority order (matching rpc-provider.ts and app/providers.tsx)
     // Note: mainnet.base.org moved lower due to frequent 429 rate limiting
-    rpcUrls: ["https://base.llamarpc.com", "https://base-rpc.publicnode.com", "https://base.drpc.org", "https://mainnet.base.org"],
-    rpcUrl: "https://base.llamarpc.com", // Default: More reliable, less rate limiting
+    rpcUrls: getRpcUrls(),
+    rpcUrl: getRpcUrls()[0] || "https://base.llamarpc.com", // Default: First in priority list
     blockExplorer: "https://basescan.org",
   },
 }
