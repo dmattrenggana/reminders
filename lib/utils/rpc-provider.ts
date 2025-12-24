@@ -186,30 +186,44 @@ export async function executeRpcCall<T>(
  */
 export async function batchRpcCalls<T>(
   calls: Array<(provider: ethers.JsonRpcProvider) => Promise<T>>,
-  options: RpcCallOptions & { batchSize?: number; batchDelay?: number } = {}
+  options: RpcCallOptions & { batchSize?: number; batchDelay?: number; maxParallel?: number } = {}
 ): Promise<T[]> {
   const {
-    batchSize = 3, // Process 3 calls at a time (increased for better responsiveness)
-    batchDelay = 300, // 300ms delay between batches (reduced for better responsiveness)
+    batchSize = 5, // Process 5 calls per batch
+    batchDelay = 150, // 150ms delay between batches (100-200ms range)
+    maxParallel = 3, // Maximum 2-3 parallel requests at once
   } = options;
 
   const results: (T | null)[] = [];
   const errors: Error[] = [];
 
-  // Process in batches
+  // Process in batches with parallel limit and request delays
   for (let i = 0; i < calls.length; i += batchSize) {
     const batch = calls.slice(i, i + batchSize);
 
-    // Execute batch in parallel
-    const batchPromises = batch.map((call) =>
-      executeRpcCall(call, options).catch((error) => {
-        errors.push(error);
-        return null as T | null;
-      })
-    );
+    // Process batch with max parallel limit
+    // Split batch into smaller chunks to limit parallel requests
+    for (let j = 0; j < batch.length; j += maxParallel) {
+      const parallelChunk = batch.slice(j, j + maxParallel);
+      
+      // Execute parallel chunk with staggered delays (100-200ms between requests)
+      const chunkPromises = parallelChunk.map(async (call, index) => {
+        // Stagger requests: first request immediate, others with 150ms delay
+        if (index > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms delay between parallel requests
+        }
+        
+        try {
+          return await executeRpcCall(call, options);
+        } catch (error) {
+          errors.push(error as Error);
+          return null as T | null;
+        }
+      });
 
-    const batchResults = await Promise.all(batchPromises);
-    results.push(...batchResults);
+      const chunkResults = await Promise.all(chunkPromises);
+      results.push(...chunkResults);
+    }
 
     // Delay between batches to avoid rate limiting
     if (i + batchSize < calls.length) {

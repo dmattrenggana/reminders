@@ -129,12 +129,13 @@ export function useReminders() {
         }
       });
 
-      // Execute batch calls with rate limiting - Optimized for responsiveness
+      // Execute batch calls with rate limiting - Optimized settings
       const fetchedResults = await batchRpcCalls(fetchCalls, {
-        batchSize: 3, // Process 3 reminders at a time (increased for responsiveness)
-        batchDelay: 300, // 300ms delay between batches (reduced for responsiveness)
+        batchSize: 5, // Process 5 reminders per batch
+        batchDelay: 150, // 150ms delay between batches (100-200ms range)
+        maxParallel: 3, // Maximum 3 parallel requests at once
         maxRetries: 2, // 2 retries for reliability
-        retryDelay: 500, // Reduced retry delay for responsiveness
+        retryDelay: 500, // Retry delay
       });
 
       // Only update state if we got valid results
