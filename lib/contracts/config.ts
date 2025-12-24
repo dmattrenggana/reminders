@@ -20,55 +20,51 @@ export const CONTRACTS = {
 }
 
 /**
- * Get RPC URLs with priority order (matching rpc-provider.ts configuration)
- * Premium RPC (from env) takes highest priority if configured
+ * Get RPC URLs - QuickNode only
+ * Uses NEXT_PUBLIC_BASE_MAINNET_RPC_URL from environment (must be QuickNode endpoint)
  * Safe for both client-side and server-side execution
  */
 function getRpcUrls(): string[] {
   const urls: string[] = [];
 
-  // Priority 1: Premium RPC from environment (if configured)
-  // Alchemy: https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY
-  // Infura: https://base-mainnet.infura.io/v3/YOUR_API_KEY
-  // QuickNode: https://YOUR-ENDPOINT-NAME.base.quiknode.pro/YOUR-API-KEY/
+  // Only use QuickNode RPC from environment
+  // QuickNode format: https://YOUR-ENDPOINT-NAME.base-mainnet.quiknode.pro/YOUR-API-KEY/
   // Note: NEXT_PUBLIC_ prefix makes it available in browser
   try {
-    let customRpc: string | undefined;
+    let quickNodeRpc: string | undefined;
     
     if (typeof window !== "undefined") {
       // Client-side: access via process.env (Next.js exposes NEXT_PUBLIC_ vars at build time)
-      // Use optional chaining and type assertion for safety
-      customRpc = (typeof process !== "undefined" && process?.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL) 
+      quickNodeRpc = (typeof process !== "undefined" && process?.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL) 
         ? String(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL).trim()
         : undefined;
     } else {
       // Server-side: direct access
-      customRpc = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL
+      quickNodeRpc = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL
         ? String(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL).trim()
         : undefined;
     }
     
-    if (customRpc && customRpc.length > 0 && !customRpc.includes("mainnet.base.org")) {
-      // Only add if it's not the default (which has rate limiting)
-      urls.push(customRpc);
+    if (quickNodeRpc && quickNodeRpc.length > 0) {
+      // Verify it's a QuickNode endpoint
+      if (quickNodeRpc.includes("quiknode.pro") || quickNodeRpc.includes("quicknode")) {
+        urls.push(quickNodeRpc);
+      } else {
+        console.warn("[Config] NEXT_PUBLIC_BASE_MAINNET_RPC_URL is not a QuickNode endpoint:", quickNodeRpc);
+        // Still use it if configured, but warn
+        urls.push(quickNodeRpc);
+      }
+    } else {
+      throw new Error(
+        "NEXT_PUBLIC_BASE_MAINNET_RPC_URL is not set. " +
+        "Please configure QuickNode RPC endpoint in environment variables."
+      );
     }
   } catch (error) {
-    // Silently fail if process is not available (client-side in some environments)
-    // This is safe - we'll just use the free RPCs
-    console.debug("[Config] Could not access process.env, using free RPCs only");
+    // If process is not available or env var not set, throw error
+    console.error("[Config] Failed to get QuickNode RPC URL:", error);
+    throw error;
   }
-
-  // Priority 2: Free reliable RPCs (less rate limiting)
-  urls.push(
-    "https://base.llamarpc.com", // LlamaRPC (free, reliable, less rate limiting)
-    "https://base-rpc.publicnode.com", // PublicNode (free, reliable)
-    "https://base.drpc.org", // dRPC (free tier, reliable)
-    "https://base-mainnet.public.blastapi.io", // BlastAPI (free tier)
-    "https://base.gateway.tenderly.co", // Tenderly Gateway
-  );
-
-  // Priority 3: Official Base RPC (moved lower due to frequent 429 rate limiting)
-  urls.push("https://mainnet.base.org");
 
   return urls;
 }
@@ -77,10 +73,15 @@ export const CHAIN_CONFIG = {
   BASE_MAINNET: {
     chainId: 8453,
     name: "Base",
-    // RPC URLs with priority order (matching rpc-provider.ts and app/providers.tsx)
-    // Note: mainnet.base.org moved lower due to frequent 429 rate limiting
+    // RPC URLs - QuickNode only (from NEXT_PUBLIC_BASE_MAINNET_RPC_URL)
     rpcUrls: getRpcUrls(),
-    rpcUrl: getRpcUrls()[0] || "https://base.llamarpc.com", // Default: First in priority list
+    rpcUrl: getRpcUrls()[0] || (() => {
+      const qnUrl = typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_BASE_MAINNET_RPC_URL : undefined;
+      if (!qnUrl) {
+        throw new Error("NEXT_PUBLIC_BASE_MAINNET_RPC_URL is not set. Please configure QuickNode RPC endpoint.");
+      }
+      return qnUrl;
+    })(),
     blockExplorer: "https://basescan.org",
   },
 }

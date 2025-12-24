@@ -48,23 +48,18 @@ export const config = createConfig({
     injected(),
   ],
          transports: {
-           // Use fallback transport to handle rate limiting (429 errors)
-           // Fallback will try next RPC if one fails or returns 429
-           // Note: mainnet.base.org moved lower due to frequent 429 rate limiting
-           [base.id]: fallback([
-             // Primary: LlamaRPC (free, reliable, less rate limiting)
-             http("https://base.llamarpc.com"),
-             // Fallback 1: PublicNode (free, reliable)
-             http("https://base-rpc.publicnode.com"),
-             // Fallback 2: dRPC (free tier, reliable)
-             http("https://base.drpc.org"),
-             // Fallback 3: BlastAPI (free tier)
-             http("https://base-mainnet.public.blastapi.io"),
-             // Fallback 4: Tenderly Gateway
-             http("https://base.gateway.tenderly.co"),
-             // Fallback 5: Official Base RPC (moved lower due to rate limiting)
-             http("https://mainnet.base.org"),
-           ]),
+           // Use QuickNode RPC only (from NEXT_PUBLIC_BASE_MAINNET_RPC_URL)
+           // QuickNode provides reliable, high-performance RPC access
+           [base.id]: (() => {
+             const quickNodeUrl = process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL;
+             if (!quickNodeUrl) {
+               console.error("[Wagmi] NEXT_PUBLIC_BASE_MAINNET_RPC_URL is not set. Please configure QuickNode RPC endpoint.");
+               // Fallback to empty array - will cause error but prevents silent failures
+               return fallback([]);
+             }
+             // Use QuickNode as single endpoint (no fallback needed - QuickNode is reliable)
+             return http(quickNodeUrl);
+           })(),
          },
 });
 

@@ -10,9 +10,10 @@
   },
   "networks": {
     "base": {
-      "url": "https://mainnet.base.org",
+      "url": "https://YOUR-QUICKNODE-ENDPOINT.base-mainnet.quiknode.pro/YOUR-API-KEY/",
       "chainId": 8453,
-      "accounts": "PRIVATE_KEY_FROM_ENV"
+      "accounts": "PRIVATE_KEY_FROM_ENV",
+      "_comment": "Replace URL with your QuickNode endpoint from NEXT_PUBLIC_BASE_MAINNET_RPC_URL or BASE_MAINNET_RPC_URL env var"
     }
   },
   "paths": {
