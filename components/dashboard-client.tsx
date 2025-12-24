@@ -74,6 +74,9 @@ export default function DashboardClient() {
 
   const { toast } = useToast();
 
+  // State untuk Farcaster user dari wallet address
+  const [walletFarcasterUser, setWalletFarcasterUser] = useState<any>(null);
+
   // Mount effect
   useEffect(() => {
     setMounted(true);
@@ -94,6 +97,38 @@ export default function DashboardClient() {
       initializeMiniApp();
     }
   }, []);
+
+  // Fetch Farcaster user ketika wallet connected
+  useEffect(() => {
+    const fetchWalletFarcasterUser = async () => {
+      // Skip if already have providerUser (miniapp) or no address
+      if (providerUser?.fid || !address || !isConnected) {
+        return;
+      }
+
+      try {
+        console.log('[Dashboard] Fetching Farcaster user for wallet:', address);
+        const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
+        const data = await response.json();
+        
+        if (data.fid && data.user) {
+          console.log('[Dashboard] Farcaster user fetched:', {
+            fid: data.fid,
+            username: data.user.username
+          });
+          setWalletFarcasterUser(data.user);
+        } else {
+          console.log('[Dashboard] No Farcaster user found for wallet');
+          setWalletFarcasterUser(null);
+        }
+      } catch (error) {
+        console.error('[Dashboard] Failed to fetch Farcaster user:', error);
+        setWalletFarcasterUser(null);
+      }
+    };
+
+    fetchWalletFarcasterUser();
+  }, [address, isConnected, providerUser?.fid]);
 
   // Computed values - prioritize Farcaster user info from provider (miniapp) or wallet lookup
   // Priority: providerUser (miniapp) > walletFarcasterUser (wallet lookup) > null
@@ -222,40 +257,6 @@ export default function DashboardClient() {
     };
   }, [reminders, address]);
 
-  // State untuk Farcaster user dari wallet address
-  const [walletFarcasterUser, setWalletFarcasterUser] = useState<any>(null);
-
-  // Fetch Farcaster user ketika wallet connected
-  useEffect(() => {
-    const fetchWalletFarcasterUser = async () => {
-      // Skip if already have providerUser (miniapp) or no address
-      if (providerUser?.fid || !address || !isConnected) {
-        return;
-      }
-
-      try {
-        console.log('[Dashboard] Fetching Farcaster user for wallet:', address);
-        const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
-        const data = await response.json();
-        
-        if (data.fid && data.user) {
-          console.log('[Dashboard] Farcaster user fetched:', {
-            fid: data.fid,
-            username: data.user.username
-          });
-          setWalletFarcasterUser(data.user);
-        } else {
-          console.log('[Dashboard] No Farcaster user found for wallet');
-          setWalletFarcasterUser(null);
-        }
-      } catch (error) {
-        console.error('[Dashboard] Failed to fetch Farcaster user:', error);
-        setWalletFarcasterUser(null);
-      }
-    };
-
-    fetchWalletFarcasterUser();
-  }, [address, isConnected, providerUser?.fid]);
 
   // Connect handler
   const handleConnect = () => {
