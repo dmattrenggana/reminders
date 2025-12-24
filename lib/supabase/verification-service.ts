@@ -196,4 +196,3 @@ export async function cleanupOldVerifications(maxAgeHours: number = 24): Promise
 
   return count || 0;
 }
-

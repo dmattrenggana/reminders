@@ -13,10 +13,10 @@ Anda punya **4 opsi** untuk verifikasi helper post. Berikut ranking berdasarkan 
 **File:** `docs/AUTO_VERIFICATION_NO_USER_ACTION.md`
 
 **Flow:**
-```
+\`\`\`
 Helper posts → Returns to app → Auto-detect → Instant verify (< 5s)
 If doesn't return → Backend cron verifies (1-4 min)
-```
+\`\`\`
 
 **User Actions:**
 - ✅ Click "Help to Remind"
@@ -49,9 +49,9 @@ If doesn't return → Backend cron verifies (1-4 min)
 **File:** `docs/SUPABASE_MIGRATION_GUIDE.md` + `docs/WEBHOOK_CHECKER.md`
 
 **Flow:**
-```
+\`\`\`
 Helper posts → Neynar webhook (instant) → Update Supabase → Realtime update
-```
+\`\`\`
 
 **User Actions:**
 - ✅ Click "Help to Remind"
@@ -82,9 +82,9 @@ Helper posts → Neynar webhook (instant) → Update Supabase → Realtime updat
 **File:** `docs/SUPABASE_ONLY_VERIFICATION.md`
 
 **Flow:**
-```
+\`\`\`
 Helper posts → Returns to app → Clicks "I Posted" → Verify (1-3s)
-```
+\`\`\`
 
 **User Actions:**
 - ✅ Click "Help to Remind"
@@ -115,9 +115,9 @@ Helper posts → Returns to app → Clicks "I Posted" → Verify (1-3s)
 **File:** `docs/AUTO_VERIFICATION_NO_USER_ACTION.md` (Option 1)
 
 **Flow:**
-```
+\`\`\`
 Helper posts → Wait → Backend cron checks → Verify (1-4 min)
-```
+\`\`\`
 
 **User Actions:**
 - ✅ Click "Help to Remind"
@@ -286,14 +286,14 @@ Based on your questions, saya rekomendasikan:
 
 ## 🎯 My Final Recommendation
 
-```
+\`\`\`
 START HERE: Auto-Detect + Backend Cron (Option 1)
 ├── Best UX (no user action)
 ├── Fast (< 5s)
 ├── No webhook complexity
 ├── Production ready
 └── Follow: docs/AUTO_VERIFICATION_NO_USER_ACTION.md
-```
+\`\`\`
 
 **Mau saya mulai implement?** Saya bisa:
 1. ✅ Setup Supabase structure
@@ -306,4 +306,3 @@ START HERE: Auto-Detect + Backend Cron (Option 1)
 Atau mau start dengan simple version dulu (manual button)?
 
 Let me know! 🚀
-

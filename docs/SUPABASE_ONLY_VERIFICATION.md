@@ -10,7 +10,7 @@
 
 ### **Architecture:**
 
-```
+\`\`\`
 ┌─────────────────┐
 │  Helper Posts   │
 │   on Farcaster  │
@@ -45,7 +45,7 @@
 │   Frontend via  │ ← Instant update via Realtime!
 │ Supabase Realtime│
 └─────────────────┘
-```
+\`\`\`
 
 ### **Flow:**
 
@@ -68,7 +68,7 @@
 
 `app/api/verify-post/route.ts`:
 
-```typescript
+\`\`\`typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 import { 
@@ -214,13 +214,13 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-```
+\`\`\`
 
 #### **2. Update Frontend Hook**
 
 `hooks/use-reminder-actions.ts`:
 
-```typescript
+\`\`\`typescript
 // Replace webhook polling with single API call + Realtime subscription
 
 const helpRemind = async (reminder: any) => {
@@ -308,7 +308,7 @@ const helpRemind = async (reminder: any) => {
     });
   }
 };
-```
+\`\`\`
 
 ### **Pros:**
 - ✅ **No webhook setup** - Simpler deployment
@@ -335,7 +335,7 @@ Use **Supabase Edge Functions** (Deno runtime) untuk handle verification logic.
 
 ### **Architecture:**
 
-```
+\`\`\`
 ┌─────────────────┐
 │  Helper Posts   │
 └────────┬────────┘
@@ -363,13 +363,13 @@ Use **Supabase Edge Functions** (Deno runtime) untuk handle verification logic.
 │  Realtime Update│
 │   to Frontend   │
 └─────────────────┘
-```
+\`\`\`
 
 ### **Implementation:**
 
 `supabase/functions/verify-helper-post/index.ts`:
 
-```typescript
+\`\`\`typescript
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -424,7 +424,7 @@ serve(async (req) => {
     headers: { 'Content-Type': 'application/json' },
   });
 });
-```
+\`\`\`
 
 ### **Pros:**
 - ✅ **All on Supabase** - Single platform
@@ -492,7 +492,7 @@ Helper self-reports dan frontend directly updates Supabase.
 
 ### **User Experience:**
 
-```
+\`\`\`
 1. User clicks "Help to Remind" button
    ↓
 2. App opens Farcaster composer with pre-filled text
@@ -514,11 +514,11 @@ Helper self-reports dan frontend directly updates Supabase.
 10. Frontend Realtime subscription fires instantly
     ↓
 11. ✅ Success! Proceed with recordReminder + claimReward
-```
+\`\`\`
 
 ### **UI Component:**
 
-```typescript
+\`\`\`typescript
 function PostConfirmationDialog({ onConfirm, onCancel }: Props) {
   return (
     <Dialog open={true}>
@@ -552,7 +552,7 @@ function PostConfirmationDialog({ onConfirm, onCancel }: Props) {
     </Dialog>
   );
 }
-```
+\`\`\`
 
 ---
 
@@ -593,4 +593,3 @@ function PostConfirmationDialog({ onConfirm, onCancel }: Props) {
 - ✅ Better UX (user knows what's happening)
 
 **Mau saya implement approach ini?** Ini lebih sederhana dari webhook setup! 🎯
-

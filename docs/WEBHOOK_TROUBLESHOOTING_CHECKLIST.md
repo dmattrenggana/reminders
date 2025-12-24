@@ -10,15 +10,15 @@ Gunakan checklist ini untuk debug webhook yang tidak berfungsi.
 
 ### **Cek File `.env.local`:**
 
-```bash
+\`\`\`bash
 # File harus ada di root project
 cat .env.local
-```
+\`\`\`
 
 **Harus ada:**
-```env
+\`\`\`env
 NEYNAR_API_KEY=your_actual_api_key_here
-```
+\`\`\`
 
 ### **Cek di Vercel Dashboard:**
 
@@ -28,21 +28,21 @@ NEYNAR_API_KEY=your_actual_api_key_here
 4. Pastikan ada: `NEYNAR_API_KEY`
 
 **Jika belum ada:**
-```bash
+\`\`\`bash
 # Via Vercel CLI
 vercel env add NEYNAR_API_KEY
 
 # Atau via dashboard: Settings → Environment Variables → Add
-```
+\`\`\`
 
 **⚠️ PENTING:** Setelah add environment variable, **REDEPLOY** aplikasi!
 
-```bash
+\`\`\`bash
 # Trigger redeploy
 vercel --prod
 
 # Atau via dashboard: Deployments → Redeploy
-```
+\`\`\`
 
 ---
 
@@ -50,18 +50,18 @@ vercel --prod
 
 ### **A. Jalankan Setup Script:**
 
-```bash
+\`\`\`bash
 # Test script locally first
 npx tsx scripts/setup-neynar-webhook.ts
-```
+\`\`\`
 
 **Expected output:**
-```
+\`\`\`
 🚀 Setting up Neynar webhook...
 Webhook URL: https://remindersbase.vercel.app/api/webhooks/neynar-cast
 ✅ Webhook created successfully!
 Webhook response: { ... }
-```
+\`\`\`
 
 **Possible errors:**
 
@@ -90,7 +90,7 @@ Webhook response: { ... }
 
 ### **A. Test Endpoint Accessibility:**
 
-```bash
+\`\`\`bash
 # Test dari terminal (curl)
 curl -X POST https://remindersbase.vercel.app/api/webhooks/neynar-cast \
   -H "Content-Type: application/json" \
@@ -105,32 +105,32 @@ curl -X POST https://remindersbase.vercel.app/api/webhooks/neynar-cast \
       "timestamp": "2024-12-25T10:00:00Z"
     }
   }'
-```
+\`\`\`
 
 **Expected response:**
-```json
+\`\`\`json
 {
   "success": true,
   "verified": 0,
   "message": "No pending verification found"
 }
-```
+\`\`\`
 
 **If error 404 or 500:** Webhook endpoint tidak accessible atau error di code
 
 ### **B. Cek Vercel Deployment:**
 
-```bash
+\`\`\`bash
 # Via Vercel CLI
 vercel logs --follow
 
 # Atau via dashboard: Deployments → Latest → Functions Logs
-```
+\`\`\`
 
 **Cari log:**
-```
+\`\`\`
 [Webhook] Received Neynar webhook: { type: 'cast.created', ... }
-```
+\`\`\`
 
 ---
 
@@ -146,33 +146,33 @@ vercel logs --follow
 
 2. **Click "Help to remind" (saat T-1 hour):**
    - Cek console browser untuk log:
-   ```javascript
+   \`\`\`javascript
    [HelpRemind] Creating pending verification via webhook mode for reminder: X
    [HelpRemind] ✅ Pending verification created: uuid-token
-   ```
+   \`\`\`
 
 3. **Post di Farcaster/Warpcast:**
    - Format exact:
-   ```
+   \`\`\`
    Tick-tock, @creatorusername ! ⏰ Don't forget your [description] is approaching. Beat the clock! https://remindersbase.vercel.app/
-   ```
+   \`\`\`
    - **PENTING:** Ganti `@creatorusername` dengan username yang benar!
 
 4. **Return to app:**
    - App akan polling status
    - Cek console:
-   ```javascript
+   \`\`\`javascript
    [HelpRemind] Polling verification status (attempt 1/120). Token: xxx
    [HelpRemind] ✅ Post verified via webhook!
-   ```
+   \`\`\`
 
 5. **Cek Vercel logs untuk webhook event:**
-   ```
+   \`\`\`
    [Webhook] Received Neynar webhook
    [Webhook] Processing cast: { authorFid: 12345, ... }
    [Webhook] ✅ Cast matches verification requirements
    [Webhook] ✅ Successfully verified reminder X for helper FID 12345
-   ```
+   \`\`\`
 
 ---
 
@@ -206,14 +206,14 @@ vercel logs --follow
 3. Post harus recent (< 10 menit)
 
 **Debug pattern:**
-```javascript
+\`\`\`javascript
 // Pattern yang digunakan di webhook:
 const mentionPattern = new RegExp(`@${creatorUsername}`, 'i');
 const reminderPattern = new RegExp(
   `(Tick-tock|Don't forget|Beat the clock|approaching|remindersbase\\.vercel\\.app)`,
   'i'
 );
-```
+\`\`\`
 
 ### **Issue 4: "Verification expired"**
 
@@ -230,14 +230,14 @@ const reminderPattern = new RegExp(
 **Fix:**
 1. **Cek status webhook** di Neynar dashboard (harus Active)
 2. **Simplify pattern** di webhook filter:
-   ```
+   \`\`\`
    remindersbase.vercel.app
-   ```
+   \`\`\`
    (hapus regex kompleks jika masalah persist)
 3. **Test dengan simple cast:**
-   ```
+   \`\`\`
    Test https://remindersbase.vercel.app/
-   ```
+   \`\`\`
 
 ---
 
@@ -247,7 +247,7 @@ const reminderPattern = new RegExp(
 
 Tambahkan di `app/api/webhooks/neynar-cast/route.ts`:
 
-```typescript
+\`\`\`typescript
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
     // ... rest of code
   }
 }
-```
+\`\`\`
 
 Redeploy dan cek logs.
 
@@ -274,7 +274,7 @@ Cek:
 
 ### **3. Manual Test Pending Verification**
 
-```bash
+\`\`\`bash
 # Test create pending verification directly
 curl -X POST https://remindersbase.vercel.app/api/reminders/record \
   -H "Content-Type: application/json" \
@@ -285,26 +285,26 @@ curl -X POST https://remindersbase.vercel.app/api/reminders/record \
     "creatorUsername": "testuser",
     "useWebhook": true
   }'
-```
+\`\`\`
 
 Expected:
-```json
+\`\`\`json
 {
   "success": true,
   "verification_token": "uuid-here",
   "status": "pending"
 }
-```
+\`\`\`
 
 ### **4. Test Verification Status API**
 
-```bash
+\`\`\`bash
 # Get status (replace TOKEN with actual token)
 curl https://remindersbase.vercel.app/api/verifications/TOKEN
-```
+\`\`\`
 
 Expected (pending):
-```json
+\`\`\`json
 {
   "status": "pending",
   "reminderId": 1,
@@ -312,17 +312,17 @@ Expected (pending):
   "createdAt": "...",
   "expiresAt": "..."
 }
-```
+\`\`\`
 
 Expected (verified):
-```json
+\`\`\`json
 {
   "status": "verified",
   "neynarScore": 0.85,
   "estimatedReward": "0.123",
   "verifiedAt": "..."
 }
-```
+\`\`\`
 
 ---
 
@@ -330,7 +330,7 @@ Expected (verified):
 
 Save as `test-webhook.sh`:
 
-```bash
+\`\`\`bash
 #!/bin/bash
 
 echo "=== Webhook Diagnostic Tool ==="
@@ -370,13 +370,13 @@ echo "Look for: [Webhook] Received Neynar webhook"
 echo ""
 
 echo "=== Diagnostic Complete ==="
-```
+\`\`\`
 
 Run:
-```bash
+\`\`\`bash
 chmod +x test-webhook.sh
 ./test-webhook.sh
-```
+\`\`\`
 
 ---
 
@@ -387,13 +387,13 @@ chmod +x test-webhook.sh
 Temporarily disable webhook mode untuk testing:
 
 In `hooks/use-reminder-actions.ts`, change:
-```typescript
+\`\`\`typescript
 // From:
 useWebhook: true,
 
 // To:
 useWebhook: false, // Use polling mode as fallback
-```
+\`\`\`
 
 This will use direct API verification (polling) instead of webhook.
 
@@ -422,4 +422,3 @@ Webhook berfungsi jika:
 6. ✅ Helper dapat claim reward setelah creator confirm
 
 Jika semua checklist ✅, webhook sudah berfungsi dengan baik!
-

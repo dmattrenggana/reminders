@@ -30,7 +30,7 @@ Source: [Supabase Documentation](https://supabase.com/docs)
 
 Di Supabase Dashboard → SQL Editor, run query ini:
 
-```sql
+\`\`\`sql
 -- Create pending_verifications table
 CREATE TABLE IF NOT EXISTS pending_verifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -83,15 +83,15 @@ CREATE POLICY "Allow service role all operations"
   TO service_role
   USING (true)
   WITH CHECK (true);
-```
+\`\`\`
 
 ---
 
 ### **Step 3: Install Supabase Client**
 
-```bash
+\`\`\`bash
 npm install @supabase/supabase-js
-```
+\`\`\`
 
 ---
 
@@ -99,11 +99,11 @@ npm install @supabase/supabase-js
 
 Add to `.env.local` and Vercel:
 
-```env
+\`\`\`env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # For API routes only!
-```
+\`\`\`
 
 **Get credentials:**
 - Settings → API → Project URL
@@ -119,7 +119,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # For API routes only!
 
 Create `lib/supabase/client.ts`:
 
-```typescript
+\`\`\`typescript
 import { createClient } from '@supabase/supabase-js';
 
 // Client for API routes (has full access)
@@ -150,7 +150,7 @@ export function getSupabaseClient() {
 
   return createClient(supabaseUrl, supabaseAnonKey);
 }
-```
+\`\`\`
 
 ---
 
@@ -158,7 +158,7 @@ export function getSupabaseClient() {
 
 Create `lib/supabase/verification-service.ts`:
 
-```typescript
+\`\`\`typescript
 import { getSupabaseServiceClient } from './client';
 
 export interface PendingVerification {
@@ -348,7 +348,7 @@ export async function cleanupOldVerifications(maxAgeHours: number = 24): Promise
   console.log(`[Supabase] Cleaned up ${count || 0} old verifications`);
   return count || 0;
 }
-```
+\`\`\`
 
 ---
 
@@ -357,38 +357,38 @@ export async function cleanupOldVerifications(maxAgeHours: number = 24): Promise
 #### **A. Update `/api/reminders/record/route.ts`**
 
 Replace import:
-```typescript
+\`\`\`typescript
 // Old:
 import { createPendingVerification, findPendingVerification } from '@/lib/utils/pending-verifications';
 
 // New:
 import { createPendingVerification, findPendingVerification } from '@/lib/supabase/verification-service';
-```
+\`\`\`
 
 That's it! Function signatures are compatible.
 
 #### **B. Update `/api/webhooks/neynar-cast/route.ts`**
 
 Replace imports:
-```typescript
+\`\`\`typescript
 // Old:
 const { getAllPendingVerifications } = await import('@/lib/utils/pending-verifications');
 const { markVerificationAsVerified } = await import('@/lib/utils/pending-verifications');
 
 // New:
 import { getAllPendingVerifications, markVerificationAsVerified } from '@/lib/supabase/verification-service';
-```
+\`\`\`
 
 #### **C. Update `/api/verifications/[token]/route.ts`**
 
 Replace import:
-```typescript
+\`\`\`typescript
 // Old:
 import { getPendingVerificationById } from '@/lib/utils/pending-verifications';
 
 // New:
 import { getPendingVerificationById } from '@/lib/supabase/verification-service';
-```
+\`\`\`
 
 ---
 
@@ -396,7 +396,7 @@ import { getPendingVerificationById } from '@/lib/supabase/verification-service'
 
 Update `hooks/use-reminder-actions.ts` untuk use Realtime instead of polling:
 
-```typescript
+\`\`\`typescript
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 // In helpRemind function, replace polling with subscription:
@@ -479,25 +479,25 @@ async function proceedWithReward() {
   // Continue with recordReminder and claimReward as before
   // ... (existing code)
 }
-```
+\`\`\`
 
 ---
 
 ### **Step 9: Deploy to Vercel**
 
 1. **Add environment variables** to Vercel:
-   ```bash
+   \`\`\`bash
    vercel env add NEXT_PUBLIC_SUPABASE_URL
    vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
    vercel env add SUPABASE_SERVICE_ROLE_KEY
-   ```
+   \`\`\`
 
 2. **Redeploy**:
-   ```bash
+   \`\`\`bash
    git add .
    git commit -m "feat: migrate verification to Supabase"
    git push origin main
-   ```
+   \`\`\`
 
 ---
 
@@ -573,7 +573,7 @@ Option 1: **Automatic (pg_cron)**
 Option 2: **Manual API endpoint**
 
 Create `/api/admin/cleanup-verifications/route.ts`:
-```typescript
+\`\`\`typescript
 import { cleanupOldVerifications } from '@/lib/supabase/verification-service';
 import { NextResponse } from 'next/server';
 
@@ -585,12 +585,12 @@ export async function POST() {
     removedCount: count,
   });
 }
-```
+\`\`\`
 
 Call manually:
-```bash
+\`\`\`bash
 curl -X POST https://remindersbase.vercel.app/api/admin/cleanup-verifications
-```
+\`\`\`
 
 ---
 
@@ -599,9 +599,9 @@ curl -X POST https://remindersbase.vercel.app/api/admin/cleanup-verifications
 ### **Error: Missing Supabase environment variables**
 
 **Fix:** Check `.env.local` and Vercel env vars:
-```bash
+\`\`\`bash
 vercel env ls
-```
+\`\`\`
 
 ### **Error: Failed to connect to Supabase**
 
@@ -613,9 +613,9 @@ vercel env ls
 ### **Error: Row Level Security policy**
 
 **Fix:** Disable RLS for testing:
-```sql
+\`\`\`sql
 ALTER TABLE pending_verifications DISABLE ROW LEVEL SECURITY;
-```
+\`\`\`
 
 Or update policies to allow service role access.
 
@@ -645,4 +645,3 @@ After migration success:
 **Migration Complete!** 🎉
 
 Your verification system is now production-ready with persistent storage!
-

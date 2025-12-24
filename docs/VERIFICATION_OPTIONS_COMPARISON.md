@@ -11,7 +11,7 @@
 ### **Option 1: Neynar Webhook + Supabase (RECOMMENDED ⭐)**
 
 **How it works:**
-```
+\`\`\`
 1. Helper clicks "Help to remind"
    └─> Create pending verification in Supabase
 
@@ -24,7 +24,7 @@
 
 4. Frontend gets instant update via Supabase Realtime
    └─> Proceed with recordReminder + claimReward
-```
+\`\`\`
 
 **Pros:**
 - ✅ **Real-time** - Instant detection (< 1 second)
@@ -49,7 +49,7 @@
 ### **Option 2: Frontend Polling + Supabase**
 
 **How it works:**
-```
+\`\`\`
 1. Helper clicks "Help to remind"
    └─> Create pending verification in Supabase
 
@@ -62,7 +62,7 @@
 
 4. Frontend detects update (via polling or Realtime)
    └─> Proceed with recordReminder + claimReward
-```
+\`\`\`
 
 **Pros:**
 - ✅ **Simple setup** - No webhook configuration needed
@@ -87,7 +87,7 @@
 ### **Option 3: Backend Cron + Supabase**
 
 **How it works:**
-```
+\`\`\`
 1. Helper clicks "Help to remind"
    └─> Create pending verification in Supabase
 
@@ -101,7 +101,7 @@
 4. Frontend subscribes to Supabase Realtime
    └─> Gets instant update when status changes
    └─> Proceed with recordReminder + claimReward
-```
+\`\`\`
 
 **Pros:**
 - ✅ **Centralized** - One job handles all verifications
@@ -203,7 +203,7 @@
 
 You can implement **webhook as primary + polling as fallback**:
 
-```typescript
+\`\`\`typescript
 // In hooks/use-reminder-actions.ts
 
 async function verifyPost(verificationToken: string) {
@@ -260,7 +260,7 @@ async function verifyPost(verificationToken: string) {
   
   return verificationData;
 }
-```
+\`\`\`
 
 **Benefits:**
 - ✅ 99% of time: Instant webhook verification
@@ -274,13 +274,13 @@ async function verifyPost(verificationToken: string) {
 For local development (webhook can't reach localhost):
 
 **Option A: Use ngrok/localtunnel**
-```bash
+\`\`\`bash
 npx ngrok http 3000
 # Use ngrok URL for webhook: https://xyz.ngrok.io/api/webhooks/neynar-cast
-```
+\`\`\`
 
 **Option B: Use polling mode temporarily**
-```typescript
+\`\`\`typescript
 // In hooks/use-reminder-actions.ts
 const useWebhook = process.env.NODE_ENV === 'production'; // Only webhook in prod
 
@@ -294,7 +294,7 @@ const recordResponse = await fetch("/api/reminders/record", {
     useWebhook: useWebhook, // false in development
   }),
 });
-```
+\`\`\`
 
 ---
 
@@ -334,4 +334,3 @@ const recordResponse = await fetch("/api/reminders/record", {
 ---
 
 **Conclusion:** Webhook + Supabase adalah kombinasi terbaik untuk production app! 🚀
-

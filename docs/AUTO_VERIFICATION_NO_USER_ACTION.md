@@ -10,7 +10,7 @@
 
 ### **Architecture:**
 
-```
+\`\`\`
 Helper posts on Farcaster
          ↓
 Helper returns to app (or stays on Farcaster)
@@ -25,7 +25,7 @@ Frontend Supabase Realtime subscription
   - No user action needed!
          ↓
 Auto-proceed with recordReminder + claimReward
-```
+\`\`\`
 
 ### **Flow:**
 
@@ -47,7 +47,7 @@ Auto-proceed with recordReminder + claimReward
 
 `app/api/cron/verify-pending-posts/route.ts`:
 
-```typescript
+\`\`\`typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 import { 
@@ -187,13 +187,13 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-```
+\`\`\`
 
 #### **2. Configure Vercel Cron**
 
 `vercel.json`:
 
-```json
+\`\`\`json
 {
   "crons": [
     {
@@ -206,17 +206,17 @@ export async function GET(request: NextRequest) {
     }
   ]
 }
-```
+\`\`\`
 
 **Every 1 minute** - Fast verification (1-2 minute delay max)
 
 Or for efficiency:
-```json
+\`\`\`json
 {
   "path": "/api/cron/verify-pending-posts",
   "schedule": "*/2 * * * *"
 }
-```
+\`\`\`
 
 **Every 2 minutes** - More efficient, 2-4 minute delay max
 
@@ -224,7 +224,7 @@ Or for efficiency:
 
 `hooks/use-reminder-actions.ts`:
 
-```typescript
+\`\`\`typescript
 const helpRemind = async (reminder: any) => {
   try {
     setTxStatus("Setting up verification...");
@@ -366,7 +366,7 @@ async function proceedWithReward(verificationData: any) {
   setTxStatus(null);
   await fetchReminders(true);
 }
-```
+\`\`\`
 
 ### **Pros:**
 - ✅ **No user action** - Fully automatic!
@@ -394,7 +394,7 @@ Combine backend polling with **smart frontend detection** for best UX!
 
 ### **Architecture:**
 
-```
+\`\`\`
 Helper posts on Farcaster
          ↓
 Helper returns to app
@@ -405,11 +405,11 @@ Frontend detects app focus (automatic!)
          ↓
 If verified: Auto-proceed
 If not verified: Subscribe to Realtime (backend cron will catch it)
-```
+\`\`\`
 
 ### **Implementation:**
 
-```typescript
+\`\`\`typescript
 const helpRemind = async (reminder: any) => {
   // ... create verification, open Farcaster ...
   
@@ -507,7 +507,7 @@ const helpRemind = async (reminder: any) => {
     setTxStatus(null);
   }, 5 * 60 * 1000);
 };
-```
+\`\`\`
 
 ### **Pros:**
 - ✅ **Best UX** - Instant verification when user returns!
@@ -557,7 +557,7 @@ const helpRemind = async (reminder: any) => {
 
 ## 🚀 User Experience Flow
 
-```
+\`\`\`
 1. User clicks "Help to Remind"
    ↓
 2. App opens Farcaster composer
@@ -580,7 +580,7 @@ const helpRemind = async (reminder: any) => {
 9. App automatically calls claimReward (NO USER ACTION!)
    ↓
 10. ✅ Done! User just sees success message
-```
+\`\`\`
 
 **User only does:**
 - Click "Help to Remind"
@@ -594,7 +594,7 @@ const helpRemind = async (reminder: any) => {
 
 Add to `.env.local` and Vercel:
 
-```env
+\`\`\`env
 # Existing
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
@@ -603,7 +603,7 @@ NEYNAR_API_KEY=your_neynar_api_key
 
 # New for cron
 CRON_SECRET=your_random_secret_here  # Generate with: openssl rand -base64 32
-```
+\`\`\`
 
 ---
 
@@ -650,4 +650,3 @@ CRON_SECRET=your_random_secret_here  # Generate with: openssl rand -base64 32
 **No user action needed beyond posting!** 🎉
 
 **Mau saya implement approach ini?** Ini memberikan UX terbaik! 🚀
-

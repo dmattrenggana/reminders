@@ -53,14 +53,14 @@ See complete code in: `docs/AUTOMATIC_VERIFICATION_NO_BUTTON.md`
 ## 📊 Architecture Overview
 
 ### **Old (Webhook-based):**
-```
+\`\`\`
 Helper posts → Neynar webhook → In-memory storage → Frontend polling API → Lost on redeploy ❌
-```
+\`\`\`
 
 ### **New (Supabase + Auto-polling):**
-```
+\`\`\`
 Helper posts → Frontend auto-polls API (5s) → Supabase database → Realtime update → Auto-proceed ✅
-```
+\`\`\`
 
 ---
 
@@ -82,7 +82,7 @@ Helper posts → Frontend auto-polls API (5s) → Supabase database → Realtime
 
 ## 🔄 User Flow (After Implementation)
 
-```
+\`\`\`
 1. User clicks "Help to Remind"
    ↓
 2. Farcaster composer opens
@@ -98,7 +98,7 @@ Helper posts → Frontend auto-polls API (5s) → Supabase database → Realtime
 6. ✅ "Recording reminder..." (auto)
    ↓
 7. ✅ "Reward claimed!" (auto)
-```
+\`\`\`
 
 **Zero button clicks after initial action!**
 
@@ -119,19 +119,19 @@ Helper posts → Frontend auto-polls API (5s) → Supabase database → Realtime
 After Supabase setup complete:
 
 - [ ] Test Supabase connection
-  ```bash
+  \`\`\`bash
   npm run dev
   # Should see no errors about Supabase
-  ```
+  \`\`\`
 
 - [ ] Test verification API
-  ```bash
+  \`\`\`bash
   # Make test call to /api/verify-post
   curl -X POST http://localhost:3000/api/verify-post \
     -H "Content-Type: application/json" \
     -d '{"verificationToken":"test"}'
   # Should return 404 (expected for invalid token)
-  ```
+  \`\`\`
 
 - [ ] Update frontend hook (see docs)
 
@@ -189,4 +189,3 @@ After Supabase setup complete:
 **Estimated time to production:** 30-45 minutes
 
 Let's finish this! 🚀
-

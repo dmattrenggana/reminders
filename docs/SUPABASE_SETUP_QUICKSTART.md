@@ -23,7 +23,7 @@
 2. Click **"New Query"**
 3. **Copy-paste SQL ini** ke editor:
 
-```sql
+\`\`\`sql
 -- Create pending_verifications table
 CREATE TABLE IF NOT EXISTS pending_verifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -70,7 +70,7 @@ CREATE POLICY "Allow anon read access"
 
 -- Enable Realtime for this table
 ALTER PUBLICATION supabase_realtime ADD TABLE pending_verifications;
-```
+\`\`\`
 
 4. **Click "Run"** (atau press `Ctrl+Enter`)
 5. **Verify success:** Should see "Success. No rows returned"
@@ -83,11 +83,11 @@ ALTER PUBLICATION supabase_realtime ADD TABLE pending_verifications;
 2. Click **"API"**
 3. **Copy these values:**
 
-```
+\`\`\`
 Project URL: https://xxxxx.supabase.co
 anon public key: eyJhbGc...
 service_role key: eyJhbGc... (⚠️ Keep this secret!)
-```
+\`\`\`
 
 4. **Save these** - you'll need them next!
 
@@ -99,7 +99,7 @@ service_role key: eyJhbGc... (⚠️ Keep this secret!)
 
 Create/update `.env.local`:
 
-```env
+\`\`\`env
 # Existing vars...
 NEYNAR_API_KEY=your_existing_neynar_key
 
@@ -107,13 +107,13 @@ NEYNAR_API_KEY=your_existing_neynar_key
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...your_service_role_key
-```
+\`\`\`
 
 ⚠️ **Replace with YOUR actual values from Step 3!**
 
 #### **B. Vercel Production:**
 
-```bash
+\`\`\`bash
 # Add to Vercel
 vercel env add NEXT_PUBLIC_SUPABASE_URL
 # Paste: https://xxxxx.supabase.co
@@ -123,7 +123,7 @@ vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 vercel env add SUPABASE_SERVICE_ROLE_KEY
 # Paste: eyJhbGc...your_service_role_key
-```
+\`\`\`
 
 Or via Vercel Dashboard:
 1. Go to: https://vercel.com/dashboard
@@ -203,4 +203,3 @@ After Supabase setup complete:
 5. Test end-to-end flow
 
 **Let me know when Step 1-5 are done!** 🚀
-

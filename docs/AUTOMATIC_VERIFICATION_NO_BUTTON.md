@@ -10,7 +10,7 @@
 
 ### **How It Works:**
 
-```
+\`\`\`
 1. Helper clicks "Help to Remind"
    ↓
 2. Create pending verification in Supabase
@@ -25,11 +25,11 @@
    - Verification already done automatically!
    - Frontend Realtime subscription fires
    - ✅ Auto-proceed with recordReminder + claimReward
-```
+\`\`\`
 
 ### **User Experience:**
 
-```
+\`\`\`
 User clicks "Help to Remind"
          ↓
 Farcaster composer opens
@@ -39,7 +39,7 @@ User posts (takes 10-30 seconds)
 User returns to app
          ↓
 ✅ "Post verified! Processing reward..." (automatic!)
-```
+\`\`\`
 
 **No button click needed!**
 
@@ -49,7 +49,7 @@ User returns to app
 
 ### **Code: `hooks/use-reminder-actions.ts`**
 
-```typescript
+\`\`\`typescript
 const helpRemind = async (reminder: any) => {
   try {
     setTxStatus("Setting up verification...");
@@ -251,7 +251,7 @@ const helpRemind = async (reminder: any) => {
     setTxStatus(null);
   }
 };
-```
+\`\`\`
 
 ### **How It Works:**
 
@@ -273,7 +273,7 @@ Use Supabase pg_cron to automatically check pending verifications.
 
 ### **SQL Setup:**
 
-```sql
+\`\`\`sql
 -- Create function to check pending verifications
 CREATE OR REPLACE FUNCTION auto_verify_pending_posts()
 RETURNS void AS $$
@@ -306,13 +306,13 @@ SELECT cron.schedule(
   '*/10 * * * * *', -- Every 10 seconds
   'SELECT auto_verify_pending_posts();'
 );
-```
+\`\`\`
 
 ### **Supabase Edge Function:**
 
 `supabase/functions/auto-verify/index.ts`:
 
-```typescript
+\`\`\`typescript
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -382,13 +382,13 @@ serve(async () => {
     headers: { 'Content-Type': 'application/json' },
   });
 });
-```
+\`\`\`
 
 **Schedule Edge Function:**
 
 Use Supabase Cron to trigger Edge Function every 10 seconds:
 
-```bash
+\`\`\`bash
 # In Supabase Dashboard
 # Database → Cron Jobs → New Cron Job
 
@@ -397,7 +397,7 @@ SELECT
     url:='https://your-project.supabase.co/functions/v1/auto-verify',
     headers:='{"Authorization": "Bearer YOUR_ANON_KEY"}'::jsonb
   );
-```
+\`\`\`
 
 ### **Pros:**
 - ✅ **Fully automatic** - No user action needed
@@ -420,7 +420,7 @@ Use Vercel Cron to trigger verification API.
 
 `app/api/cron/verify-pending/route.ts`:
 
-```typescript
+\`\`\`typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 import {
@@ -521,13 +521,13 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-```
+\`\`\`
 
 ### **Vercel Cron Configuration:**
 
 `vercel.json`:
 
-```json
+\`\`\`json
 {
   "crons": [
     {
@@ -536,7 +536,7 @@ export async function GET(request: NextRequest) {
     }
   ]
 }
-```
+\`\`\`
 
 **Note:** Vercel cron supports intervals down to 1 minute on Pro plan.
 
@@ -571,7 +571,7 @@ export async function GET(request: NextRequest) {
 
 **User Experience:**
 
-```
+\`\`\`
 User clicks "Help to Remind"
          ↓
 Farcaster opens
@@ -585,7 +585,7 @@ User returns to app
 ✅ "Post verified! Processing..." (auto!)
          ↓
 ✅ "Reward claimed!" (all automatic!)
-```
+\`\`\`
 
 **Implementation:**
 - ✅ Add auto-polling code to `helpRemind` function
@@ -599,7 +599,7 @@ User returns to app
 
 Combine multiple methods:
 
-```typescript
+\`\`\`typescript
 // 1. Start frontend auto-polling (fast, 5s interval)
 const frontendPolling = startFrontendPolling(verification_token);
 
@@ -617,7 +617,7 @@ const channel = supabase
   .channel(`verification-${verification_token}`)
   .on('postgres_changes', { /* ... */ })
   .subscribe();
-```
+\`\`\`
 
 **Result:**
 - ✅ If user stays: Frontend polling catches it fast (5-10s)
@@ -640,11 +640,10 @@ const channel = supabase
 6. ✅ **Auto-proceed** with recordReminder + claimReward
 
 **User sees:**
-```
+\`\`\`
 "Help to Remind" → Farcaster → Post → Return → ✅ Done!
-```
+\`\`\`
 
 **No button, no confirmation, fully automatic!** 🚀
 
 **Mau saya implement sekarang?** Code sudah ready di atas! 🎯
-
