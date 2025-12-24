@@ -653,11 +653,12 @@ export function useReminderActions({
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
 
-      // Step 4: Create pending verification in Supabase (NO WEBHOOK!)
+      // Step 4: Create pending verification via webhook mode (PRIMARY METHOD)
+      // Webhook mode is now the default for real-time verification
       setTxStatus("Setting up verification...");
-      console.log('[HelpRemind] Creating pending verification in Supabase for reminder:', reminder.id);
+      console.log('[HelpRemind] Creating pending verification via webhook mode for reminder:', reminder.id);
       
-      // Create pending verification entry in Supabase
+      // Create pending verification entry (webhook will verify automatically when post is created)
       let verificationToken: string | null = null;
       try {
         const recordResponse = await fetch("/api/reminders/record", {
@@ -668,7 +669,7 @@ export function useReminderActions({
             helperAddress: address,
             helperFid: fid,
             creatorUsername: creatorUsername,
-            useSupabase: true, // Use Supabase only, no webhook
+            useWebhook: true, // Enable webhook mode (primary method)
           }),
         });
 
@@ -694,115 +695,105 @@ export function useReminderActions({
         throw new Error("Verification token not received. Please try again.");
       }
 
-      // Step 5: START AUTOMATIC VERIFICATION (No user button needed!)
-      setTxStatus("Waiting for your post (automatic verification)...");
-      console.log('[HelpRemind] 🤖 Starting automatic verification. Token:', verificationToken);
+      // Step 5: Wait for user to post and return to app
+      // Webhook will automatically verify the post when it's created
+      setTxStatus("Waiting for you to post and return to app...");
+      console.log('[HelpRemind] Waiting for webhook verification. Token:', verificationToken);
       
-      let verificationComplete = false;
+      // Poll verification status endpoint (webhook updates this in real-time)
+      // Extended to 2 minutes to give user time to post and return to miniapp
+      let verificationAttempts = 0;
+      const maxVerificationAttempts = 120; // 120 attempts = ~2 minutes (poll every 1 second)
+      let verificationSuccess = false;
       let verificationData: any = null;
       
-      // Subscribe to Supabase Realtime for instant updates
-      const supabase = getSupabaseClient();
-      const channel = supabase
-        .channel(`verification-${verificationToken}`)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'pending_verifications',
-          filter: `id=eq.${verificationToken}`,
-        }, (payload) => {
-          console.log('[HelpRemind] 📡 Realtime update received:', payload);
-          
-          if (payload.new && (payload.new as any).status === 'verified') {
-            verificationComplete = true;
-            verificationData = {
-              success: true,
-              neynarScore: (payload.new as any).neynar_score,
-              estimatedReward: (payload.new as any).estimated_reward,
-            };
-            console.log('[HelpRemind] ✅ Realtime: Post verified!', verificationData);
-          }
-        })
-        .subscribe();
-
-      // Start automatic background polling (every 5 seconds)
-      const startTime = Date.now();
-      const maxWaitTime = 3 * 60 * 1000; // 3 minutes max
-      let pollCount = 0;
-      
-      const pollInterval = setInterval(async () => {
-        if (verificationComplete) {
-          clearInterval(pollInterval);
-          channel.unsubscribe();
-          return;
-        }
-
-        if (Date.now() - startTime > maxWaitTime) {
-          clearInterval(pollInterval);
-          channel.unsubscribe();
-          return;
-        }
-
-        pollCount++;
+      while (verificationAttempts < maxVerificationAttempts && !verificationSuccess) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between attempts
+        verificationAttempts++;
+        
         try {
-          console.log(`[HelpRemind] 🔄 Auto-polling verification (attempt ${pollCount})`);
+          const progress = `${verificationAttempts}/${maxVerificationAttempts}`;
+          setTxStatus(`Waiting for post verification... (${progress})`);
+          console.log(`[HelpRemind] Polling verification status (attempt ${progress}). Token: ${verificationToken}`);
           
-          const verifyResponse = await fetch("/api/verify-post", {
-            method: "POST",
+          // Poll verification status (webhook updates this when post is verified)
+          const statusResponse = await fetch(`/api/verifications/${verificationToken}`, {
+            method: "GET",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ verificationToken }),
           });
 
-          if (!verifyResponse.ok) {
-            console.log(`[HelpRemind] ⏳ Polling response not OK: ${verifyResponse.status}`);
-            return; // Continue polling
+          // Check if response is OK
+          if (!statusResponse.ok) {
+            if (statusResponse.status === 404) {
+              // Verification not found - might not be created yet, continue polling
+              console.log(`[HelpRemind] ⏳ Verification not found yet (attempt ${progress})`);
+              continue;
+            } else {
+              // Other errors - log and continue polling
+              console.warn(`[HelpRemind] ⚠️ Status check error (attempt ${progress}): HTTP ${statusResponse.status}`);
+              continue;
+            }
           }
 
-          const verifyData = await verifyResponse.json();
+          // Response is OK, parse JSON
+          const statusData = await statusResponse.json();
           
-          if (verifyData.success && verifyData.status === 'verified') {
-            clearInterval(pollInterval);
-            channel.unsubscribe();
-            
-            if (!verificationComplete) {
-              verificationComplete = true;
-              verificationData = {
-                success: true,
-                neynarScore: verifyData.neynarScore,
-                estimatedReward: verifyData.estimatedReward,
-              };
-              console.log('[HelpRemind] ✅ Polling: Post verified!', verificationData);
-            }
+          // Check verification status
+          if (statusData.status === 'verified') {
+            // Webhook has verified the post!
+            console.log('[HelpRemind] ✅ Post verified via webhook!', {
+              neynarScore: statusData.neynarScore,
+              estimatedReward: statusData.estimatedReward,
+              verifiedAt: statusData.verifiedAt,
+            });
+            verificationSuccess = true;
+            verificationData = {
+              success: true,
+              neynarScore: statusData.neynarScore,
+              estimatedReward: statusData.estimatedReward,
+            };
+            break; // Exit polling loop
+          } else if (statusData.status === 'expired') {
+            // Verification expired
+            throw new Error("Verification expired. Please try again and post within 10 minutes.");
+          } else if (statusData.status === 'pending') {
+            // Still waiting for webhook
+            console.log(`[HelpRemind] ⏳ Still waiting for webhook verification (attempt ${progress})`);
+            // Continue polling
           } else {
-            console.log(`[HelpRemind] ⏳ Still waiting... Status: ${verifyData.status}`);
+            // Unknown status
+            console.warn(`[HelpRemind] ⚠️ Unknown verification status: ${statusData.status}`);
+            // Continue polling
           }
         } catch (error: any) {
-          console.warn('[HelpRemind] ⚠️ Polling error:', error.message);
+          // Network errors - continue polling if we haven't exceeded max attempts
+          if (error.message?.includes("expired")) {
+            throw error; // Expired is a critical error
+          }
+          
+          if (verificationAttempts >= maxVerificationAttempts) {
+            throw new Error("Post verification timeout. Please ensure you posted the reminder and mentioned the creator, then returned to the app.");
+          }
+          
+          console.log(`[HelpRemind] ⏳ Retrying after error (attempt ${verificationAttempts}/${maxVerificationAttempts}):`, error.message);
+          continue;
         }
-      }, 5000); // Poll every 5 seconds
-
-      // Wait for verification (via Realtime or polling)
-      while (!verificationComplete && Date.now() - startTime < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-
-      clearInterval(pollInterval);
-      channel.unsubscribe();
       
-      if (!verificationComplete || !verificationData) {
-        throw new Error("Verification timeout. Please ensure you posted the reminder and mentioned the creator.");
+      if (!verificationSuccess || !verificationData) {
+        throw new Error("Post verification timeout. Please ensure you posted the reminder and mentioned the creator, then returned to the app.");
       }
       
       const data = verificationData;
 
-      // Step 6: Call recordReminder contract with Neynar score
-      setTxStatus("✅ Post verified! Recording reminder...");
+      // Step 5: Call recordReminder contract with Neynar score
+      setTxStatus("Recording reminder on-chain... Please confirm in wallet.");
       if (!publicClient) {
         throw new Error("Public client not available");
       }
 
-      // Neynar score is 0-1.0, but contract expects 0-10000 (multiply by 10000)
-      const neynarScore = Math.floor((data.neynarScore || 0.5) * 10000);
+      // Neynar score is 0-1.0, but contract expects 0-100 (multiply by 100)
+      const neynarScore = Math.floor((data.neynarScore || 0.5) * 100);
       
       const recordTxHash = await writeContractAsync({
         address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
@@ -812,10 +803,10 @@ export function useReminderActions({
         chainId: 8453,
       });
 
-      setTxStatus("Confirming record transaction...");
+      setTxStatus("Waiting for record transaction confirmation...");
       const recordReceipt = await publicClient.waitForTransactionReceipt({
         hash: recordTxHash,
-        timeout: 120000,
+        timeout: 60000,
       });
 
       if (recordReceipt.status !== "success") {
