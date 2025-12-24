@@ -92,8 +92,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Neynar score is 0-1.0 (from profile.score)
-    const neynarScore = user.profile?.score || 0.5;
+    // Calculate Neynar score (0-1 range) - same logic as app/api/neynar/score/route.ts
+    // Power badge users get high score (0.9-1.0)
+    // Others based on follower count with diminishing returns
+    let neynarScore = 0;
+    
+    // Type assertion untuk power_badge (optional property)
+    const userWithPowerBadge = user as any;
+    if (userWithPowerBadge.power_badge) {
+      neynarScore = 0.95; // Power badge = premium users
+    } else {
+      // Logarithmic scale for followers (diminishing returns)
+      // 100 followers = ~0.4, 1000 = ~0.6, 10000 = ~0.8
+      const followerCount = user.follower_count || 0;
+      neynarScore = Math.min(Math.log10(followerCount + 1) / 5, 0.89);
+    }
+
+    // Normalize to 0-1 range
+    const normalizedScore = Math.max(0, Math.min(1, neynarScore));
 
     // Step 3: Get reminder data from contract to calculate estimated reward
     let estimatedReward = "0";
@@ -111,7 +127,7 @@ export async function POST(request: NextRequest) {
         
         // Calculate reward based on tier (V4 contract logic)
         let rewardPercentage = 300; // 3% default (TIER_LOW)
-        const scorePercent = Math.floor(neynarScore * 100);
+        const scorePercent = Math.floor(normalizedScore * 100);
         if (scorePercent >= 90) {
           rewardPercentage = 1000; // 10% (TIER_HIGH)
         } else if (scorePercent >= 50) {
@@ -129,7 +145,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       message: "Reminder verified and ready to record",
-      neynarScore: neynarScore,
+      neynarScore: normalizedScore,
       estimatedReward: estimatedReward,
       user: user.username 
     });
