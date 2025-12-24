@@ -50,7 +50,5 @@ export const metadata: Metadata = {
       noindex: false,
     }),
   },
-
+    generator: 'v0.app'
 };
-
-

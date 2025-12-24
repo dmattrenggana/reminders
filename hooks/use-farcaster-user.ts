@@ -325,4 +325,3 @@ export function useFarcasterUser() {
     refreshWalletUser,
   };
 }
-
