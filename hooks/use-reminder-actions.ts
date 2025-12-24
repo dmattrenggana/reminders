@@ -494,6 +494,13 @@ export function useReminderActions({
     setTxStatus("Preparing reminder post...");
 
     try {
+      // Step 0: Validate FID first (required for Supabase)
+      if (!fid || fid === 0) {
+        throw new Error("Farcaster FID not available. Please connect your Farcaster account.");
+      }
+      
+      console.log('[HelpRemind] Starting with FID:', fid, 'Address:', address);
+      
       // Step 1: Format reminder time and deadline
       let reminderTime: Date;
       if (typeof reminder.reminderTime === 'number') {
@@ -583,7 +590,56 @@ export function useReminderActions({
         postText: postText.substring(0, 100) + '...',
       });
 
-      // Step 3: Post to Farcaster (if in miniapp)
+      // Step 3: Create pending verification in Supabase FIRST (before posting)
+      setTxStatus("Setting up verification...");
+      console.log('[HelpRemind] Creating pending verification in Supabase for reminder:', reminder.id);
+      console.log('[HelpRemind] Verification params:', {
+        reminderId: reminder.id,
+        helperAddress: address,
+        helperFid: fid,
+        creatorUsername: creatorUsername,
+      });
+      
+      // Create pending verification entry in Supabase
+      let verificationToken: string | null = null;
+      try {
+        const recordResponse = await fetch("/api/reminders/record", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reminderId: reminder.id,
+            helperAddress: address,
+            helperFid: fid,
+            creatorUsername: creatorUsername,
+            useSupabase: true, // Use Supabase only, no webhook
+          }),
+        });
+
+        if (!recordResponse.ok) {
+          const errorData = await recordResponse.json().catch(() => ({}));
+          console.error('[HelpRemind] API error response:', errorData);
+          throw new Error(errorData.message || errorData.error || `HTTP ${recordResponse.status}: Failed to create pending verification`);
+        }
+
+        const recordData = await recordResponse.json();
+        
+        if (!recordData.success) {
+          throw new Error(recordData.message || recordData.error || "Failed to create pending verification");
+        }
+
+        verificationToken = recordData.verification_token;
+        console.log('[HelpRemind] ✅ Pending verification created:', verificationToken);
+      } catch (error: any) {
+        console.error('[HelpRemind] ❌ Failed to create pending verification:', error);
+        throw new Error(`Failed to setup verification: ${error.message}`);
+      }
+
+      if (!verificationToken) {
+        throw new Error("Verification token not received. Please try again.");
+      }
+
+      // Step 4: Now post to Farcaster
+      // Step 4: Now post to Farcaster
       if (isMiniApp && typeof window !== 'undefined' && (window as any).Farcaster?.sdk) {
         try {
           setTxStatus("Opening Farcaster to post...");
@@ -626,47 +682,6 @@ export function useReminderActions({
           description: "Please post the reminder and mention the creator, then return to this app.",
         });
         await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-
-      // Step 4: Create pending verification in Supabase (NO WEBHOOK!)
-      setTxStatus("Setting up verification...");
-      console.log('[HelpRemind] Creating pending verification in Supabase for reminder:', reminder.id);
-      
-      // Create pending verification entry in Supabase
-      let verificationToken: string | null = null;
-      try {
-        const recordResponse = await fetch("/api/reminders/record", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reminderId: reminder.id,
-            helperAddress: address,
-            helperFid: fid,
-            creatorUsername: creatorUsername,
-            useSupabase: true, // Use Supabase only, no webhook
-          }),
-        });
-
-        if (!recordResponse.ok) {
-          const errorData = await recordResponse.json().catch(() => ({}));
-          throw new Error(errorData.message || errorData.error || `HTTP ${recordResponse.status}: Failed to create pending verification`);
-        }
-
-        const recordData = await recordResponse.json();
-        
-        if (!recordData.success) {
-          throw new Error(recordData.message || recordData.error || "Failed to create pending verification");
-        }
-
-        verificationToken = recordData.verification_token;
-        console.log('[HelpRemind] ✅ Pending verification created:', verificationToken);
-      } catch (error: any) {
-        console.error('[HelpRemind] ❌ Failed to create pending verification:', error);
-        throw new Error(`Failed to setup verification: ${error.message}`);
-      }
-
-      if (!verificationToken) {
-        throw new Error("Verification token not received. Please try again.");
       }
 
       // Step 5: START AUTOMATIC VERIFICATION (No user button needed!)
