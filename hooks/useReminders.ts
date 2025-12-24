@@ -129,12 +129,12 @@ export function useReminders() {
         }
       });
 
-      // Execute batch calls with rate limiting - Optimized for QuickNode quota
+      // Execute batch calls with rate limiting - Optimized for responsiveness
       const fetchedResults = await batchRpcCalls(fetchCalls, {
-        batchSize: 2, // Process 2 reminders at a time (reduced to save quota)
-        batchDelay: 1000, // 1000ms delay between batches (increased to save quota)
-        maxRetries: 1, // Reduced retries to save quota
-        retryDelay: 2000, // Increased retry delay
+        batchSize: 3, // Process 3 reminders at a time (increased for responsiveness)
+        batchDelay: 300, // 300ms delay between batches (reduced for responsiveness)
+        maxRetries: 2, // 2 retries for reliability
+        retryDelay: 500, // Reduced retry delay for responsiveness
       });
 
       // Only update state if we got valid results

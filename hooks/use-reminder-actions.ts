@@ -101,6 +101,7 @@ export function useReminderActions({
             abi: COMMIT_TOKEN_ABI,
             functionName: 'approve',
             args: [CONTRACTS.REMINDER_VAULT as `0x${string}`, amountInWei],
+            chainId: 8453, // Base Mainnet - explicitly specify to avoid getChainId error
           });
           
           console.log("[CreateReminder] Approval transaction sent:", approveTxHash);
@@ -157,6 +158,7 @@ export function useReminderActions({
         abi: REMINDER_VAULT_ABI,
         functionName: 'createReminder',
         args: [amountInWei, BigInt(deadlineTimestamp), desc, farcasterUsername],
+        chainId: 8453, // Base Mainnet - explicitly specify to avoid getChainId error
       });
 
       setTxStatus("Waiting for transaction confirmation...");
@@ -243,6 +245,7 @@ export function useReminderActions({
         abi: REMINDER_VAULT_ABI,
         functionName: 'confirmReminder',
         args: [BigInt(id)],
+        chainId: 8453, // Base Mainnet - explicitly specify to avoid getChainId error
       });
 
       setTxStatus("Waiting for transaction confirmation...");
@@ -330,6 +333,7 @@ export function useReminderActions({
           abi: REMINDER_VAULT_ABI,
           functionName: 'claimReward',
           args: [BigInt(reminder.id)],
+          chainId: 8453, // Base Mainnet - explicitly specify to avoid getChainId error
         });
 
         setTxStatus("Waiting for transaction confirmation...");

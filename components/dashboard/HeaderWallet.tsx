@@ -34,9 +34,26 @@ export function HeaderWallet({
   const handlePfpError = createImageErrorHandler(setPfpError, { suppressConsole: true });
 
   if (isConnected) {
-    // When wallet is connected, show user info from miniapp if available
-    const displayUsername = username || (isMiniApp && providerUser?.username) || (isMiniApp && providerUser?.displayName);
-    const displayPfpUrl = pfpUrl || (isMiniApp && providerUser?.pfpUrl) || (isMiniApp && providerUser?.pfp);
+    // When wallet is connected, prioritize user info from miniapp
+    // Use providerUser data as primary source when in miniapp
+    const displayUsername = isMiniApp && providerUser 
+      ? (providerUser.username || providerUser.displayName || username)
+      : (username || providerUser?.username || providerUser?.displayName);
+    
+    const displayPfpUrl = isMiniApp && providerUser
+      ? (providerUser.pfpUrl || providerUser.pfp || pfpUrl)
+      : (pfpUrl || providerUser?.pfpUrl || providerUser?.pfp);
+    
+    console.log("[HeaderWallet] Connected state:", {
+      isConnected,
+      isMiniApp,
+      hasProviderUser: !!providerUser,
+      displayUsername,
+      displayPfpUrl,
+      username,
+      pfpUrl,
+      providerUserKeys: providerUser ? Object.keys(providerUser) : []
+    });
     
     return (
       <div className="
