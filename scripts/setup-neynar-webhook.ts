@@ -46,9 +46,8 @@ async function setupWebhook() {
     });
 
     console.log('✅ Webhook created successfully!');
-    console.log('Webhook ID:', webhook.id);
-    console.log('Webhook URL:', webhook.url);
-    console.log('Subscription:', JSON.stringify(webhook.subscription, null, 2));
+    // Log webhook response (structure may vary, log full response)
+    console.log('Webhook response:', JSON.stringify(webhook, null, 2));
     
     console.log('\n📝 Next steps:');
     console.log('1. Test webhook dengan membuat cast yang match criteria');
