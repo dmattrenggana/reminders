@@ -34,6 +34,10 @@ export function HeaderWallet({
   const handlePfpError = createImageErrorHandler(setPfpError, { suppressConsole: true });
 
   if (isConnected) {
+    // When wallet is connected, show user info from miniapp if available
+    const displayUsername = username || (isMiniApp && providerUser?.username) || (isMiniApp && providerUser?.displayName);
+    const displayPfpUrl = pfpUrl || (isMiniApp && providerUser?.pfpUrl) || (isMiniApp && providerUser?.pfp);
+    
     return (
       <div className="
         flex items-center gap-2 bg-slate-50 p-1 rounded-full 
@@ -53,19 +57,23 @@ export function HeaderWallet({
             bg-white transition-all shadow-sm
           "
         >
-          {pfpUrl && !pfpError ? (
+          {displayPfpUrl && !pfpError ? (
             <img 
-              src={pfpUrl} 
+              src={displayPfpUrl} 
               alt="PFP" 
               className="w-6 h-6 rounded-full object-cover ring-2 ring-indigo-50" 
               referrerPolicy="no-referrer"
               onError={handlePfpError}
             />
+          ) : displayUsername ? (
+            <div className="w-6 h-6 rounded-full bg-indigo-300 flex items-center justify-center text-xs font-bold text-indigo-700">
+              {displayUsername.charAt(0).toUpperCase()}
+            </div>
           ) : (
             <Wallet className="h-4 w-4 text-indigo-500" />
           )}
           <span className="text-xs font-black">
-            {username ? `@${username}` : `${address?.slice(0, 4)}...`}
+            {displayUsername ? `@${displayUsername}` : `${address?.slice(0, 4)}...`}
           </span>
           <LogOut className="h-3 w-3 opacity-20 ml-1" />
         </Button>

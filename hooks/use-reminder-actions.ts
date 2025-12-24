@@ -103,18 +103,45 @@ export function useReminderActions({
             args: [CONTRACTS.REMINDER_VAULT as `0x${string}`, amountInWei],
           });
           
+          console.log("[CreateReminder] Approval transaction sent:", approveTxHash);
           setTxStatus("Waiting for approval confirmation...");
           
-          // Wait for approval to be confirmed
-          const approveReceipt = await publicClient.waitForTransactionReceipt({
-            hash: approveTxHash,
-          });
-          
-          if (approveReceipt.status !== "success") {
-            throw new Error("Approval transaction failed");
+          // Wait for approval to be confirmed with timeout
+          try {
+            const approveReceipt = await publicClient.waitForTransactionReceipt({
+              hash: approveTxHash,
+              timeout: 120000, // 2 minutes timeout
+            });
+            
+            console.log("[CreateReminder] Approval receipt received:", {
+              status: approveReceipt.status,
+              blockNumber: approveReceipt.blockNumber
+            });
+            
+            if (approveReceipt.status !== "success") {
+              throw new Error("Approval transaction failed");
+            }
+            
+            setTxStatus("Approval confirmed! Creating reminder...");
+          } catch (waitError: any) {
+            // If waitForTransactionReceipt fails, check if transaction exists
+            console.warn("[CreateReminder] Wait for receipt failed, checking transaction status:", waitError?.message || waitError);
+            
+            // Try to get transaction to verify it was sent
+            try {
+              const tx = await publicClient.getTransaction({ hash: approveTxHash });
+              if (tx) {
+                console.log("[CreateReminder] Transaction found, proceeding (receipt may be delayed)");
+                setTxStatus("Approval sent! Creating reminder...");
+                // Proceed anyway - transaction was sent, receipt may be delayed
+              } else {
+                throw new Error("Transaction not found");
+              }
+            } catch (txError: any) {
+              // If we can't verify, throw original error
+              throw waitError;
+            }
           }
-          
-          setTxStatus("Approval confirmed! Creating reminder...");
         } catch (approveError: any) {
           if (approveError.message?.includes("User rejected") || approveError.code === 4001) {
             throw new Error("Approval cancelled by user");
