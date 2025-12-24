@@ -211,12 +211,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Disable body parsing limit for webhook
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
-  },
-};
-
