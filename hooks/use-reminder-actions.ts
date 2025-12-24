@@ -546,35 +546,62 @@ export function useReminderActions({
         hour12: true
       });
 
-      // Step 2: Get creator username - fetch from creator address if not available in reminder
-      let creatorUsername = reminder.farcasterUsername || reminder.creatorUsername;
+      // Step 2: Get creator username from reminder card that was clicked
+      // Always fetch user info from the reminder card's creator address to ensure correct username
+      let creatorUsername: string | null = null;
       
-      // If username not found in reminder, fetch from creator address
-      if (!creatorUsername && reminder.creator) {
-        try {
-          console.log('[HelpRemind] Fetching creator username from address:', reminder.creator);
-          const creatorResponse = await fetch(`/api/farcaster/fid-by-address?address=${reminder.creator}`);
-          const creatorData = await creatorResponse.json();
-          
-          if (creatorData.user?.username) {
-            creatorUsername = creatorData.user.username;
-            console.log('[HelpRemind] ✅ Creator username fetched:', creatorUsername);
-          } else {
-            console.warn('[HelpRemind] ⚠️ Creator username not found, using fallback');
-            creatorUsername = reminder.creator.slice(0, 6) + "..." + reminder.creator.slice(-4);
-          }
-        } catch (error) {
-          console.error('[HelpRemind] Failed to fetch creator username:', error);
-          creatorUsername = reminder.creator.slice(0, 6) + "..." + reminder.creator.slice(-4);
+      // First, check if username is already in reminder data (from contract)
+      if (reminder.farcasterUsername && reminder.farcasterUsername.trim() !== "") {
+        // Remove any "wallet-" prefix or address-like patterns that might be incorrectly stored
+        const storedUsername = reminder.farcasterUsername.trim();
+        if (!storedUsername.startsWith("wallet-") && !storedUsername.startsWith("0x")) {
+          creatorUsername = storedUsername;
+          console.log('[HelpRemind] ✅ Using username from reminder data:', creatorUsername);
         }
       }
       
-      // Fallback if still no username
-      if (!creatorUsername) {
-        creatorUsername = reminder.creator 
-          ? (reminder.creator.slice(0, 6) + "..." + reminder.creator.slice(-4))
-          : "creator";
+      // If username not found or invalid, fetch from creator address
+      if (!creatorUsername && reminder.creator) {
+        try {
+          console.log('[HelpRemind] Fetching creator username from address:', reminder.creator);
+          setTxStatus("Fetching creator information...");
+          
+          const creatorResponse = await fetch(`/api/farcaster/fid-by-address?address=${reminder.creator}`);
+          
+          if (!creatorResponse.ok) {
+            throw new Error(`API returned status ${creatorResponse.status}`);
+          }
+          
+          const creatorData = await creatorResponse.json();
+          
+          // Check for username in various possible fields
+          if (creatorData.user?.username) {
+            creatorUsername = creatorData.user.username;
+            console.log('[HelpRemind] ✅ Creator username fetched from API:', creatorUsername);
+          } else if (creatorData.username) {
+            creatorUsername = creatorData.username;
+            console.log('[HelpRemind] ✅ Creator username from direct field:', creatorUsername);
+          } else {
+            console.warn('[HelpRemind] ⚠️ Creator username not found in API response:', creatorData);
+          }
+        } catch (error: any) {
+          console.error('[HelpRemind] ❌ Failed to fetch creator username:', error);
+          // Don't use address as fallback - this causes "@wallet-0x1AB5" issue
+        }
       }
+      
+      // Final validation and fallback
+      if (!creatorUsername || creatorUsername.startsWith("wallet-") || creatorUsername.startsWith("0x")) {
+        // If still no valid username, we must fetch it - don't use address fallback
+        if (reminder.creator) {
+          console.error('[HelpRemind] ❌ Could not get valid creator username for address:', reminder.creator);
+          throw new Error("Creator username not found. Please ensure the reminder creator has a Farcaster account linked to their wallet address.");
+        } else {
+          throw new Error("Reminder creator information not available.");
+        }
+      }
+      
+      console.log('[HelpRemind] Final creator username to use:', creatorUsername);
       
       const reminderDescription = reminder.description || "reminder";
       const appUrl = "https://remindersbase.vercel.app/";
