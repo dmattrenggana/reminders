@@ -2,6 +2,21 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import Script from 'next/script';
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <Script 
+          src="https://neynarxyz.github.io/siwn/raw/1.2.0/index.js" 
+          strategy="lazyOnload"
+        />
+      </body>
+    </html>
+  );
+}
 
 const inter = Inter({ subsets: ["latin"] });
 
