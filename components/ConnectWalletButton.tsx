@@ -17,46 +17,35 @@ export function ConnectWalletButton({
   size = 'default',
   onConnect,
   ...props
-}: ConnectWalletButtonProps) {
-  const { user, isLoaded, isMiniApp } = useFarcaster()
+}: export function ConnectWalletButton() {
+  const { user, isMiniApp } = useFarcaster();
 
-  if (!isLoaded) {
-    return (
-      <Button variant={variant} size={size} className={className} disabled {...props}>
-        Loading...
-      </Button>
-    )
-  }
+  useEffect(() => {
+    // Define callback untuk SIWN
+    (window as any).onSignInSuccess = (data: any) => {
+      console.log("SIWN success:", data);
+      // Simpan user data ke state/localStorage
+      localStorage.setItem('siwn_user', JSON.stringify(data.user));
+      window.location.reload(); // atau update state
+    };
+  }, []);
 
   if (user) {
     return (
-      <Button
-        variant={variant}
-        size={size}
-        className={cn('gap-2', className)}
-        {...props}
-      >
-        {user.pfpUrl && (
-          <img
-            src={user.pfpUrl}
-            alt={user.username}
-            className="h-5 w-5 rounded-full object-cover"
-          />
-        )}
+      <Button>
+        <img src={user.pfpUrl} className="h-5 w-5 rounded-full" />
         <span>@{user.username}</span>
       </Button>
-    )
+    );
   }
 
+  // SIWN button (HTML)
   return (
-    <Button
-      variant={variant}
-      size={size}
-      className={className}
-      onClick={onConnect}
-      {...props}
-    >
-      Connect Wallet
-    </Button>
-  )
+    <div
+      className="neynar_signin"
+      data-client_id={process.env.NEXT_PUBLIC_NEYNAR_CLIENT_ID}
+      data-success-callback="onSignInSuccess"
+      data-theme="light"
+    />
+  );
 }
