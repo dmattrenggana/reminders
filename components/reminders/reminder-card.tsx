@@ -318,8 +318,8 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
           </button>
         )}
 
-        {/* Tombol Confirm Reminder (untuk My Feed) - Aktif di T-1 hour */}
-        {actualFeedType === "my" && !reminder.isResolved && (
+        {/* Tombol Confirm Reminder (untuk Creator - bisa di Public atau My Feed) - Aktif di T-1 hour */}
+        {isMyReminder && !reminder.isResolved && (
           <button
             onClick={handleConfirmReminder}
             disabled={!canInteract || !!loadingAction || !address}

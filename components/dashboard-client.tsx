@@ -307,6 +307,7 @@ export default function DashboardClient() {
               feedType="public"
               address={address}
               onHelpRemind={handleHelpRemindMe}
+              onConfirm={confirmReminder}
             />
           </TabsContent>
 
