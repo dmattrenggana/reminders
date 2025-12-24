@@ -92,10 +92,14 @@ export async function POST(request: NextRequest) {
     });
     const neynarClient = new NeynarAPIClient(config);
 
-    // WEBHOOK MODE: Create pending verification and return token
+    // WEBHOOK MODE (PRIMARY): Create pending verification and return token
+    // Webhook mode is now the default for real-time verification
     // Frontend will poll /api/verifications/[token] to check status
-    if (useWebhook === true && creatorUsername) {
-      console.log(`[Record] Using webhook mode for helper ${helperFid}, reminder ${reminderId}`);
+    // If useWebhook is not explicitly false, default to webhook mode
+    const shouldUseWebhook = useWebhook !== false && creatorUsername;
+    
+    if (shouldUseWebhook) {
+      console.log(`[Record] Using webhook mode (PRIMARY) for helper ${helperFid}, reminder ${reminderId}`);
       
       // Check if there's already a pending verification
       const existing = findPendingVerification(Number(helperFid), parseInt(reminderId));
@@ -119,7 +123,7 @@ export async function POST(request: NextRequest) {
         expiresInMinutes: 10, // 10 minutes to post and get webhook
       });
       
-      console.log(`[Record] Created pending verification ${verification.id} for webhook mode`);
+      console.log(`[Record] ✅ Created pending verification ${verification.id} for webhook mode (PRIMARY)`);
       
       return NextResponse.json({
         success: true,
