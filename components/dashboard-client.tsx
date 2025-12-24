@@ -98,36 +98,76 @@ export default function DashboardClient() {
     }
   }, []);
 
-  // Fetch Farcaster user ketika wallet connected
+  // Fetch Farcaster user ketika wallet connected atau ketika address berubah
   useEffect(() => {
     const fetchWalletFarcasterUser = async () => {
-      // Skip if already have providerUser (miniapp) or no address
-      if (providerUser?.fid || !address || !isConnected) {
+      // Skip if already have providerUser (miniapp) dengan FID yang valid
+      if (providerUser?.fid) {
+        console.log('[Dashboard] Skipping wallet Farcaster fetch - already have miniapp user:', providerUser.fid);
+        setWalletFarcasterUser(null); // Clear wallet user since we have miniapp user
+        return;
+      }
+
+      // Skip if no address or not connected
+      if (!address || !isConnected) {
+        console.log('[Dashboard] Skipping wallet Farcaster fetch - no address or not connected');
+        setWalletFarcasterUser(null);
         return;
       }
 
       try {
-        console.log('[Dashboard] Fetching Farcaster user for wallet:', address);
+        console.log('[Dashboard] 🔄 Fetching Farcaster user for wallet:', address);
         const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
+        
+        if (!response.ok) {
+          console.warn('[Dashboard] Farcaster user API returned non-OK status:', response.status);
+          setWalletFarcasterUser(null);
+          return;
+        }
+
         const data = await response.json();
         
         if (data.fid && data.user) {
-          console.log('[Dashboard] Farcaster user fetched:', {
+          console.log('[Dashboard] ✅ Farcaster user fetched successfully:', {
             fid: data.fid,
-            username: data.user.username
+            username: data.user.username,
+            displayName: data.user.displayName || data.user.display_name,
+            hasPfp: !!data.user.pfpUrl || !!data.user.pfp_url,
+            verifiedAddresses: data.user.verifications?.length || 0,
+            powerBadge: data.user.power_badge,
           });
-          setWalletFarcasterUser(data.user);
+          
+          // Store comprehensive user data
+          setWalletFarcasterUser({
+            ...data.user,
+            // Ensure normalized field names
+            fid: data.fid,
+            username: data.user.username,
+            displayName: data.user.displayName || data.user.display_name,
+            display_name: data.user.display_name || data.user.displayName,
+            pfpUrl: data.user.pfpUrl || data.user.pfp_url,
+            pfp_url: data.user.pfp_url || data.user.pfpUrl,
+            pfp: data.user.pfp_url || data.user.pfpUrl,
+          });
         } else {
-          console.log('[Dashboard] No Farcaster user found for wallet');
+          console.log('[Dashboard] ℹ️ No Farcaster user found for wallet address:', address);
           setWalletFarcasterUser(null);
         }
-      } catch (error) {
-        console.error('[Dashboard] Failed to fetch Farcaster user:', error);
+      } catch (error: any) {
+        console.error('[Dashboard] ❌ Failed to fetch Farcaster user:', {
+          error: error?.message || error,
+          address,
+        });
         setWalletFarcasterUser(null);
       }
     };
 
-    fetchWalletFarcasterUser();
+    // Debounce to avoid excessive calls
+    const timeoutId = setTimeout(() => {
+      fetchWalletFarcasterUser();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [address, isConnected, providerUser?.fid]);
 
   // Computed values - prioritize Farcaster user info from provider (miniapp) or wallet lookup

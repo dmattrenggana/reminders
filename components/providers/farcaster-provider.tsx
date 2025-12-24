@@ -100,19 +100,49 @@ function FarcasterProviderInner({ children }: { children: ReactNode }) {
                 let enhancedUserData = userData;
                 if (fid) {
                   try {
+                    console.log('[Farcaster] 🔄 Fetching enhanced user data from Neynar for FID:', fid);
                     const neynarResponse = await fetch(`/api/farcaster/user?fid=${fid}`);
                     if (neynarResponse.ok) {
                       const neynarData = await neynarResponse.json();
                       if (neynarData.user) {
+                        // Merge comprehensive user data from Neynar
                         enhancedUserData = {
                           ...userData,
+                          // Basic info
+                          fid: fid,
                           username: neynarData.user.username || userData.username,
-                          pfpUrl: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
-                          pfp_url: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
                           displayName: neynarData.user.display_name || userData.displayName,
                           display_name: neynarData.user.display_name || userData.displayName,
+                          // Profile pictures
+                          pfpUrl: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
+                          pfp_url: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
+                          pfp: neynarData.user.pfp_url || userData.pfpUrl || userData.pfp,
+                          // Profile data
+                          bio: neynarData.user.bio || userData.bio,
+                          profile: neynarData.user.profile || userData.profile,
+                          // Verification data
+                          verifications: neynarData.user.verifications || userData.verifications || [],
+                          verifiedAddresses: neynarData.user.verifiedAddresses || neynarData.user.verifications || [],
+                          verified_addresses: neynarData.user.verified_addresses || userData.verified_addresses,
+                          verified_accounts: neynarData.user.verified_accounts || userData.verified_accounts,
+                          // Addresses
+                          custody_address: neynarData.user.custody_address || userData.custody_address,
+                          // Social stats
+                          follower_count: neynarData.user.follower_count || userData.follower_count,
+                          following_count: neynarData.user.following_count || userData.following_count,
+                          // Badge
+                          power_badge: neynarData.user.power_badge || userData.power_badge,
                         };
+                        console.log('[Farcaster] ✅ Enhanced user data fetched:', {
+                          fid,
+                          username: enhancedUserData.username,
+                          displayName: enhancedUserData.displayName,
+                          hasPfp: !!enhancedUserData.pfpUrl,
+                          verifiedAddresses: enhancedUserData.verifications?.length || 0,
+                        });
                       }
+                    } else {
+                      console.warn('[Farcaster] Neynar API returned non-OK status:', neynarResponse.status);
                     }
                   } catch (neynarError: any) {
                     console.warn('[Farcaster] Neynar fetch failed (non-critical):', neynarError?.message);
