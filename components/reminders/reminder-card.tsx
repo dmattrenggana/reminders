@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Clock, CheckCircle2, Flame, Lock, AlertCircle, Info, Coins, Bell, User } from "lucide-react"
+import { Clock, CheckCircle2, Flame, Lock, AlertCircle, Info, Coins, Bell } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { useAccount } from "wagmi"
 import { useFarcaster } from "@/components/providers/farcaster-provider"
@@ -273,28 +273,42 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
 
   const statusConfig = getStatusConfig()
 
-  return (
-    <div className="group bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-sm hover:shadow-lg hover:border-[#4f46e5] transition-all overflow-hidden relative">
-      {/* Creator username - Top left corner */}
-      {creatorUsername && (
-        <div className="absolute top-4 left-4 z-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200 shadow-sm">
-            <User className="h-3 w-3 text-slate-500" />
-            <span className="text-xs font-bold text-slate-700">@{creatorUsername}</span>
-          </div>
-        </div>
-      )}
+  // Farcaster profile URL
+  const creatorProfileUrl = creatorUsername 
+    ? `https://warpcast.com/${creatorUsername}`
+    : null
 
-      {/* Header dengan status badge */}
-      <div className="p-6 pb-4 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${statusConfig.color}`}>
+  return (
+    <div className="group bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-sm hover:shadow-lg hover:border-[#4f46e5] transition-all overflow-hidden">
+      {/* Header */}
+      <div className="p-5 pb-4 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100">
+        {/* Creator username - Clickable, top left */}
+        {creatorUsername && (
+          <div className="mb-3">
+            {creatorProfileUrl ? (
+              <a
+                href={creatorProfileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-sm font-bold text-[#4f46e5] hover:text-[#4338ca] hover:underline transition-colors"
+              >
+                @{creatorUsername}
+              </a>
+            ) : (
+              <span className="text-sm font-bold text-slate-600">@{creatorUsername}</span>
+            )}
+          </div>
+        )}
+
+        {/* Status badges row - Below username */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${statusConfig.color}`}>
             <span className={statusConfig.iconColor}>{statusConfig.icon}</span>
             {statusConfig.label}
           </div>
           
           {/* Feed type indicator */}
-          <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+          <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
             actualFeedType === "my" 
               ? "bg-indigo-50 text-indigo-700 border-indigo-100"
               : "bg-slate-50 text-slate-600 border-slate-200"
@@ -303,33 +317,33 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
           </div>
         </div>
 
-        {/* Description */}
-        <h3 className="text-lg font-black text-slate-800 leading-tight mb-2 line-clamp-2">
+        {/* Description - Smaller font */}
+        <h3 className="text-sm font-semibold text-slate-800 leading-relaxed mb-3 line-clamp-3">
           {reminder.description || "No description"}
         </h3>
 
-        {/* Time and reward - Hide time if reminder is confirmed */}
-        <div className="flex items-center justify-between text-xs">
+        {/* Time and reward info */}
+        <div className="flex items-center justify-between text-xs mb-2">
           {!reminder.isResolved || !reminder.isCompleted ? (
             <div className="flex items-center gap-1.5 text-slate-500">
-              <Clock className="h-3.5 w-3.5" />
-              <span className="font-bold">{formattedTime}</span>
+              <Clock className="h-3 w-3" />
+              <span className="font-semibold">{formattedTime}</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 text-green-600">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span className="font-bold">Confirmed</span>
+              <CheckCircle2 className="h-3 w-3" />
+              <span className="font-semibold">Confirmed</span>
             </div>
           )}
-          <div className="flex items-center gap-1.5 text-[#4f46e5] font-black">
-            <Coins className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1.5 text-[#4f46e5] font-bold">
+            <Coins className="h-3 w-3" />
             <span>{reminder.rewardPool || reminder.tokenAmount || 0} {TOKEN_SYMBOL}</span>
           </div>
         </div>
 
         {/* Time Left Display */}
         {!reminder.isResolved && reminder.timeLeft !== undefined && (
-          <div className={`mt-2 px-3 py-1.5 rounded-lg text-[10px] font-bold text-center ${
+          <div className={`px-2.5 py-1 rounded-lg text-[10px] font-bold text-center ${
             reminder.isDangerZone 
               ? "bg-orange-50 text-orange-700 border border-orange-200"
               : reminder.isExpired
@@ -347,7 +361,7 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
       </div>
 
       {/* Body - Action buttons */}
-      <div className="p-6 pt-4 space-y-3">
+      <div className="p-5 pt-4 space-y-3">
         {/* Tombol Help Remind Me (untuk Public Feed) - Aktif di T-1 hour */}
         {actualFeedType === "public" && !reminder.isResolved && (
           <button
