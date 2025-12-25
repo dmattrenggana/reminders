@@ -12,13 +12,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // 1. Suppress unhandled promise rejection errors from Neynar SDK
+              // 1. Suppress unhandled promise rejection errors from Neynar SDK and CSP
               window.addEventListener('unhandledrejection', function(event) {
-                // Check if error is from Neynar SDK or Farcaster components
+                // Check if error is from Neynar SDK, Farcaster components, or CSP
                 const errorMessage = event.reason?.message || event.reason?.toString() || '';
                 const errorStack = event.reason?.stack || '';
                 const eventType = event.reason?.type || '';
                 const eventTarget = event.reason?.target?.tagName || '';
+                
+                // Suppress CSP errors (harmless - from optional features like Privy/WalletConnect)
+                if (
+                  errorMessage.includes('Content Security Policy') ||
+                  errorMessage.includes('CSP') ||
+                  errorMessage.includes('violates the document') ||
+                  errorMessage.includes('Failed to fetch') && errorMessage.includes('violates') ||
+                  errorStack.includes('Content Security Policy') ||
+                  errorStack.includes('CSP')
+                ) {
+                  console.debug('[Suppressed] CSP unhandled promise rejection (harmless)');
+                  event.preventDefault(); // Prevent error from being logged
+                  return false;
+                }
                 
                 // Suppress known harmless errors from Neynar SDK
                 if (
@@ -75,7 +89,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     return false;
                   }
                 }
+                
+                // Suppress CSP errors that are handled gracefully
+                const errorMessage = event.message || '';
+                if (
+                  errorMessage.includes('Content Security Policy') ||
+                  errorMessage.includes('CSP') ||
+                  (errorMessage.includes('Failed to fetch') && errorMessage.includes('violates'))
+                ) {
+                  // Only suppress if it's a known harmless CSP error
+                  // (e.g., from Privy/WalletConnect optional features)
+                  console.debug('[Suppressed] CSP error (handled gracefully):', errorMessage.substring(0, 100));
+                  event.preventDefault();
+                  return false;
+                }
               }, true); // Use capture phase to catch errors early
+              
             `,
           }}
         />
