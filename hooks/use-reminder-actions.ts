@@ -593,26 +593,50 @@ export function useReminderActions({
       // Step 3: Create pending verification in Supabase FIRST (before posting)
       setTxStatus("Setting up verification...");
       console.log('[HelpRemind] Creating pending verification in Supabase for reminder:', reminder.id);
-      console.log('[HelpRemind] Verification params:', {
+      console.log('[HelpRemind] Verification params BEFORE API call:', {
         reminderId: reminder.id,
+        reminderIdType: typeof reminder.id,
         helperAddress: address,
+        helperAddressType: typeof address,
         helperFid: fid,
+        helperFidType: typeof fid,
         creatorUsername: creatorUsername,
+        creatorUsernameType: typeof creatorUsername,
       });
+      
+      // Validate all params BEFORE API call
+      if (!reminder.id || reminder.id === 0) {
+        throw new Error(`Invalid reminder ID: ${reminder.id}`);
+      }
+      if (!address || address === '') {
+        throw new Error(`Invalid helper address: ${address}`);
+      }
+      if (!fid || fid === 0) {
+        throw new Error(`Invalid helper FID: ${fid}. Please ensure you're connected via Farcaster.`);
+      }
+      if (!creatorUsername || creatorUsername === '') {
+        throw new Error(`Invalid creator username: ${creatorUsername}`);
+      }
+      
+      console.log('[HelpRemind] ✅ All params validated. Calling API...');
       
       // Create pending verification entry in Supabase
       let verificationToken: string | null = null;
       try {
+        const requestBody = {
+          reminderId: reminder.id,
+          helperAddress: address,
+          helperFid: fid,
+          creatorUsername: creatorUsername,
+          useSupabase: true, // Use Supabase only, no webhook
+        };
+        
+        console.log('[HelpRemind] API request body:', JSON.stringify(requestBody, null, 2));
+        
         const recordResponse = await fetch("/api/reminders/record", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reminderId: reminder.id,
-            helperAddress: address,
-            helperFid: fid,
-            creatorUsername: creatorUsername,
-            useSupabase: true, // Use Supabase only, no webhook
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!recordResponse.ok) {
