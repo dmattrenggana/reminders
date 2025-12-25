@@ -2,8 +2,9 @@
 
 import { useEffect } from "react"
 import { useAccount, useReadContracts } from "wagmi"
+import { CONTRACTS } from "@/lib/contracts/config"
 
-// ABI minimal untuk token ERC-20 (RMNDtest)
+// ABI minimal untuk token ERC-20 (RMND)
 const erc20Abi = [
   {
     constant: true,
@@ -23,8 +24,15 @@ const erc20Abi = [
 export function useTokenBalance() {
   const { address, isConnected } = useAccount();
   
-  // Alamat Kontrak RMNDtest kamu di Base
-  const TOKEN_CONTRACT = "0x6ee85c2cfab33678de10a5e1634d86abb5eebb07";
+  // Alamat Kontrak RMND dari environment variable
+  const TOKEN_CONTRACT = CONTRACTS.COMMIT_TOKEN || "";
+  
+  // Validate token contract address
+  useEffect(() => {
+    if (!TOKEN_CONTRACT || TOKEN_CONTRACT.length === 0) {
+      console.error("[TokenBalance] ⚠️ NEXT_PUBLIC_CONTRACT_ADDRESS is not set in environment variables");
+    }
+  }, [TOKEN_CONTRACT]);
   
   // Log address for debugging
   useEffect(() => {
@@ -48,7 +56,7 @@ export function useTokenBalance() {
       },
     ],
     query: {
-      enabled: !!address && isConnected,
+      enabled: !!address && isConnected && !!TOKEN_CONTRACT && TOKEN_CONTRACT.length > 0,
       refetchInterval: 60000, // Refresh every 60 seconds (reduced from 10s to save quota)
       staleTime: 30000, // Consider data stale after 30 seconds (increased from 5s)
       gcTime: 300000, // Keep in cache for 5 minutes (was default 5 minutes)
@@ -68,7 +76,7 @@ export function useTokenBalance() {
   const balanceStatus = data?.[0]?.status;
   const balanceError = data?.[0]?.error;
   
-  const symbolResult = (data?.[1]?.result as string) || "RMNDtest";
+  const symbolResult = (data?.[1]?.result as string) || "RMND";
   const symbolStatus = data?.[1]?.status;
   const symbolError = data?.[1]?.error;
   

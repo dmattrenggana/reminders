@@ -64,7 +64,7 @@ export function HeaderWallet({
           px-4 py-1.5 text-xs font-bold text-[#4f46e5] 
           border-r border-slate-200 whitespace-nowrap
         ">
-          {formattedBalance || "0.00"} <span className="text-[10px] opacity-75">{symbol || "RMNDtest"}</span>
+          {formattedBalance || "0.00"} <span className="text-[10px] opacity-75">{symbol || "RMND"}</span>
         </div>
         <Button 
           variant="ghost" 

@@ -349,7 +349,7 @@ export default function DashboardClient() {
         <Header
           isConnected={isConnected}
           formattedBalance={formattedBalance}
-          symbol={symbol || "RMNDtest"}
+          symbol={symbol || "RMND"}
           pfpUrl={pfpUrl}
           username={username}
           address={address}
