@@ -422,7 +422,7 @@ export function useReminderActions({
       const oneHourBefore = reminderTime - 3600;
 
       // If at T-1 hour (before deadline), use reclaimReminder (returns 30% + unclaimed 70%)
-      // If at deadline or after, use confirmReminder (returns 30% only)
+      // If after deadline, use burnMissedReminder (burns 30% commitment)
       if (currentTime >= oneHourBefore && currentTime < reminderTime) {
         // T-1 hour window: Use reclaimReminder (more tokens returned)
         setTxStatus("Reclaiming reminder... Please confirm in wallet.");
@@ -453,10 +453,39 @@ export function useReminderActions({
         } else {
           throw new Error("Reclaim reminder transaction failed");
         }
+      } else if (currentTime >= reminderTime) {
+        // After deadline: Use burnMissedReminder (burns 30% commitment)
+        setTxStatus("Burning reminder... Please confirm in wallet.");
+        const burnTxHash = await writeContractAsync({
+          address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
+          abi: REMINDER_VAULT_ABI,
+          functionName: 'burnMissedReminder',
+          args: [BigInt(id)],
+          chainId: 8453,
+        });
+
+        setTxStatus("Waiting for burn transaction...");
+        const burnReceipt = await publicClient.waitForTransactionReceipt({
+          hash: burnTxHash,
+          timeout: 60000,
+        });
+
+        if (burnReceipt.status === "success") {
+          setTxStatus("");
+          toast({
+            variant: "default",
+            title: "⚠️ Reminder Burned",
+            description: "Reminder deadline passed. 30% commitment has been burned.",
+            duration: 2000,
+          });
+          refreshReminders();
+          refreshBalance();
+        } else {
+          throw new Error("Burn reminder transaction failed");
+        }
       } else {
-        // V5: Always use reclaimReminder (no confirmReminder in V5)
-        // reclaimReminder returns commit amount + unclaimed rewards
-        throw new Error("Reminder deadline has passed. Use burnMissedReminder instead.");
+        // Before T-1 hour: Too early
+        throw new Error("Too early to confirm. Please wait until T-1 hour before deadline.");
       }
     } catch (error: any) {
       console.error("Confirm reminder error:", error);

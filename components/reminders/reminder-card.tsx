@@ -86,6 +86,7 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   // T = reminderTime (deadline waktu yang di input ketika create reminder)
   // T-1 hour = 1 jam sebelum deadline (reminderTime - 3600)
   // Window: dari T-1 hour sampai confirmationDeadline (T+1 hour)
+  // For creators: can also interact after deadline to burn
   const canInteract = useMemo(() => {
     if (reminder.isResolved) return false
     
@@ -111,29 +112,74 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
     let confirmationDeadline: number
     if (reminder.confirmationDeadline) {
       confirmationDeadline = typeof reminder.confirmationDeadline === 'number'
-        ? reminder.confirmationDeadline
+        ? confirmationDeadline
         : Math.floor(new Date(reminder.confirmationDeadline).getTime() / 1000)
     } else {
       confirmationDeadline = reminderTime + 3600 // Default: T+1 hour
     }
     
-    // Can interact from T-1 hour until confirmationDeadline
-    const canInteractNow = now >= oneHourBefore && now <= confirmationDeadline
+    // For helpers (public feed): Can interact from T-1 hour until confirmationDeadline
+    // For creators (my feed): Can interact from T-1 hour onwards (including after deadline to burn)
+    const isCreator = address && reminder.creator && address.toLowerCase() === reminder.creator.toLowerCase()
     
-    // Debug logging (remove in production if needed)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ReminderCard] T-1 hour check:', {
-        reminderId: reminder.id,
-        now,
-        reminderTime,
-        oneHourBefore,
-        confirmationDeadline,
-        canInteract: canInteractNow,
-        timeUntilT1: oneHourBefore - now,
-      })
+    if (isCreator) {
+      // Creator can interact from T-1 hour onwards (even after deadline to burn)
+      const canInteractNow = now >= oneHourBefore
+      
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[ReminderCard] Creator T-1 hour check:', {
+          reminderId: reminder.id,
+          now,
+          reminderTime,
+          oneHourBefore,
+          confirmationDeadline,
+          canInteract: canInteractNow,
+          isAfterDeadline: now > reminderTime,
+          timeUntilT1: oneHourBefore - now,
+        })
+      }
+      
+      return canInteractNow
+    } else {
+      // Helper: Can interact from T-1 hour until confirmationDeadline
+      const canInteractNow = now >= oneHourBefore && now <= confirmationDeadline
+      
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[ReminderCard] Helper T-1 hour check:', {
+          reminderId: reminder.id,
+          now,
+          reminderTime,
+          oneHourBefore,
+          confirmationDeadline,
+          canInteract: canInteractNow,
+          timeUntilT1: oneHourBefore - now,
+        })
+      }
+      
+      return canInteractNow
+    }
+  }, [reminder, address])
+  
+  // Check if deadline has passed (for creator to burn)
+  const isAfterDeadline = useMemo(() => {
+    if (reminder.isResolved) return false
+    
+    const now = Math.floor(Date.now() / 1000)
+    let reminderTime: number
+    
+    if (reminder.deadline && typeof reminder.deadline === 'number') {
+      reminderTime = reminder.deadline
+    } else if (typeof reminder.reminderTime === 'number') {
+      reminderTime = reminder.reminderTime
+    } else if (reminder.reminderTime) {
+      reminderTime = Math.floor(new Date(reminder.reminderTime).getTime() / 1000)
+    } else {
+      return false
     }
     
-    return canInteractNow
+    return now > reminderTime
   }, [reminder])
 
   // Format reminder time (deadline)
@@ -388,18 +434,22 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
           </button>
         )}
 
-        {/* Tombol Confirm Reminder (untuk Creator - bisa di Public atau My Feed) - Aktif di T-1 hour */}
+        {/* Tombol Confirm Reminder (untuk Creator - bisa di Public atau My Feed) */}
         {isMyReminder && !reminder.isResolved && (
           <button
             onClick={handleConfirmReminder}
             disabled={!canInteract || !!loadingAction || !address}
             className={`w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${
               canInteract && !loadingAction && address
-                ? "bg-green-600 hover:bg-green-700 text-white"
+                ? isAfterDeadline
+                  ? "bg-orange-500 hover:bg-orange-600 text-white" // Warning color after deadline
+                  : "bg-blue-600 hover:bg-blue-700 text-white" // Blue color at T-1 hour
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
           >
-            {loadingAction === "confirm" ? "Processing..." : "Confirm Reminder"}
+            {loadingAction === "confirm" ? "Processing..." : (
+              isAfterDeadline ? "Burn Reminder" : "Confirm Reminder"
+            )}
           </button>
         )}
 
