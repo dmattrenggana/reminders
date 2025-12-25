@@ -87,8 +87,14 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   // T-1 hour = 1 jam sebelum deadline (reminderTime - 3600)
   // Window: dari T-1 hour sampai confirmationDeadline (T+1 hour)
   // For creators: can also interact after deadline to burn
-  const canInteract = useMemo(() => {
-    if (reminder.isResolved) return false
+  // Use useState + useEffect to avoid hydration mismatch with Date.now()
+  const [canInteract, setCanInteract] = useState(false)
+  
+  useEffect(() => {
+    if (reminder.isResolved) {
+      setCanInteract(false)
+      return
+    }
     
     // T = reminderTime (deadline) - bisa dari reminderTime atau deadline field
     const now = Math.floor(Date.now() / 1000)
@@ -102,7 +108,8 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
     } else if (reminder.reminderTime) {
       reminderTime = Math.floor(new Date(reminder.reminderTime).getTime() / 1000)
     } else {
-      return false // No valid deadline found
+      setCanInteract(false)
+      return
     }
     
     // T-1 hour = 1 jam sebelum deadline
@@ -140,7 +147,7 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
         })
       }
       
-      return canInteractNow
+      setCanInteract(canInteractNow)
     } else {
       // Helper: Can interact from T-1 hour until confirmationDeadline
       const canInteractNow = now >= oneHourBefore && now <= confirmationDeadline
@@ -158,13 +165,19 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
         })
       }
       
-      return canInteractNow
+      setCanInteract(canInteractNow)
     }
   }, [reminder, address])
   
   // Check if deadline has passed (for creator to burn)
-  const isAfterDeadline = useMemo(() => {
-    if (reminder.isResolved) return false
+  // Use useState + useEffect to avoid hydration mismatch
+  const [isAfterDeadline, setIsAfterDeadline] = useState(false)
+  
+  useEffect(() => {
+    if (reminder.isResolved) {
+      setIsAfterDeadline(false)
+      return
+    }
     
     const now = Math.floor(Date.now() / 1000)
     let reminderTime: number
@@ -176,10 +189,11 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
     } else if (reminder.reminderTime) {
       reminderTime = Math.floor(new Date(reminder.reminderTime).getTime() / 1000)
     } else {
-      return false
+      setIsAfterDeadline(false)
+      return
     }
     
-    return now > reminderTime
+    setIsAfterDeadline(now > reminderTime)
   }, [reminder])
 
   // Format reminder time (deadline)
