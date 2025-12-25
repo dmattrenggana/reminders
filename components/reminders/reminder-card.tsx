@@ -119,7 +119,7 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
     let confirmationDeadline: number
     if (reminder.confirmationDeadline) {
       confirmationDeadline = typeof reminder.confirmationDeadline === 'number'
-        ? confirmationDeadline
+        ? reminder.confirmationDeadline
         : Math.floor(new Date(reminder.confirmationDeadline).getTime() / 1000)
     } else {
       confirmationDeadline = reminderTime + 3600 // Default: T+1 hour
