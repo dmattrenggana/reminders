@@ -449,15 +449,16 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
         )}
 
         {/* Tombol Confirm Reminder (untuk Creator - bisa di Public atau My Feed) */}
+        {/* Creator bisa klik setelah deadline untuk burn (warna merah), atau di T-1 hour untuk reclaim (warna biru) */}
         {isMyReminder && !reminder.isResolved && (
           <button
             onClick={handleConfirmReminder}
-            disabled={!canInteract || !!loadingAction || !address}
+            disabled={!!loadingAction || !address || (!canInteract && !isAfterDeadline)}
             className={`w-full py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${
-              canInteract && !loadingAction && address
+              !loadingAction && address && (canInteract || isAfterDeadline)
                 ? isAfterDeadline
-                  ? "bg-orange-500 hover:bg-orange-600 text-white" // Warning color after deadline
-                  : "bg-blue-600 hover:bg-blue-700 text-white" // Blue color at T-1 hour
+                  ? "bg-red-600 hover:bg-red-700 text-white" // Red color after deadline (burn)
+                  : "bg-blue-600 hover:bg-blue-700 text-white" // Blue color at T-1 hour (reclaim)
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
           >
