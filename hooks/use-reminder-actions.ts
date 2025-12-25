@@ -626,19 +626,54 @@ export function useReminderActions({
       }
       
       console.log('[HelpRemind] ✅ All params validated. Calling API...');
+      console.log('[HelpRemind] Final values before API call:', {
+        reminderId,
+        reminderIdType: typeof reminderId,
+        address,
+        addressType: typeof address,
+        fid,
+        fidType: typeof fid,
+        creatorUsername,
+        creatorUsernameType: typeof creatorUsername,
+      });
       
       // Create pending verification entry in Supabase
       let verificationToken: string | null = null;
       try {
+        // Ensure all values are properly formatted before sending
         const requestBody = {
-          reminderId: reminderId, // Already validated and converted to number
-          helperAddress: String(address).toLowerCase(), // Ensure it's a string and lowercase
+          reminderId: Number(reminderId), // Ensure it's a number
+          helperAddress: String(address || '').toLowerCase().trim(), // Ensure it's a string and lowercase
           helperFid: Number(fid), // Ensure it's a number
-          creatorUsername: String(creatorUsername), // Ensure it's a string
+          creatorUsername: String(creatorUsername || '').trim(), // Ensure it's a string
           useSupabase: true, // Use Supabase mode (automatic verification)
         };
         
+        // Validate request body before sending
+        if (requestBody.reminderId === undefined || requestBody.reminderId === null || isNaN(requestBody.reminderId)) {
+          throw new Error(`Invalid reminderId: ${reminderId} (converted: ${requestBody.reminderId})`);
+        }
+        if (!requestBody.helperAddress || requestBody.helperAddress === '') {
+          throw new Error(`Invalid helperAddress: ${address} (converted: ${requestBody.helperAddress})`);
+        }
+        if (!requestBody.helperFid || isNaN(requestBody.helperFid) || requestBody.helperFid === 0) {
+          throw new Error(`Invalid helperFid: ${fid} (converted: ${requestBody.helperFid})`);
+        }
+        if (!requestBody.creatorUsername || requestBody.creatorUsername === '') {
+          throw new Error(`Invalid creatorUsername: ${creatorUsername} (converted: ${requestBody.creatorUsername})`);
+        }
+        
         console.log('[HelpRemind] API request body:', JSON.stringify(requestBody, null, 2));
+        console.log('[HelpRemind] Request body validation:', {
+          reminderId: requestBody.reminderId,
+          reminderIdValid: !isNaN(requestBody.reminderId) && requestBody.reminderId > 0,
+          helperAddress: requestBody.helperAddress,
+          helperAddressValid: requestBody.helperAddress !== '',
+          helperFid: requestBody.helperFid,
+          helperFidValid: !isNaN(requestBody.helperFid) && requestBody.helperFid > 0,
+          creatorUsername: requestBody.creatorUsername,
+          creatorUsernameValid: requestBody.creatorUsername !== '',
+        });
         
         const recordResponse = await fetch("/api/reminders/record", {
           method: "POST",

@@ -68,11 +68,40 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { reminderId, helperAddress, helperFid, creatorUsername, useWebhook, useSupabase } = body;
 
-    if (!reminderId || !helperAddress || !helperFid) {
+    // Log received data for debugging
+    console.log('[Record] Received request body:', {
+      reminderId,
+      reminderIdType: typeof reminderId,
+      helperAddress,
+      helperAddressType: typeof helperAddress,
+      helperFid,
+      helperFidType: typeof helperFid,
+      creatorUsername,
+      useSupabase,
+    });
+
+    // More flexible validation - check for undefined/null, but allow 0
+    if (reminderId === undefined || reminderId === null || isNaN(Number(reminderId))) {
       return NextResponse.json({ 
         success: false,
         error: "Missing required parameters",
-        message: "reminderId, helperAddress, and helperFid are required" 
+        message: `reminderId is required (received: ${reminderId})` 
+      }, { status: 400 });
+    }
+
+    if (!helperAddress || typeof helperAddress !== 'string' || helperAddress.trim() === '') {
+      return NextResponse.json({ 
+        success: false,
+        error: "Missing required parameters",
+        message: `helperAddress is required (received: ${helperAddress})` 
+      }, { status: 400 });
+    }
+
+    if (helperFid === undefined || helperFid === null || isNaN(Number(helperFid)) || Number(helperFid) === 0) {
+      return NextResponse.json({ 
+        success: false,
+        error: "Missing required parameters",
+        message: `helperFid is required and must be a valid number > 0 (received: ${helperFid})` 
       }, { status: 400 });
     }
 
