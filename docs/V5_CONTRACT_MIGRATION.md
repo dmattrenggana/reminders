@@ -18,7 +18,7 @@
 
 ### **Helper Flow (Simplified!):**
 
-```
+\`\`\`
 1. Helper posts on Farcaster
          ↓
 2. Verified off-chain (Supabase)
@@ -30,16 +30,16 @@
 5. Done! ✅
 
 NO recordReminder step! 🎉
-```
+\`\`\`
 
 ### **Old V4 Flow (Removed):**
 
-```
+\`\`\`
 ❌ 1. Post verification
 ❌ 2. Call recordReminder
 ❌ 3. Wait for confirmation
 ❌ 4. Call claimReward
-```
+\`\`\`
 
 ---
 
@@ -47,7 +47,7 @@ NO recordReminder step! 🎉
 
 ### **Contract Functions (V5):**
 
-```solidity
+\`\`\`solidity
 // Create reminder (unchanged parameters order)
 function createReminder(
     uint256 totalAmount,
@@ -68,7 +68,7 @@ function reclaimReminder(uint256 reminderId)
 
 // Burn missed reminder (after deadline)
 function burnMissedReminder(uint256 reminderId)
-```
+\`\`\`
 
 ### **Key Changes:**
 
@@ -83,13 +83,13 @@ function burnMissedReminder(uint256 reminderId)
 
 ### **Message Hash:**
 
-```solidity
+\`\`\`solidity
 keccak256(abi.encodePacked(helperAddress, reminderId, neynarScore))
-```
+\`\`\`
 
 ### **Backend Implementation:**
 
-```typescript
+\`\`\`typescript
 // app/api/sign-claim/route.ts
 const messageHash = ethers.solidityPackedKeccak256(
   ['address', 'uint256', 'uint256'],
@@ -97,15 +97,15 @@ const messageHash = ethers.solidityPackedKeccak256(
 );
 
 const signature = await wallet.signMessage(ethers.getBytes(messageHash));
-```
+\`\`\`
 
 ### **Contract Verification:**
 
-```solidity
+\`\`\`solidity
 bytes32 messageHash = keccak256(abi.encodePacked(msg.sender, reminderId, neynarScore));
 bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(messageHash);
 require(ethSignedMessageHash.recover(signature) == signerAddress, "Invalid Signature");
-```
+\`\`\`
 
 ---
 
@@ -113,7 +113,7 @@ require(ethSignedMessageHash.recover(signature) == signerAddress, "Invalid Signa
 
 ### **Step 1: Generate Signer Wallet**
 
-```bash
+\`\`\`bash
 # Generate new wallet for signing
 node -e "console.log(require('ethers').Wallet.createRandom().privateKey)"
 # Output: 0x1234567890abcdef...
@@ -121,32 +121,32 @@ node -e "console.log(require('ethers').Wallet.createRandom().privateKey)"
 # Get address
 node -e "console.log(new (require('ethers').Wallet)('0x1234567890abcdef...').address)"
 # Output: 0xabcd...
-```
+\`\`\`
 
 ### **Step 2: Add Environment Variable**
 
-```env
+\`\`\`env
 # .env.local
 SIGNER_PRIVATE_KEY=0x1234567890abcdef...your_private_key_here
-```
+\`\`\`
 
 ⚠️ **IMPORTANT:** This private key is used ONLY for signing claim messages, NOT for transactions. Keep it secure!
 
 ### **Step 3: Deploy Contract with Signer Address**
 
-```solidity
+\`\`\`solidity
 constructor(address _token, address _signer) {
     commitToken = IERC20(_token);
     signerAddress = _signer; // ← Your signer wallet address
 }
-```
+\`\`\`
 
 ### **Step 4: Update Contract Address**
 
-```env
+\`\`\`env
 # .env.local
 NEXT_PUBLIC_VAULT_CONTRACT=0x...your_v5_contract_address
-```
+\`\`\`
 
 ---
 
@@ -171,7 +171,7 @@ Contract calculates reward based on score:
 
 ### **Test Claim Flow:**
 
-```typescript
+\`\`\`typescript
 // 1. Helper posts and gets verified (automatic)
 // 2. Frontend calls /api/sign-claim
 const signResponse = await fetch("/api/sign-claim", {
@@ -189,15 +189,15 @@ const { signature } = await signResponse.json();
 await contract.claimReward(1, 85, signature);
 
 // ✅ Done! No recordReminder needed!
-```
+\`\`\`
 
 ### **Verify Signature:**
 
-```bash
+\`\`\`bash
 # In contract, check signerAddress matches
 await contract.signerAddress()
 # Should return your signer wallet address
-```
+\`\`\`
 
 ---
 
@@ -251,23 +251,23 @@ await contract.signerAddress()
 Generate signature for claimReward.
 
 **Request:**
-```json
+\`\`\`json
 {
   "helperAddress": "0x123...",
   "reminderId": 1,
   "neynarScore": 85
 }
-```
+\`\`\`
 
 **Response:**
-```json
+\`\`\`json
 {
   "success": true,
   "signature": "0xabcd...",
   "signerAddress": "0x789...",
   "messageHash": "0xdef..."
 }
-```
+\`\`\`
 
 ---
 
@@ -288,7 +288,7 @@ Generate signature for claimReward.
 **Cause:** Signer address mismatch
 
 **Fix:**
-```bash
+\`\`\`bash
 # Check signer address in contract
 cast call $VAULT_ADDRESS "signerAddress()" --rpc-url $RPC
 
@@ -296,7 +296,7 @@ cast call $VAULT_ADDRESS "signerAddress()" --rpc-url $RPC
 node -e "console.log(new (require('ethers').Wallet)('$SIGNER_PRIVATE_KEY').address)"
 
 # They must match!
-```
+\`\`\`
 
 ### **"Window not open" Error**
 
@@ -322,4 +322,3 @@ node -e "console.log(new (require('ethers').Wallet)('$SIGNER_PRIVATE_KEY').addre
 ---
 
 **Migration complete!** V5 is now live with simplified workflow! 🚀
-

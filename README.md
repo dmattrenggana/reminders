@@ -25,7 +25,7 @@ A commitment-based reminder system built on Base with Farcaster integration. Loc
 
 ### **For Creators:**
 
-```
+\`\`\`
 1. Create Reminder
    ├─ Lock 100 RMND (30 commit, 70 reward pool)
    ├─ Set description & deadline
@@ -38,11 +38,11 @@ A commitment-based reminder system built on Base with Farcaster integration. Loc
 3. Confirm or Burn
    ├─ Confirm: Get commit back + unclaimed rewards
    └─ Miss deadline: Commit burns, rewards return
-```
+\`\`\`
 
 ### **For Helpers:**
 
-```
+\`\`\`
 1. Find Active Reminders
    └─ Browse "Public Feed"
 
@@ -61,7 +61,7 @@ A commitment-based reminder system built on Base with Farcaster integration. Loc
    ├─ High (90-100): 10% of pool
    ├─ Medium (50-89): 6% of pool
    └─ Low (0-49): 3% of pool
-```
+\`\`\`
 
 ## 🛠️ Technology Stack
 
@@ -86,12 +86,12 @@ Core contract managing reminder logic:
 - **Auto-Burn**: Missed reminders burned after deadline
 
 **Key Functions:**
-```solidity
+\`\`\`solidity
 createReminder(uint256 totalAmount, uint256 deadline, string description, string farcasterUsername)
 claimReward(uint256 reminderId, uint256 neynarScore, bytes signature) // ← V5: With signature!
 reclaimReminder(uint256 reminderId)
 burnMissedReminder(uint256 reminderId)
-```
+\`\`\`
 
 ### **CommitToken (RMND)**
 
@@ -109,19 +109,19 @@ Standard ERC20 token with mint/burn functions.
 ### **Installation**
 
 1. **Clone and install:**
-```bash
+\`\`\`bash
 git clone https://github.com/dmattrenggana/reminders
 cd reminders
 npm install
-```
+\`\`\`
 
 2. **Generate signer wallet (V5):**
-```bash
+\`\`\`bash
 node scripts/generate-signer.js
-```
+\`\`\`
 
 3. **Setup environment variables:**
-```env
+\`\`\`env
 # Smart Contracts
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...your_rmnd_token
 NEXT_PUBLIC_VAULT_CONTRACT=0x...your_v5_vault
@@ -142,32 +142,32 @@ NEYNAR_API_KEY=your_neynar_api_key
 
 # WalletConnect
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
-```
+\`\`\`
 
 4. **Deploy V5 contract:**
-```bash
+\`\`\`bash
 npx hardhat compile
 npx hardhat run scripts/deploy-v5.ts --network base
-```
+\`\`\`
 
 5. **Setup Supabase:**
-```sql
+\`\`\`sql
 -- See docs/SUPABASE_SETUP_QUICKSTART.md
 CREATE TABLE pending_verifications (...);
 ALTER PUBLICATION supabase_realtime ADD TABLE pending_verifications;
-```
+\`\`\`
 
 6. **Run development:**
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 ### **Deployment**
 
 Deploy to Vercel:
-```bash
+\`\`\`bash
 vercel --prod
-```
+\`\`\`
 
 **Remember to add all env vars to Vercel Project Settings!**
 
@@ -188,7 +188,7 @@ vercel --prod
 
 ### **V5 Workflow:**
 
-```
+\`\`\`
 ┌─────────────────────────────────────────────────────────┐
 │ CREATOR                                                 │
 ├─────────────────────────────────────────────────────────┤
@@ -222,7 +222,7 @@ vercel --prod
 │       ├─ 30 RMND burned                                │
 │       └─ Unclaimed rewards return to creator           │
 └─────────────────────────────────────────────────────────┘
-```
+\`\`\`
 
 ### **Reward Tiers:**
 

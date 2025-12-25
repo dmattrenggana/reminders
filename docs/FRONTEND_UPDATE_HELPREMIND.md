@@ -4,7 +4,7 @@
 
 Replace the entire `helpRemind` function in `hooks/use-reminder-actions.ts` (lines 507-908) with this new version:
 
-```typescript
+\`\`\`typescript
 const helpRemind = async (reminder: any, isMiniApp: boolean, fid: number) => {
   if (!isConnected || !address) {
     toast({
@@ -408,7 +408,7 @@ const helpRemind = async (reminder: any, isMiniApp: boolean, fid: number) => {
     setIsSubmitting(false);
   }
 };
-```
+\`\`\`
 
 This new version:
 - ✅ Uses Supabase Realtime for instant updates
@@ -419,4 +419,3 @@ This new version:
 - ✅ Clean error handling
 
 Replace the old function and test!
-

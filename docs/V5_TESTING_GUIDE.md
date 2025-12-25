@@ -8,16 +8,16 @@
 ## 🎯 What Changed in V5
 
 ### **Old Flow (V4):**
-```
+\`\`\`
 Helper clicks → Post → Verify → recordReminder() → claimReward()
                                  ❌ 2 transactions
-```
+\`\`\`
 
 ### **New Flow (V5):**
-```
+\`\`\`
 Helper clicks → Post → Verify → Get signature → claimReward(signature)
                                                  ✅ 1 transaction
-```
+\`\`\`
 
 **Key Difference:** No more `recordReminder` step! Direct claim with backend signature.
 
@@ -29,7 +29,7 @@ Helper clicks → Post → Verify → Get signature → claimReward(signature)
 
 Ensure these are in your `.env.local`:
 
-```env
+\`\`\`env
 # V5 Contract
 NEXT_PUBLIC_VAULT_CONTRACT=0x...your_v5_contract_address
 
@@ -52,30 +52,30 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
 
 # Token
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...your_token_address
-```
+\`\`\`
 
 ### **2. Contract Deployment**
 
 V5 contract must be deployed with correct signer address:
 
-```solidity
+\`\`\`solidity
 constructor(address _token, address _signer)
-```
+\`\`\`
 
 **Verify signer matches:**
-```bash
+\`\`\`bash
 # Check contract signer
 cast call $VAULT_ADDRESS "signerAddress()" --rpc-url $RPC
 
 # Should match your signer wallet address
 node -e "console.log(new (require('ethers').Wallet)('$SIGNER_PRIVATE_KEY').address)"
-```
+\`\`\`
 
 ### **3. Supabase Setup**
 
 Table `pending_verifications` must exist:
 
-```sql
+\`\`\`sql
 CREATE TABLE pending_verifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   reminder_id INTEGER NOT NULL,
@@ -93,7 +93,7 @@ CREATE TABLE pending_verifications (
 
 -- Enable Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE pending_verifications;
-```
+\`\`\`
 
 ---
 
@@ -101,11 +101,11 @@ ALTER PUBLICATION supabase_realtime ADD TABLE pending_verifications;
 
 ### **Step 1: Start Dev Server**
 
-```bash
+\`\`\`bash
 npm run dev
 # or
 bun dev
-```
+\`\`\`
 
 **Verify:**
 - ✅ No errors in console
@@ -115,7 +115,7 @@ bun dev
 ### **Step 2: Test Signature Generation**
 
 **Manual API test:**
-```bash
+\`\`\`bash
 curl -X POST http://localhost:3000/api/sign-claim \
   -H "Content-Type: application/json" \
   -d '{
@@ -123,17 +123,17 @@ curl -X POST http://localhost:3000/api/sign-claim \
     "reminderId": 1,
     "neynarScore": 85
   }'
-```
+\`\`\`
 
 **Expected response:**
-```json
+\`\`\`json
 {
   "success": true,
   "signature": "0xabcd1234...",
   "signerAddress": "0x...",
   "messageHash": "0xdef5678..."
 }
-```
+\`\`\`
 
 **✅ Pass:** Signature generated successfully  
 **❌ Fail:** Check `SIGNER_PRIVATE_KEY` is set correctly
@@ -166,7 +166,7 @@ For testing, you can:
 
 **V5 Workflow:**
 
-```
+\`\`\`
 ┌────────────────────────────────┐
 │ 1. User clicks "Help to Remind"│
 └────────────┬───────────────────┘
@@ -206,12 +206,12 @@ For testing, you can:
 └────────────────────────────────┘
 
 Total: 1 blockchain transaction (approval was earlier)
-```
+\`\`\`
 
 ### **Console Logs (V5):**
 
 **Successful flow:**
-```
+\`\`\`
 [HelpRemind] Creating pending verification in Supabase for reminder: 1
 [HelpRemind] ✅ Pending verification created: uuid-token
 [HelpRemind] Subscribing to Supabase Realtime for verification: uuid-token
@@ -223,7 +223,7 @@ Total: 1 blockchain transaction (approval was earlier)
 [HelpRemind] ✅ Got claim signature from backend
 [HelpRemind] Calling claimReward with signature
 ✅ Reward claimed!
-```
+\`\`\`
 
 **Key Points:**
 - ❌ **NO** "Recording reminder..." step
@@ -282,7 +282,7 @@ Total: 1 blockchain transaction (approval was earlier)
 **Cause:** Signer address mismatch
 
 **Fix:**
-```bash
+\`\`\`bash
 # Check contract signer
 cast call $VAULT_ADDRESS "signerAddress()" --rpc-url $RPC
 
@@ -290,7 +290,7 @@ cast call $VAULT_ADDRESS "signerAddress()" --rpc-url $RPC
 node -e "console.log(new (require('ethers').Wallet)('$SIGNER_PRIVATE_KEY').address)"
 
 # They MUST match!
-```
+\`\`\`
 
 ### **Issue 2: "Window not open" Error**
 
@@ -299,9 +299,9 @@ node -e "console.log(new (require('ethers').Wallet)('$SIGNER_PRIVATE_KEY').addre
 **Fix:** Wait until `deadline - 1 hour`
 
 **Check window:**
-```bash
+\`\`\`bash
 cast call $VAULT_ADDRESS "isClaimWindowOpen(uint256)" $REMINDER_ID --rpc-url $RPC
-```
+\`\`\`
 
 ### **Issue 3: "Already claimed" Error**
 
@@ -310,16 +310,16 @@ cast call $VAULT_ADDRESS "isClaimWindowOpen(uint256)" $REMINDER_ID --rpc-url $RP
 **Fix:** Each helper can only claim once per reminder. This is expected behavior.
 
 **Check if claimed:**
-```bash
+\`\`\`bash
 cast call $VAULT_ADDRESS "hasClaimed(uint256,address)" $REMINDER_ID $HELPER_ADDRESS --rpc-url $RPC
-```
+\`\`\`
 
 ### **Issue 4: No Signature Generated**
 
 **Cause:** `/api/sign-claim` endpoint not working
 
 **Check:**
-```bash
+\`\`\`bash
 # Test endpoint
 curl -X POST http://localhost:3000/api/sign-claim \
   -H "Content-Type: application/json" \
@@ -327,7 +327,7 @@ curl -X POST http://localhost:3000/api/sign-claim \
 
 # Check logs
 # Should see: [SignClaim] Generated signature: { ... }
-```
+\`\`\`
 
 **Fix:**
 - Verify `SIGNER_PRIVATE_KEY` is set
@@ -344,11 +344,11 @@ curl -X POST http://localhost:3000/api/sign-claim \
 - Check `/api/verify-post` logs
 
 **Manual verify:**
-```bash
+\`\`\`bash
 curl -X POST http://localhost:3000/api/verify-post \
   -H "Content-Type: application/json" \
   -d '{"verificationToken":"your-uuid-token"}'
-```
+\`\`\`
 
 ---
 
@@ -370,23 +370,23 @@ curl -X POST http://localhost:3000/api/verify-post \
 ### **Enable Verbose Logging:**
 
 Add to browser console:
-```javascript
+\`\`\`javascript
 localStorage.setItem('DEBUG', 'helpRemind,signClaim,verifyPost');
-```
+\`\`\`
 
 ### **Check Supabase Realtime:**
 
-```javascript
+\`\`\`javascript
 // In browser console
 const { supabase } = await import('/lib/supabase/client');
 supabase.channel('test').subscribe((status) => {
   console.log('Realtime status:', status);
 });
-```
+\`\`\`
 
 ### **Monitor Contract State:**
 
-```bash
+\`\`\`bash
 # Check reminder details
 cast call $VAULT_ADDRESS "reminders(uint256)" $REMINDER_ID --rpc-url $RPC
 
@@ -395,7 +395,7 @@ cast call $VAULT_ADDRESS "hasClaimed(uint256,address)" $REMINDER_ID $HELPER --rp
 
 # Check remaining pool
 cast call $VAULT_ADDRESS "getRemainingPool(uint256)" $REMINDER_ID --rpc-url $RPC
-```
+\`\`\`
 
 ---
 
@@ -424,4 +424,3 @@ cast call $VAULT_ADDRESS "getRemainingPool(uint256)" $REMINDER_ID --rpc-url $RPC
 ---
 
 **Happy Testing!** 🎉 V5 workflow is simpler and faster! 🚀
-

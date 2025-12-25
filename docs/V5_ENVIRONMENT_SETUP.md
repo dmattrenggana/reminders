@@ -4,7 +4,7 @@
 
 Add these to your `.env.local` file:
 
-```env
+\`\`\`env
 # Smart Contract Addresses
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...your_commit_token_address
 NEXT_PUBLIC_VAULT_CONTRACT=0x...your_v5_vault_contract_address
@@ -25,7 +25,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # V5 Signature Verification (NEW!)
 SIGNER_PRIVATE_KEY=0x...your_signer_wallet_private_key
-```
+\`\`\`
 
 ---
 
@@ -33,51 +33,51 @@ SIGNER_PRIVATE_KEY=0x...your_signer_wallet_private_key
 
 ### **Step 1: Generate Private Key**
 
-```bash
+\`\`\`bash
 node -e "console.log(require('ethers').Wallet.createRandom().privateKey)"
-```
+\`\`\`
 
 Output example:
-```
+\`\`\`
 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
-```
+\`\`\`
 
 ### **Step 2: Get Signer Address**
 
-```bash
+\`\`\`bash
 node -e "console.log(new (require('ethers').Wallet)('0x1234567890abcdef...').address)"
-```
+\`\`\`
 
 Output example:
-```
+\`\`\`
 0xabcdef1234567890abcdef1234567890abcdef12
-```
+\`\`\`
 
 ### **Step 3: Add to .env.local**
 
-```env
+\`\`\`env
 SIGNER_PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
-```
+\`\`\`
 
 ### **Step 4: Deploy V5 Contract**
 
 When deploying V5 contract, use the signer address:
 
-```solidity
+\`\`\`solidity
 constructor(
     address _token,
     address _signer  // ← Your signer address from Step 2
 )
-```
+\`\`\`
 
 Example:
-```bash
+\`\`\`bash
 # Deploy with Hardhat/Foundry
 forge create ReminderVaultV5 \
   --constructor-args $TOKEN_ADDRESS $SIGNER_ADDRESS \
   --rpc-url $RPC_URL \
   --private-key $DEPLOYER_PRIVATE_KEY
-```
+\`\`\`
 
 ---
 
@@ -108,7 +108,7 @@ Create this script to help with setup:
 
 **`scripts/setup-v5-signer.js`:**
 
-```javascript
+\`\`\`javascript
 const { Wallet } = require('ethers');
 
 console.log('🔐 Generating V5 Signer Wallet...\n');
@@ -121,13 +121,13 @@ console.log(`SIGNER_PRIVATE_KEY=${wallet.privateKey}`);
 console.log(`\n🔑 Signer Address (use in contract deployment):`);
 console.log(`${wallet.address}`);
 console.log('\n⚠️  KEEP PRIVATE KEY SECURE! Never commit to git.\n');
-```
+\`\`\`
 
 **Run:**
 
-```bash
+\`\`\`bash
 node scripts/setup-v5-signer.js
-```
+\`\`\`
 
 ---
 
@@ -135,23 +135,23 @@ node scripts/setup-v5-signer.js
 
 ### **1. Check Environment Variables:**
 
-```bash
+\`\`\`bash
 # In your project directory
 node -e "require('dotenv').config({path:'.env.local'}); console.log('SIGNER_PRIVATE_KEY:', process.env.SIGNER_PRIVATE_KEY ? '✅ Set' : '❌ Missing')"
-```
+\`\`\`
 
 ### **2. Check Contract Signer Address:**
 
-```bash
+\`\`\`bash
 # Query contract
 cast call $VAULT_ADDRESS "signerAddress()" --rpc-url $RPC
-```
+\`\`\`
 
 Should match your signer wallet address!
 
 ### **3. Test Signature Generation:**
 
-```bash
+\`\`\`bash
 # Start dev server
 npm run dev
 
@@ -159,17 +159,17 @@ npm run dev
 curl -X POST http://localhost:3000/api/sign-claim \
   -H "Content-Type: application/json" \
   -d '{"helperAddress":"0x123...","reminderId":1,"neynarScore":85}'
-```
+\`\`\`
 
 Expected response:
-```json
+\`\`\`json
 {
   "success": true,
   "signature": "0xabcd...",
   "signerAddress": "0x789...",
   "messageHash": "0xdef..."
 }
-```
+\`\`\`
 
 ---
 
@@ -177,17 +177,17 @@ Expected response:
 
 If you already have a `.env.local` from V4, just add:
 
-```env
+\`\`\`env
 # Add this line
 SIGNER_PRIVATE_KEY=0x...your_new_signer_private_key
-```
+\`\`\`
 
 And update:
 
-```env
+\`\`\`env
 # Update this line with V5 contract address
 NEXT_PUBLIC_VAULT_CONTRACT=0x...your_v5_contract_address
-```
+\`\`\`
 
 All other env vars stay the same! ✅
 
@@ -202,4 +202,3 @@ All other env vars stay the same! ✅
 ---
 
 **Setup complete!** You're ready to use V5! 🎉
-

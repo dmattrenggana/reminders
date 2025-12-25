@@ -13,16 +13,16 @@
 Helper flow simplified from **2 transactions** to **1 transaction**:
 
 ### **Before (V4):**
-```
+\`\`\`
 Post → Verify → recordReminder() → claimReward()
         ❌ 2 on-chain transactions
-```
+\`\`\`
 
 ### **After (V5):**
-```
+\`\`\`
 Post → Verify → claimReward(signature)
         ✅ 1 on-chain transaction
-```
+\`\`\`
 
 ---
 
@@ -73,25 +73,25 @@ Post → Verify → claimReward(signature)
 ### **1. Contract Function Signature:**
 
 **OLD (V4):**
-```solidity
+\`\`\`solidity
 function recordReminder(uint256 reminderId, uint256 neynarScore)
 function claimReward(uint256 reminderId)
-```
+\`\`\`
 
 **NEW (V5):**
-```solidity
+\`\`\`solidity
 // recordReminder REMOVED ❌
 function claimReward(
     uint256 reminderId,
     uint256 neynarScore,
     bytes memory signature  // ← NEW!
 )
-```
+\`\`\`
 
 ### **2. Frontend Flow:**
 
 **OLD:**
-```typescript
+\`\`\`typescript
 // Step 1: Verify post (off-chain)
 const { neynarScore } = await verifyPost();
 
@@ -100,10 +100,10 @@ await contract.recordReminder(reminderId, neynarScore);
 
 // Step 3: Call claimReward (on-chain)
 await contract.claimReward(reminderId);
-```
+\`\`\`
 
 **NEW:**
-```typescript
+\`\`\`typescript
 // Step 1: Verify post (off-chain)
 const { neynarScore } = await verifyPost();
 
@@ -114,38 +114,38 @@ const { signature } = await fetch('/api/sign-claim', {
 
 // Step 3: Call claimReward with signature (on-chain)
 await contract.claimReward(reminderId, neynarScore, signature);
-```
+\`\`\`
 
 ### **3. Signature Verification:**
 
 **Message Hash:**
-```solidity
+\`\`\`solidity
 keccak256(abi.encodePacked(helperAddress, reminderId, neynarScore))
-```
+\`\`\`
 
 **Backend Signing:**
-```typescript
+\`\`\`typescript
 const messageHash = ethers.solidityPackedKeccak256(
   ['address', 'uint256', 'uint256'],
   [helperAddress, reminderId, neynarScore]
 );
 const signature = await wallet.signMessage(ethers.getBytes(messageHash));
-```
+\`\`\`
 
 **Contract Verification:**
-```solidity
+\`\`\`solidity
 bytes32 hash = keccak256(abi.encodePacked(msg.sender, reminderId, neynarScore));
 bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(hash);
 require(ethHash.recover(signature) == signerAddress, "Invalid");
-```
+\`\`\`
 
 ---
 
 ## 🆕 New Environment Variable
 
-```env
+\`\`\`env
 SIGNER_PRIVATE_KEY=0x...
-```
+\`\`\`
 
 **Purpose:**
 - Used by `/api/sign-claim` to sign claim messages
@@ -153,9 +153,9 @@ SIGNER_PRIVATE_KEY=0x...
 - Must match contract's `signerAddress`
 
 **Generate:**
-```bash
+\`\`\`bash
 node -e "console.log(require('ethers').Wallet.createRandom().privateKey)"
-```
+\`\`\`
 
 ---
 
@@ -250,4 +250,3 @@ If you encounter issues:
 ---
 
 **Migration complete!** 🎊 V5 is ready to deploy!
-

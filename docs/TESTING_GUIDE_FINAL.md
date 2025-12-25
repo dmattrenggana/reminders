@@ -34,15 +34,15 @@ All code is now ready for testing. Here's everything that's been done and how to
 
 ### **Step 1: Start Dev Server**
 
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 **Expected output:**
-```
+\`\`\`
 ✓ Ready in 3.2s
 ○ Local:   http://localhost:3000
-```
+\`\`\`
 
 **If you see errors:**
 - ❌ "Missing Supabase environment variables"
@@ -84,11 +84,11 @@ npm run dev
 1. **Click "Help to Remind" button** on the reminder card
 
 2. **Observe automatic flow:**
-   ```
+   \`\`\`
    ✓ "Setting up verification..."
    ✓ "Opening Farcaster to post..."
    ✓ Farcaster composer opens with pre-filled text
-   ```
+   \`\`\`
 
 3. **Post on Farcaster/Warpcast**
    - Post the text as-is
@@ -98,20 +98,20 @@ npm run dev
 4. **Return to app immediately**
 
 5. **Watch DevTools Console:**
-   ```
+   \`\`\`
    [HelpRemind] 🤖 Starting automatic verification
    [HelpRemind] 🔄 Auto-polling verification (attempt 1)
    [HelpRemind] 🔄 Auto-polling verification (attempt 2)
    [HelpRemind] ✅ Polling: Post verified!
-   ```
+   \`\`\`
 
 6. **App should automatically:**
-   ```
+   \`\`\`
    ✓ "Post verified! Recording reminder..."
    ✓ "Confirming record transaction..."
    ✓ "Claiming your reward..." (if eligible)
    ✓ "✅ Reward claimed!" toast notification
-   ```
+   \`\`\`
 
 **Total time:** 15-30 seconds after posting (automatic!)
 
@@ -134,7 +134,7 @@ npm run dev
 
 ### **User Experience:**
 
-```
+\`\`\`
 ┌────────────────────────────────┐
 │ 1. Click "Help to Remind"      │ ← Only user action!
 └────────────┬───────────────────┘
@@ -166,12 +166,12 @@ npm run dev
 └────────────────────────────────┘
 
 NO button clicks after initial action! 🎉
-```
+\`\`\`
 
 ### **Console Logs (What to Look For):**
 
 **Successful flow:**
-```
+\`\`\`
 [HelpRemind] Creating pending verification in Supabase for reminder: 1
 [HelpRemind] ✅ Pending verification created: uuid-token
 [HelpRemind] 🤖 Starting automatic verification. Token: uuid-token
@@ -182,7 +182,7 @@ NO button clicks after initial action! 🎉
 [HelpRemind] 🔄 Auto-polling verification (attempt 3)
 [HelpRemind] ✅ Polling: Post verified! { neynarScore: 0.85, estimatedReward: "0.595" }
 [HelpRemind] ✅ Post verified! Recording reminder...
-```
+\`\`\`
 
 ---
 
@@ -233,7 +233,7 @@ Use this checklist for comprehensive testing:
 - Can't create verifications
 
 **Fix:**
-```bash
+\`\`\`bash
 # Check .env.local has:
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
@@ -241,7 +241,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
 
 # Restart dev server
 npm run dev
-```
+\`\`\`
 
 ---
 
@@ -266,13 +266,13 @@ npm run dev
    - Check table exists: `pending_verifications`
 
 **Debug:**
-```bash
+\`\`\`bash
 # Check Supabase logs
 # Go to: Supabase Dashboard → Logs → Postgres Logs
 
 # Check Vercel logs (if deployed)
 vercel logs --follow
-```
+\`\`\`
 
 ---
 
@@ -313,10 +313,10 @@ vercel logs --follow
    - Should allow anon SELECT access
 
 3. **Check subscription:**
-   ```javascript
+   \`\`\`javascript
    // In console, should see:
    [HelpRemind] 📡 Realtime update received: { ... }
-   ```
+   \`\`\`
 
 **Note:** Even if Realtime doesn't work, polling will still catch the verification!
 
@@ -328,11 +328,11 @@ Once local testing is complete:
 
 ### **Step 1: Add Environment Variables to Vercel**
 
-```bash
+\`\`\`bash
 vercel env add NEXT_PUBLIC_SUPABASE_URL
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 vercel env add SUPABASE_SERVICE_ROLE_KEY
-```
+\`\`\`
 
 Or via Vercel Dashboard:
 1. Go to: https://vercel.com/dashboard
@@ -343,9 +343,9 @@ Or via Vercel Dashboard:
 
 ### **Step 2: Deploy**
 
-```bash
+\`\`\`bash
 git push origin main
-```
+\`\`\`
 
 Vercel will auto-deploy.
 
@@ -422,4 +422,3 @@ After testing complete:
 ---
 
 **Ready to test?** Follow the steps above and let me know how it goes! 🚀
-

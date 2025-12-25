@@ -34,4 +34,3 @@ export const REMINDER_VAULT_V5_ABI = parseAbi([
   "event ReminderReclaimed(uint256 indexed id, address indexed user, uint256 amountReturned)",
   "event ReminderBurned(uint256 indexed id, uint256 burnedAmount, uint256 returnedToUser)",
 ]);
-

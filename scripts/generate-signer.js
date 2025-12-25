@@ -33,4 +33,3 @@ console.log('   4. Test locally with: npm run dev');
 console.log('   5. Add SIGNER_PRIVATE_KEY to Vercel env vars');
 console.log('   6. Deploy to production\n');
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
