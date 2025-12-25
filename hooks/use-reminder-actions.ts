@@ -624,11 +624,11 @@ export function useReminderActions({
       let verificationToken: string | null = null;
       try {
         const requestBody = {
-          reminderId: reminder.id,
-          helperAddress: address,
-          helperFid: fid,
-          creatorUsername: creatorUsername,
-          useSupabase: true, // Use Supabase only, no webhook
+          reminderId: Number(reminder.id), // Ensure it's a number
+          helperAddress: String(address).toLowerCase(), // Ensure it's a string and lowercase
+          helperFid: Number(fid), // Ensure it's a number
+          creatorUsername: String(creatorUsername), // Ensure it's a string
+          useSupabase: true, // Use Supabase mode (automatic verification)
         };
         
         console.log('[HelpRemind] API request body:', JSON.stringify(requestBody, null, 2));
@@ -640,8 +640,18 @@ export function useReminderActions({
         });
 
         if (!recordResponse.ok) {
-          const errorData = await recordResponse.json().catch(() => ({}));
-          console.error('[HelpRemind] API error response:', errorData);
+          let errorData: any = {};
+          try {
+            errorData = await recordResponse.json();
+          } catch (parseError) {
+            console.error('[HelpRemind] Failed to parse error response:', parseError);
+            errorData = { error: `HTTP ${recordResponse.status}`, message: `Server returned ${recordResponse.status} status` };
+          }
+          console.error('[HelpRemind] API error response:', {
+            status: recordResponse.status,
+            statusText: recordResponse.statusText,
+            error: errorData
+          });
           throw new Error(errorData.message || errorData.error || `HTTP ${recordResponse.status}: Failed to create pending verification`);
         }
 
@@ -686,10 +696,17 @@ export function useReminderActions({
             await new Promise(resolve => setTimeout(resolve, 3000));
           } else {
             // Fallback: Open Warpcast URL
-            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`;
-            window.open(warpcastUrl, '_blank');
-            setTxStatus("Please post in Warpcast and return...");
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            try {
+              const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`;
+              const newWindow = window.open(warpcastUrl, '_blank');
+              if (!newWindow) {
+                console.warn('[HelpRemind] ⚠️ Popup blocked');
+              }
+              setTxStatus("Please post in Warpcast and return...");
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            } catch (openError: any) {
+              console.error('[HelpRemind] ⚠️ Error opening Warpcast fallback:', openError);
+            }
           }
         } catch (postError: any) {
           console.warn("Farcaster posting error (non-critical):", postError);
@@ -697,15 +714,32 @@ export function useReminderActions({
         }
       } else {
         // Web browser: Open Warpcast in new tab
-        const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`;
-        window.open(warpcastUrl, '_blank');
-        setTxStatus("Please post in Warpcast and return...");
-        toast({
-          variant: "default",
-          title: "Post in Warpcast",
-          description: "Please post the reminder and mention the creator, then return to this app.",
-        });
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        try {
+          const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(postText)}`;
+          const newWindow = window.open(warpcastUrl, '_blank');
+          if (!newWindow) {
+            console.warn('[HelpRemind] ⚠️ Popup blocked, user may need to allow popups');
+            toast({
+              variant: "default",
+              title: "Popup Blocked",
+              description: "Please allow popups and open Warpcast manually to post.",
+            });
+          }
+          setTxStatus("Please post in Warpcast and return...");
+          toast({
+            variant: "default",
+            title: "Post in Warpcast",
+            description: "Please post the reminder and mention the creator, then return to this app.",
+          });
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } catch (openError: any) {
+          console.error('[HelpRemind] ⚠️ Error opening Warpcast:', openError);
+          toast({
+            variant: "default",
+            title: "Open Warpcast",
+            description: "Please manually open Warpcast and post the reminder.",
+          });
+        }
       }
 
       // Step 5: START AUTOMATIC VERIFICATION (No user button needed!)
@@ -716,28 +750,45 @@ export function useReminderActions({
       let verificationData: any = null;
       
       // Subscribe to Supabase Realtime for instant updates
-      const supabase = getSupabaseClient();
-      const channel = supabase
-        .channel(`verification-${verificationToken}`)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'pending_verifications',
-          filter: `id=eq.${verificationToken}`,
-        }, (payload) => {
-          console.log('[HelpRemind] 📡 Realtime update received:', payload);
-          
-          if (payload.new && (payload.new as any).status === 'verified') {
-            verificationComplete = true;
-            verificationData = {
-              success: true,
-              neynarScore: (payload.new as any).neynar_score,
-              estimatedReward: (payload.new as any).estimated_reward,
-            };
-            console.log('[HelpRemind] ✅ Realtime: Post verified!', verificationData);
-          }
-        })
-        .subscribe();
+      let channel: any = null;
+      try {
+        const supabase = getSupabaseClient();
+        channel = supabase
+          .channel(`verification-${verificationToken}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'pending_verifications',
+            filter: `id=eq.${verificationToken}`,
+          }, (payload: any) => {
+            try {
+              console.log('[HelpRemind] 📡 Realtime update received:', payload);
+              
+              if (payload.new && (payload.new as any).status === 'verified') {
+                verificationComplete = true;
+                verificationData = {
+                  success: true,
+                  neynarScore: (payload.new as any).neynar_score,
+                  estimatedReward: (payload.new as any).estimated_reward,
+                };
+                console.log('[HelpRemind] ✅ Realtime: Post verified!', verificationData);
+              }
+            } catch (realtimeError: any) {
+              console.error('[HelpRemind] ⚠️ Error in Realtime callback:', realtimeError);
+              // Don't throw - just log the error
+            }
+          })
+          .subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('[HelpRemind] ✅ Realtime subscription active');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('[HelpRemind] ⚠️ Realtime channel error');
+            }
+          });
+      } catch (subscribeError: any) {
+        console.error('[HelpRemind] ⚠️ Failed to subscribe to Realtime:', subscribeError);
+        // Continue with polling only if Realtime fails
+      }
 
       // Start automatic background polling (every 5 seconds)
       const startTime = Date.now();
@@ -745,63 +796,100 @@ export function useReminderActions({
       let pollCount = 0;
       
       const pollInterval = setInterval(async () => {
-        if (verificationComplete) {
-          clearInterval(pollInterval);
-          channel.unsubscribe();
-          return;
-        }
-
-        if (Date.now() - startTime > maxWaitTime) {
-          clearInterval(pollInterval);
-          channel.unsubscribe();
-          return;
-        }
-
-        pollCount++;
         try {
-          console.log(`[HelpRemind] 🔄 Auto-polling verification (attempt ${pollCount})`);
-          
-          const verifyResponse = await fetch("/api/verify-post", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ verificationToken }),
-          });
-
-          if (!verifyResponse.ok) {
-            console.log(`[HelpRemind] ⏳ Polling response not OK: ${verifyResponse.status}`);
-            return; // Continue polling
-          }
-
-          const verifyData = await verifyResponse.json();
-          
-          if (verifyData.success && verifyData.status === 'verified') {
+          if (verificationComplete) {
             clearInterval(pollInterval);
-            channel.unsubscribe();
-            
-            if (!verificationComplete) {
-              verificationComplete = true;
-              verificationData = {
-                success: true,
-                neynarScore: verifyData.neynarScore,
-                estimatedReward: verifyData.estimatedReward,
-              };
-              console.log('[HelpRemind] ✅ Polling: Post verified!', verificationData);
+            if (channel) {
+              try {
+                await channel.unsubscribe();
+              } catch (unsubError: any) {
+                console.warn('[HelpRemind] ⚠️ Error unsubscribing channel:', unsubError);
+              }
             }
-          } else {
-            console.log(`[HelpRemind] ⏳ Still waiting... Status: ${verifyData.status}`);
+            return;
           }
-        } catch (error: any) {
-          console.warn('[HelpRemind] ⚠️ Polling error:', error.message);
+
+          if (Date.now() - startTime > maxWaitTime) {
+            clearInterval(pollInterval);
+            if (channel) {
+              try {
+                await channel.unsubscribe();
+              } catch (unsubError: any) {
+                console.warn('[HelpRemind] ⚠️ Error unsubscribing channel:', unsubError);
+              }
+            }
+            return;
+          }
+
+          pollCount++;
+          try {
+            console.log(`[HelpRemind] 🔄 Auto-polling verification (attempt ${pollCount})`);
+            
+            const verifyResponse = await fetch("/api/verify-post", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ verificationToken }),
+            });
+
+            if (!verifyResponse.ok) {
+              console.log(`[HelpRemind] ⏳ Polling response not OK: ${verifyResponse.status}`);
+              return; // Continue polling
+            }
+
+            const verifyData = await verifyResponse.json();
+            
+            if (verifyData.success && verifyData.status === 'verified') {
+              clearInterval(pollInterval);
+              if (channel) {
+                try {
+                  await channel.unsubscribe();
+                } catch (unsubError: any) {
+                  console.warn('[HelpRemind] ⚠️ Error unsubscribing channel:', unsubError);
+                }
+              }
+              
+              if (!verificationComplete) {
+                verificationComplete = true;
+                verificationData = {
+                  success: true,
+                  neynarScore: verifyData.neynarScore,
+                  estimatedReward: verifyData.estimatedReward,
+                };
+                console.log('[HelpRemind] ✅ Polling: Post verified!', verificationData);
+              }
+            } else {
+              console.log(`[HelpRemind] ⏳ Still waiting... Status: ${verifyData.status}`);
+            }
+          } catch (error: any) {
+            console.warn('[HelpRemind] ⚠️ Polling error:', error.message);
+            // Continue polling even on error
+          }
+        } catch (intervalError: any) {
+          console.error('[HelpRemind] ⚠️ Interval error:', intervalError);
+          // Don't break the interval on error
         }
       }, 5000); // Poll every 5 seconds
 
       // Wait for verification (via Realtime or polling)
-      while (!verificationComplete && Date.now() - startTime < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        while (!verificationComplete && Date.now() - startTime < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (waitError: any) {
+        console.error('[HelpRemind] ⚠️ Error in wait loop:', waitError);
       }
 
-      clearInterval(pollInterval);
-      channel.unsubscribe();
+      // Cleanup
+      try {
+        clearInterval(pollInterval);
+        if (channel) {
+          await channel.unsubscribe().catch((err: any) => {
+            console.warn('[HelpRemind] ⚠️ Error unsubscribing during cleanup:', err);
+          });
+        }
+      } catch (cleanupError: any) {
+        console.warn('[HelpRemind] ⚠️ Cleanup error:', cleanupError);
+      }
       
       if (!verificationComplete || !verificationData) {
         throw new Error("Verification timeout. Please ensure you posted the reminder and mentioned the creator.");
@@ -832,19 +920,25 @@ export function useReminderActions({
         });
 
         if (!signResponse.ok) {
-          throw new Error(`Failed to get signature: ${signResponse.status}`);
+          let errorData: any = {};
+          try {
+            errorData = await signResponse.json();
+          } catch (parseError) {
+            console.error('[HelpRemind] Failed to parse sign error response:', parseError);
+          }
+          throw new Error(errorData.message || errorData.error || `Failed to get signature: HTTP ${signResponse.status}`);
         }
 
         const signData = await signResponse.json();
         if (!signData.success || !signData.signature) {
-          throw new Error("Invalid signature response");
+          throw new Error(signData.message || signData.error || "Invalid signature response");
         }
 
         signature = signData.signature;
         console.log('[HelpRemind] ✅ Got claim signature from backend');
       } catch (signError: any) {
         console.error('[HelpRemind] Failed to get signature:', signError);
-        throw new Error(`Failed to get claim signature: ${signError.message}`);
+        throw new Error(`Failed to get claim signature: ${signError.message || signError}`);
       }
 
       // Call claimReward with signature (V5 contract)

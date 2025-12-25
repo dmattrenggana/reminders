@@ -66,7 +66,7 @@ async function verifyHelperPost(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { reminderId, helperAddress, helperFid, creatorUsername, useWebhook } = body;
+    const { reminderId, helperAddress, helperFid, creatorUsername, useWebhook, useSupabase } = body;
 
     if (!reminderId || !helperAddress || !helperFid) {
       return NextResponse.json({ 
@@ -92,14 +92,13 @@ export async function POST(request: NextRequest) {
     });
     const neynarClient = new NeynarAPIClient(config);
 
-    // WEBHOOK MODE (PRIMARY): Create pending verification and return token
-    // Webhook mode is now the default for real-time verification
-    // Frontend will poll /api/verifications/[token] to check status
-    // If useWebhook is not explicitly false, default to webhook mode
-    const shouldUseWebhook = useWebhook !== false && creatorUsername;
+    // SUPABASE/WEBHOOK MODE (PRIMARY): Create pending verification and return token
+    // Support both useSupabase and useWebhook for backward compatibility
+    // If useSupabase is true OR useWebhook is not explicitly false, use Supabase mode
+    const shouldUseSupabase = (useSupabase === true || useWebhook !== false) && creatorUsername;
     
-    if (shouldUseWebhook) {
-      console.log(`[Record] Using webhook mode (PRIMARY) for helper ${helperFid}, reminder ${reminderId}`);
+    if (shouldUseSupabase) {
+      console.log(`[Record] Using Supabase mode (PRIMARY) for helper ${helperFid}, reminder ${reminderId}`);
       
       // Check if there's already a pending verification
       const existing = await findPendingVerification(Number(helperFid), parseInt(reminderId));
