@@ -8,9 +8,11 @@ import { CheckCircle2, Info, Copy, ExternalLink } from "lucide-react"
 import { useAccount } from "wagmi"
 import { useFarcaster } from "@/components/providers/farcaster-provider"
 
-// ALAMAT KONTRAK ASLI (BASE MAINNET)
-const TOKEN_ADDRESS = "0x6EE85c2cfAB33678DE10A5E1634D86ABB5EeBB07"
-const VAULT_ADDRESS = "0x2e3A524912636BF456B3C19f88693087c4dAa25f" // V4
+// CONTRACT ADDRESSES (BASE MAINNET)
+// These are display-only constants for the deploy page
+// Actual addresses used by app come from environment variables
+const TOKEN_ADDRESS = "0x8984b389cb82e05016db2e4c7230ca0791b9cb07"
+const VAULT_ADDRESS = "0xd575D4174B34C1af976c54a1c14caf40395Ca0A1" // V5
 
 export function VaultDeployer() {
   const { address: walletAddress } = useAccount()
