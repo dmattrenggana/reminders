@@ -80,10 +80,10 @@ export async function createRpcProvider(endpoint?: string): Promise<ethers.JsonR
         staticNetwork: true,
       });
       
-      // Test connection with timeout
+      // Test connection with timeout - reduced for faster failover
       await Promise.race([
         provider.getNetwork(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)), // Increased from 2s to 5s for better stability
       ]);
       
       return provider;
@@ -104,9 +104,9 @@ export async function executeRpcCall<T>(
   options: RpcCallOptions = {}
 ): Promise<T> {
   const {
-    maxRetries = 2, // Reduced from 3 to save QuickNode quota
-    retryDelay = 500, // Reduced from 2000ms for better responsiveness
-    timeout = 15000, // Reduced from 30000ms for better responsiveness
+    maxRetries = 3, // Increased from 2 to 3 for better reliability
+    retryDelay = 1000, // Increased from 500ms to 1000ms for better stability
+    timeout = 20000, // Increased from 15s to 20s for better reliability
   } = options;
 
   let lastError: Error | null = null;
@@ -191,9 +191,9 @@ export async function batchRpcCalls<T>(
   options: RpcCallOptions & { batchSize?: number; batchDelay?: number; maxParallel?: number } = {}
 ): Promise<T[]> {
   const {
-    batchSize = 5, // Process 5 calls per batch
-    batchDelay = 150, // 150ms delay between batches (100-200ms range)
-    maxParallel = 3, // Maximum 2-3 parallel requests at once
+    batchSize = 10, // Increased from 5 to 10 for faster processing
+    batchDelay = 100, // Reduced from 150ms to 100ms for faster processing
+    maxParallel = 5, // Increased from 3 to 5 for more concurrent requests
   } = options;
 
   const results: (T | null)[] = [];
@@ -208,11 +208,11 @@ export async function batchRpcCalls<T>(
     for (let j = 0; j < batch.length; j += maxParallel) {
       const parallelChunk = batch.slice(j, j + maxParallel);
       
-      // Execute parallel chunk with staggered delays (100-200ms between requests)
+      // Execute parallel chunk with staggered delays (100ms between requests for better throughput)
       const chunkPromises = parallelChunk.map(async (call, index) => {
-        // Stagger requests: first request immediate, others with 150ms delay
+        // Stagger requests: first request immediate, others with 100ms delay
         if (index > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms delay between parallel requests
+          await new Promise((resolve) => setTimeout(resolve, 100)); // Reduced from 150ms to 100ms
         }
         
         try {
