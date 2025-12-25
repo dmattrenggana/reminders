@@ -605,17 +605,24 @@ export function useReminderActions({
       });
       
       // Validate all params BEFORE API call
-      if (!reminder.id || reminder.id === 0) {
-        throw new Error(`Invalid reminder ID: ${reminder.id}`);
+      const reminderId = reminder.id !== undefined && reminder.id !== null 
+        ? Number(reminder.id) 
+        : null;
+      
+      if (reminderId === null || isNaN(reminderId)) {
+        throw new Error(`Invalid reminder ID: ${reminder.id}. Reminder data may be corrupted.`);
       }
+      
       if (!address || address === '') {
-        throw new Error(`Invalid helper address: ${address}`);
+        throw new Error(`Invalid helper address: ${address}. Please connect your wallet.`);
       }
+      
       if (!fid || fid === 0) {
         throw new Error(`Invalid helper FID: ${fid}. Please ensure you're connected via Farcaster.`);
       }
+      
       if (!creatorUsername || creatorUsername === '') {
-        throw new Error(`Invalid creator username: ${creatorUsername}`);
+        throw new Error(`Invalid creator username: ${creatorUsername}. Unable to create reminder post.`);
       }
       
       console.log('[HelpRemind] ✅ All params validated. Calling API...');
@@ -624,7 +631,7 @@ export function useReminderActions({
       let verificationToken: string | null = null;
       try {
         const requestBody = {
-          reminderId: Number(reminder.id), // Ensure it's a number
+          reminderId: reminderId, // Already validated and converted to number
           helperAddress: String(address).toLowerCase(), // Ensure it's a string and lowercase
           helperFid: Number(fid), // Ensure it's a number
           creatorUsername: String(creatorUsername), // Ensure it's a string
@@ -652,6 +659,14 @@ export function useReminderActions({
             statusText: recordResponse.statusText,
             error: errorData
           });
+          
+          // Check if it's a CSP error
+          if (errorData.message?.includes('Content Security Policy') || 
+              errorData.message?.includes('CSP') || 
+              errorData.message?.includes('violates')) {
+            throw new Error('Connection blocked by browser security. Please check your browser settings.');
+          }
+          
           throw new Error(errorData.message || errorData.error || `HTTP ${recordResponse.status}: Failed to create pending verification`);
         }
 
@@ -665,7 +680,17 @@ export function useReminderActions({
         console.log('[HelpRemind] ✅ Pending verification created:', verificationToken);
       } catch (error: any) {
         console.error('[HelpRemind] ❌ Failed to create pending verification:', error);
-        throw new Error(`Failed to setup verification: ${error.message}`);
+        
+        // Check if it's a CSP or network error
+        if (error.message?.includes('Content Security Policy') || 
+            error.message?.includes('CSP') || 
+            error.message?.includes('violates') ||
+            error.message?.includes('Failed to fetch') ||
+            error.name === 'TypeError' && error.message?.includes('fetch')) {
+          throw new Error('Unable to connect to server. This may be due to browser security settings. Please try again or check your network connection.');
+        }
+        
+        throw new Error(`Failed to setup verification: ${error.message || error}`);
       }
 
       if (!verificationToken) {

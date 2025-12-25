@@ -258,20 +258,56 @@ export default function DashboardClient() {
   const handleHelpRemindMe = async (reminder: any) => {
     console.log('[Dashboard] handleHelpRemindMe called with reminder:', reminder);
     console.log('[Dashboard] Reminder ID:', reminder.id, 'Type:', typeof reminder.id);
+    console.log('[Dashboard] Reminder object keys:', reminder ? Object.keys(reminder) : 'null');
     
-    // Validate reminder has ID
-    if (!reminder || !reminder.id || reminder.id === 0) {
+    // Validate reminder exists and has required fields
+    if (!reminder) {
+      console.error('[Dashboard] Reminder is null or undefined');
       toast({
         variant: "destructive",
         title: "Invalid Reminder",
-        description: "Reminder data is invalid. Please refresh the page.",
+        description: "Reminder data is missing. Please refresh the page.",
+      });
+      return;
+    }
+    
+    // More flexible validation - allow ID to be 0 or any number, but must exist
+    const reminderId = reminder.id !== undefined && reminder.id !== null 
+      ? Number(reminder.id) 
+      : null;
+    
+    if (reminderId === null || isNaN(reminderId)) {
+      console.error('[Dashboard] Invalid reminder ID:', reminder.id);
+      toast({
+        variant: "destructive",
+        title: "Invalid Reminder",
+        description: `Reminder ID is invalid: ${reminder.id}. Please refresh the page.`,
+      });
+      return;
+    }
+    
+    // Validate reminder has creator address (required for fetching username)
+    if (!reminder.creator) {
+      console.error('[Dashboard] Reminder missing creator address:', reminder);
+      toast({
+        variant: "destructive",
+        title: "Invalid Reminder",
+        description: "Reminder creator information is missing. Please refresh the page.",
       });
       return;
     }
     
     // Try to get FID from farcasterUser hook
     if (farcasterFid) {
-      helpRemind(reminder, isMiniApp, farcasterFid);
+      console.log('[Dashboard] Using FID from hook:', farcasterFid);
+      helpRemind(reminder, isMiniApp, farcasterFid).catch((error: any) => {
+        console.error('[Dashboard] helpRemind error:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to help remind. Please try again.",
+        });
+      });
       return;
     }
 
@@ -279,14 +315,29 @@ export default function DashboardClient() {
     if (address && isConnected) {
       try {
         setTxStatus("Fetching Farcaster user...");
+        console.log('[Dashboard] Fetching FID for address:', address);
+        
         const response = await fetch(`/api/farcaster/fid-by-address?address=${address}`);
+        
+        if (!response.ok) {
+          throw new Error(`API returned status ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('[Dashboard] FID fetch response:', data);
         
         if (data.fid) {
           setTxStatus("");
           // Trigger refresh in hook for future use, but use the fetched FID immediately
           refreshWalletUser().catch(console.error);
-          helpRemind(reminder, isMiniApp, data.fid);
+          helpRemind(reminder, isMiniApp, data.fid).catch((error: any) => {
+            console.error('[Dashboard] helpRemind error:', error);
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: error.message || "Failed to help remind. Please try again.",
+            });
+          });
         } else {
           setTxStatus("");
           toast({
@@ -296,13 +347,23 @@ export default function DashboardClient() {
           });
         }
       } catch (error: any) {
-        console.error("Failed to fetch FID:", error);
+        console.error("[Dashboard] Failed to fetch FID:", error);
         setTxStatus("");
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to fetch Farcaster user. Please try again.",
-        });
+        
+        // Check if it's a CSP error
+        if (error.message?.includes('Content Security Policy') || error.message?.includes('CSP') || error.message?.includes('violates')) {
+          toast({
+            variant: "destructive",
+            title: "Connection Error",
+            description: "Unable to connect. Please check your browser settings and try again.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: error.message || "Failed to fetch Farcaster user. Please try again.",
+          });
+        }
       }
     } else {
       toast({

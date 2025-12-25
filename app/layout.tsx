@@ -25,11 +25,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   errorMessage.includes('Content Security Policy') ||
                   errorMessage.includes('CSP') ||
                   errorMessage.includes('violates the document') ||
-                  errorMessage.includes('Failed to fetch') && errorMessage.includes('violates') ||
+                  errorMessage.includes('violates') ||
+                  (errorMessage.includes('Failed to fetch') && errorMessage.includes('violates')) ||
                   errorStack.includes('Content Security Policy') ||
-                  errorStack.includes('CSP')
+                  errorStack.includes('CSP') ||
+                  errorStack.includes('privy-provider') ||
+                  errorStack.includes('privy')
                 ) {
-                  console.debug('[Suppressed] CSP unhandled promise rejection (harmless)');
+                  console.debug('[Suppressed] CSP unhandled promise rejection (harmless - from Privy/WalletConnect optional features)');
                   event.preventDefault(); // Prevent error from being logged
                   return false;
                 }
@@ -92,10 +95,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 
                 // Suppress CSP errors that are handled gracefully
                 const errorMessage = event.message || '';
+                const errorTarget = event.target as any;
+                const errorSrc = errorTarget?.src || errorTarget?.href || '';
+                
                 if (
                   errorMessage.includes('Content Security Policy') ||
                   errorMessage.includes('CSP') ||
-                  (errorMessage.includes('Failed to fetch') && errorMessage.includes('violates'))
+                  errorMessage.includes('violates') ||
+                  (errorMessage.includes('Failed to fetch') && errorMessage.includes('violates')) ||
+                  errorSrc.includes('privy') ||
+                  errorSrc.includes('walletconnect')
                 ) {
                   // Only suppress if it's a known harmless CSP error
                   // (e.g., from Privy/WalletConnect optional features)
