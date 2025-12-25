@@ -188,6 +188,10 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   const actualFeedType = isMyReminder ? "my" : feedType
 
   const handleHelpRemindMe = async () => {
+    console.log('[ReminderCard] handleHelpRemindMe called');
+    console.log('[ReminderCard] Reminder object:', reminder);
+    console.log('[ReminderCard] Reminder ID:', reminder.id, 'Type:', typeof reminder.id);
+    
     if (onHelpRemind) {
       onHelpRemind(reminder);
     } else {

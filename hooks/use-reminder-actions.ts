@@ -581,7 +581,7 @@ export function useReminderActions({
       const appUrl = "https://remindersbase.vercel.app/";
       
       // Create post template with mention using the specified template
-      const postText = `Tick-tock, @${creatorUsername} ! ⏰ Don't forget your ${reminderDescription} is approaching at ${formattedDeadline}. Beat the clock and get it done now! ${appUrl.trim()}`;
+      const postText = `Tick-tock, @${creatorUsername} ! Don't forget your ${reminderDescription} is approaching at ${formattedDeadline}. Beat the clock and get it done now! ${appUrl.trim()} ⏰`;
       
       console.log('[HelpRemind] Post template created:', {
         creatorUsername,
