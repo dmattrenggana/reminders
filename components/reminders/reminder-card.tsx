@@ -300,22 +300,19 @@ export function ReminderCard({ reminder, feedType = "public", onHelpRemind, onCo
   }
 
   const getStatusConfig = () => {
-    // V5: Check if reminder was reclaimed by creator (resolved = true, and creator action)
-    // In V5, we need to check if resolved but not burned (no burn event)
-    // For now, if isResolved and creator === current user, it's reclaimed (Confirmed)
-    const isCreator = address && reminder.creator && address.toLowerCase() === reminder.creator.toLowerCase();
-    
-    // Check if reminder is confirmed/reclaimed (completed or reclaimed by creator)
-    if (reminder.isResolved && (reminder.isCompleted || isCreator)) {
-      return {
-        icon: <CheckCircle2 className="h-4 w-4" />,
-        label: "Confirmed",
-        color: "bg-green-50 text-green-700 border-green-100",
-        iconColor: "text-green-600"
+    // Check if reminder is resolved (completed or burned)
+    if (reminder.isResolved) {
+      // Confirmed: Only if successfully reclaimed/confirmed (isCompleted = true)
+      if (reminder.isCompleted) {
+        return {
+          icon: <CheckCircle2 className="h-4 w-4" />,
+          label: "Confirmed",
+          color: "bg-green-50 text-green-700 border-green-100",
+          iconColor: "text-green-600"
+        }
       }
-    }
-    // Check if reminder is burned (missed deadline - resolved but not by creator)
-    if (reminder.isResolved && !reminder.isCompleted && !isCreator) {
+      // Burned: If resolved but not completed (deadline passed without reclaim)
+      // This includes reminders that failed to reclaim at T-1 hour
       return {
         icon: <Flame className="h-4 w-4" />,
         label: "Burned",
