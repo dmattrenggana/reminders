@@ -256,6 +256,19 @@ export default function DashboardClient() {
 
   // Help remind handler - Use FID from farcasterUser hook
   const handleHelpRemindMe = async (reminder: any) => {
+    console.log('[Dashboard] handleHelpRemindMe called with reminder:', reminder);
+    console.log('[Dashboard] Reminder ID:', reminder.id, 'Type:', typeof reminder.id);
+    
+    // Validate reminder has ID
+    if (!reminder || !reminder.id || reminder.id === 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Reminder",
+        description: "Reminder data is invalid. Please refresh the page.",
+      });
+      return;
+    }
+    
     // Try to get FID from farcasterUser hook
     if (farcasterFid) {
       helpRemind(reminder, isMiniApp, farcasterFid);
