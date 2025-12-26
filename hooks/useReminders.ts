@@ -173,15 +173,18 @@ export function useReminders() {
             // We need to differentiate using timing:
             // - reclaimReminder can only be called before deadline (T-1 hour to deadline)
             // - burnMissedReminder can only be called after confirmationDeadline
-            // So if burned = true and current time < deadline, it was likely reclaimed (confirmed)
-            // If burned = true and current time >= deadline, it was likely burned
+            // So if burned = true and current time < confirmationDeadline, it was likely reclaimed (confirmed)
+            // If burned = true and current time >= confirmationDeadline, it was likely burned
             const now = Math.floor(Date.now() / 1000);
             const deadlineValue = Number(r.reminderTime);
+            const confirmationDeadlineValue = Number(r.confirmationDeadline);
             // If confirmed = true, it's definitely confirmed (from confirmReminder)
             // If burned = true but not confirmed, check timing:
-            // - If current time < deadline, it was likely reclaimed (confirmed) at T-1 hour
-            // - If current time >= deadline, it was likely burned after deadline
-            const isCompleted = r.confirmed || (r.burned && now < deadlineValue);
+            // - If current time < confirmationDeadline, it was likely reclaimed (confirmed) at T-1 hour
+            //   (reclaimReminder can only be called before deadline, which is before confirmationDeadline)
+            // - If current time >= confirmationDeadline, it was likely burned after deadline
+            //   (burnMissedReminder can only be called after confirmationDeadline)
+            const isCompleted = r.confirmed || (r.burned && now < confirmationDeadlineValue);
             
             reminderData = {
               id: id,
