@@ -122,76 +122,14 @@ export const COMMIT_TOKEN_ABI = parseAbi([
   "function burn(address from, uint256 amount)",
 ])
 
-export const REMINDER_VAULT_V2_ABI = [
-  "function createReminder(uint256 tokenAmount, uint256 reminderTime, string memory description, string memory farcasterUsername) returns (uint256)",
-  "function confirmReminder(uint256 reminderId)",
-  "function burnMissedReminder(uint256 reminderId)",
-  "function recordReminder(uint256 reminderId, uint256 neynarScore)",
-  "function claimReward(uint256 reminderId)",
-  "function getUserReminders(address user) view returns (uint256[])",
-  "function reminders(uint256 reminderId) view returns (address user, uint256 commitAmount, uint256 rewardPoolAmount, uint256 reminderTime, uint256 confirmationDeadline, bool confirmed, bool burned, string memory description, string memory farcasterUsername, uint256 totalReminders, uint256 rewardsClaimed)",
-  "function getRemindersFor(uint256 reminderId) view returns (address[] memory)",
-  "function canRemind(uint256 reminderId) view returns (bool)",
-  "function getActiveReminders() view returns (uint256[] memory)",
-  "function nextReminderId() view returns (uint256)",
-  "event ReminderCreated(uint256 indexed reminderId, address indexed user, uint256 commitAmount, uint256 rewardPoolAmount, uint256 reminderTime, string description, string farcasterUsername)",
-  "event ReminderConfirmed(uint256 indexed reminderId, address indexed user, uint256 timestamp)",
-  "event TokensBurned(uint256 indexed reminderId, address indexed user, uint256 commitAmount)",
-  "event RewardPoolReturned(uint256 indexed reminderId, address indexed user, uint256 rewardPoolAmount)",
-  "event UserReminded(uint256 indexed reminderId, address indexed remindedBy, uint256 neynarScore, uint256 timestamp)",
-  "event RewardClaimed(uint256 indexed reminderId, address indexed claimer, uint256 amount)",
-] as const
-
-export const REMINDER_VAULT_V1_ABI = [
-  "function createReminder(uint256 tokenAmount, uint256 reminderTime, string memory description) returns (uint256)",
-  "function confirmReminder(uint256 reminderId)",
-  "function burnMissedReminder(uint256 reminderId)",
-  "function getUserReminders(address user) view returns (uint256[])",
-  "function getReminder(uint256 reminderId) view returns (address user, uint256 tokenAmount, uint256 reminderTime, uint256 confirmationDeadline, bool confirmed, bool burned, string memory description)",
-  "function canConfirm(uint256 reminderId) view returns (bool)",
-  "function shouldBurn(uint256 reminderId) view returns (bool)",
-  "event ReminderCreated(uint256 indexed reminderId, address indexed user, uint256 tokenAmount, uint256 reminderTime, string description)",
-  "event ReminderConfirmed(uint256 indexed reminderId, address indexed user, uint256 timestamp)",
-  "event TokensBurned(uint256 indexed reminderId, address indexed user, uint256 tokenAmount)",
-  "event TokensReclaimed(uint256 indexed reminderId, address indexed user, uint256 tokenAmount)",
-] as const
-
-export const REMINDER_VAULT_V3_ABI = [
-  "function createReminder(uint256 totalAmount, uint256 reminderTime, string memory description, string memory farcasterUsername) returns (uint256)",
-  "function confirmReminder(uint256 reminderId)",
-  "function burnMissedReminder(uint256 reminderId)",
-  "function recordReminder(uint256 reminderId, uint256 neynarScore)",
-  "function claimReward(uint256 reminderId)",
-  "function withdrawUnclaimedRewards(uint256 reminderId)",
-  "function getUserReminders(address user) view returns (uint256[])",
-  "function reminders(uint256 reminderId) view returns (address user, uint256 commitAmount, uint256 rewardPoolAmount, uint256 reminderTime, uint256 confirmationDeadline, bool confirmed, bool burned, string memory description, string memory farcasterUsername, uint256 totalReminders, uint256 rewardsClaimed, uint256 confirmationTime)",
-  "function getRemindersFor(uint256 reminderId) view returns (address[] memory)",
-  "function canRemind(uint256 reminderId) view returns (bool)",
-  "function canWithdrawUnclaimed(uint256 reminderId) view returns (bool)",
-  "function getUnclaimedAmount(uint256 reminderId) view returns (uint256)",
-  "function getActiveReminders() view returns (uint256[] memory)",
-  "function nextReminderId() view returns (uint256)",
-  "event ReminderCreated(uint256 indexed reminderId, address indexed user, uint256 commitAmount, uint256 rewardPoolAmount, uint256 reminderTime, string description, string farcasterUsername)",
-  "event ReminderConfirmed(uint256 indexed reminderId, address indexed user, uint256 timestamp)",
-  "event TokensBurned(uint256 indexed reminderId, address indexed user, uint256 commitAmount)",
-  "event RewardPoolReturned(uint256 indexed reminderId, address indexed user, uint256 rewardPoolAmount)",
-  "event UserReminded(uint256 indexed reminderId, address indexed remindedBy, uint256 neynarScore, uint256 timestamp)",
-  "event RewardClaimed(uint256 indexed reminderId, address indexed claimer, uint256 amount)",
-  "event UnclaimedRewardsWithdrawn(uint256 indexed reminderId, address indexed user, uint256 amount)",
-] as const
-
 // Import V5 ABI (30/70 split with signature-based claim, no recordReminder)
 import { REMINDER_VAULT_V5_ABI } from "./v5-abi"
 
-// Default ABI: Use V5 (latest version)
+// Default ABI: Use V5 only (no backward compatibility with V1/V2/V3/V4)
 export const REMINDER_VAULT_ABI = REMINDER_VAULT_V5_ABI
 export const REMINDER_VAULT_V5_ABI_EXPORT = REMINDER_VAULT_V5_ABI
 
-// Export V4 ABI for backward compatibility
-import { REMINDER_VAULT_V4_ABI } from "./v4-abi"
-export const REMINDER_VAULT_V4_ABI_EXPORT = REMINDER_VAULT_V4_ABI
-
-// Export aliases for backward compatibility
+// Export aliases
 export const VAULT_ABI = REMINDER_VAULT_ABI
 export const VAULT_ADDRESS = CONTRACTS.REMINDER_VAULT
 export const TOKEN_ADDRESS = CONTRACTS.COMMIT_TOKEN
