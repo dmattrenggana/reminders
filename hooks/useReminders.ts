@@ -5,14 +5,14 @@ import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
 
 // Cache untuk mengurangi RPC calls - Optimized for QuickNode quota
 const reminderCache = new Map<number, { data: any; timestamp: number }>();
-const CACHE_DURATION = 300000; // 300 seconds cache (5 minutes - increased to save quota)
+const CACHE_DURATION = 60000; // 60 seconds cache (reduced from 5 minutes for faster updates)
 let globalFetchInProgress = false; // Prevent multiple simultaneous fetches
 
 export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 60000; // Minimum 60 seconds between fetches (increased to save quota)
+  const MIN_FETCH_INTERVAL = 30000; // Minimum 30 seconds between fetches (reduced from 60 seconds for faster updates)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchReminders = useCallback(async (force = false) => {
@@ -141,13 +141,16 @@ export function useReminders() {
             // Logic:
             // - reclaimReminder: Called by creator at T-1 hour (before deadline) → "Confirmed"
             // - burnMissedReminder: Called by cron job after deadline → "Burned"
-            // Since V5 contract doesn't have separate 'confirmed' field, we use timing:
-            // - If resolved = true and current time < deadline, it was likely reclaimed (confirmed) at T-1 hour
-            // - If resolved = true and current time >= deadline, it was likely burned after deadline
-            const now = Math.floor(Date.now() / 1000);
-            // If resolved and current time is before deadline, it was reclaimed (confirmed) at T-1 hour
-            // If resolved and current time is after deadline, it was burned
-            const isCompleted = r.resolved && now < deadlineValue;
+            // Since V5 contract doesn't have separate 'confirmed' field, we use rewards comparison:
+            // - If resolved = true and rewardsClaimed < rewardPoolAmount, it was likely reclaimed (confirmed)
+            //   (reclaimReminder returns unclaimed rewards, so some may remain unclaimed)
+            // - If resolved = true and rewardsClaimed >= rewardPoolAmount, it was likely burned
+            //   (burnMissedReminder returns all unclaimed rewards, so rewardsClaimed should be close to rewardPoolAmount)
+            const rewardPoolAmount = Number(ethers.formatUnits(r.rewardPoolAmount, 18));
+            const rewardsClaimed = Number(ethers.formatUnits(r.rewardsClaimed, 18));
+            // If resolved and there are still unclaimed rewards, it's likely confirmed (reclaimed)
+            // This is because reclaimReminder returns unclaimed portion, so some helpers may not have claimed yet
+            const isCompleted = r.resolved && rewardsClaimed < rewardPoolAmount * 0.9; // 90% threshold to account for rounding
             
             reminderData = {
               id: id,

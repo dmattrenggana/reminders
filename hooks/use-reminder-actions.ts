@@ -402,12 +402,16 @@ https://remindersbase.vercel.app/`;
         
         // No toast notification - FloatingCreate component shows success animation with Share button
         
-        // Wait for blockchain state to update (optimized to save quota)
-        // Only refresh once after transaction confirmation
+        // Force refresh immediately to show new reminder in feed
+        // Clear cache and refresh to ensure new reminder appears
+        refreshReminders();
+        refreshBalance();
+        
+        // Also refresh after a short delay to catch any delayed blockchain updates
         setTimeout(() => {
           refreshReminders();
           refreshBalance();
-        }, 3000); // Single refresh after 3 seconds (reduced from multiple refreshes)
+        }, 5000); // Additional refresh after 5 seconds
         
         // Return success immediately to allow FloatingCreate to show success animation
         return { success: true, receipt: createReceipt };
