@@ -1178,5 +1178,6 @@ https://remindersbase.vercel.app/`;
     showClaimPopup,
     setShowClaimPopup,
     claimPopupData,
+    setClaimPopupData,
   };
 }

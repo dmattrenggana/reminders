@@ -83,6 +83,7 @@ export default function DashboardClient() {
     showClaimPopup,
     setShowClaimPopup,
     claimPopupData,
+    setClaimPopupData,
   } = useReminderActions({
     address,
     isConnected,
