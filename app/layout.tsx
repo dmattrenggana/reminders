@@ -37,6 +37,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   return false;
                 }
                 
+                // Suppress 429 rate limit errors (handled by RPC provider with retry and exponential backoff)
+                if (
+                  errorMessage.includes('429') ||
+                  errorMessage.includes('Too Many Requests') ||
+                  errorMessage.includes('rate limit') ||
+                  errorStack.includes('429') ||
+                  errorStack.includes('quiknode')
+                ) {
+                  console.debug('[Suppressed] 429 rate limit error (handled by RPC provider with retry)');
+                  event.preventDefault();
+                  return false;
+                }
+                
                 // Suppress known harmless errors from Neynar SDK
                 if (
                   errorMessage.includes('UnfocusedCast') ||
@@ -97,6 +110,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 const errorMessage = event.message || '';
                 const errorTarget = event.target as any;
                 const errorSrc = errorTarget?.src || errorTarget?.href || '';
+                
+                // Suppress 429 rate limit errors (handled by RPC provider with retry)
+                if (
+                  errorMessage.includes('429') ||
+                  errorMessage.includes('Too Many Requests') ||
+                  errorMessage.includes('rate limit') ||
+                  errorSrc.includes('quiknode.pro') && errorMessage.includes('429')
+                ) {
+                  console.debug('[Suppressed] 429 rate limit error (handled by RPC provider)');
+                  event.preventDefault();
+                  return false;
+                }
                 
                 if (
                   errorMessage.includes('Content Security Policy') ||

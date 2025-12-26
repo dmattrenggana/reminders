@@ -5,14 +5,14 @@ import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
 
 // Cache untuk mengurangi RPC calls - Optimized for QuickNode quota
 const reminderCache = new Map<number, { data: any; timestamp: number }>();
-const CACHE_DURATION = 30000; // 30 seconds cache (reduced for faster updates)
+const CACHE_DURATION = 120000; // 2 minutes cache (increased to reduce RPC calls and prevent 429 errors)
 let globalFetchInProgress = false; // Prevent multiple simultaneous fetches
 
 export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 15000; // Minimum 15 seconds between fetches (reduced for faster Public feed updates)
+  const MIN_FETCH_INTERVAL = 60000; // Minimum 60 seconds between fetches (increased to prevent 429 rate limit errors)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchReminders = useCallback(async (force = false) => {
@@ -245,10 +245,10 @@ export function useReminders() {
       fetchReminders();
     }, 100);
     
-    // Refresh otomatis setiap 1 menit untuk mengupdate status (optimized for faster updates)
+    // Refresh otomatis setiap 2 menit untuk mengupdate status (optimized to prevent 429 errors)
     const interval = setInterval(() => {
       fetchReminders();
-    }, 60000); // 1 minute (reduced from 5 minutes for faster Public feed updates)
+    }, 120000); // 2 minutes (increased to reduce RPC calls and prevent 429 rate limit errors)
 
     return () => {
       if (fetchTimeoutRef.current) {

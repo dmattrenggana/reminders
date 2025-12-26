@@ -155,11 +155,19 @@ export async function executeRpcCall<T>(
           error?.code === "ETIMEDOUT" ||
           (error?.error?.code && error.error.code === -32005); // JSON-RPC rate limit code
 
-        // If rate limit, try next endpoint immediately
+        // If rate limit, wait longer before retrying or trying next endpoint
         if (isRateLimit) {
-          console.warn(`[RPC] Rate limit on ${endpoint}, trying next endpoint...`);
-          usedEndpoints.push(endpoint);
-          break; // Break retry loop, try next endpoint
+          console.warn(`[RPC] Rate limit (429) detected on ${endpoint}, waiting before retry...`);
+          // Wait longer for rate limit (exponential backoff: 2s, 4s, 8s)
+          const rateLimitDelay = 2000 * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, rateLimitDelay));
+          
+          // If last attempt on this endpoint, try next endpoint
+          if (attempt === maxRetries - 1) {
+            usedEndpoints.push(endpoint);
+            break; // Break retry loop, try next endpoint
+          }
+          continue; // Retry same endpoint after delay
         }
 
         // If not rate limit and not last attempt, wait and retry
@@ -191,9 +199,9 @@ export async function batchRpcCalls<T>(
   options: RpcCallOptions & { batchSize?: number; batchDelay?: number; maxParallel?: number } = {}
 ): Promise<T[]> {
   const {
-    batchSize = 10, // Increased from 5 to 10 for faster processing
-    batchDelay = 100, // Reduced from 150ms to 100ms for faster processing
-    maxParallel = 5, // Increased from 3 to 5 for more concurrent requests
+    batchSize = 5, // Reduced from 10 to 5 to prevent 429 rate limit errors
+    batchDelay = 500, // Increased from 100ms to 500ms to prevent rate limiting
+    maxParallel = 3, // Reduced from 5 to 3 to prevent overwhelming RPC endpoint
   } = options;
 
   const results: (T | null)[] = [];
@@ -210,9 +218,9 @@ export async function batchRpcCalls<T>(
       
       // Execute parallel chunk with staggered delays (100ms between requests for better throughput)
       const chunkPromises = parallelChunk.map(async (call, index) => {
-        // Stagger requests: first request immediate, others with 100ms delay
+        // Stagger requests: first request immediate, others with 200ms delay to prevent rate limiting
         if (index > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 100)); // Reduced from 150ms to 100ms
+          await new Promise((resolve) => setTimeout(resolve, 200)); // Increased to prevent 429 errors
         }
         
         try {
