@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // V3: index 8, V2: index 8 (same position)
+        // V5: farcasterUsername at index 7
         const rawFarcasterUsername = reminderData[8]
         const farcasterUsername =
           rawFarcasterUsername && rawFarcasterUsername.trim() !== ""

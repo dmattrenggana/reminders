@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
           confirmationTime
 
         if (reminder.length === 12) {
-          // V4/V3 contract with confirmationTime field at index 11
+          // V5 contract format (8 fields)
           ;[
             user,
             commitAmount,
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
             confirmationTime,
           ] = reminder
         } else {
-          // V2 contract without confirmationTime
+          // V5 contract format (8 fields)
           ;[
             user,
             commitAmount,
@@ -133,12 +133,12 @@ export async function GET(request: NextRequest) {
           )
           console.log(`[v0] Cron: Burning expired reminder ${i} for ${farcasterUsername || "wallet user"}`)
 
-          // V4: Burns 30% commitment tokens to 0xdead
-          // V4: Returns unclaimed portion of 70% reward pool to user
+          // V5: Burns 30% commitment tokens to 0xdead
+          // V5: Returns unclaimed portion of 70% reward pool to user
           const tx = await vaultContract.burnMissedReminder(i)
           const receipt = await tx.wait()
 
-          // Calculate unclaimed rewards (V4 returns unclaimed portion, not full reward pool)
+          // Calculate unclaimed rewards (V5 returns unclaimed portion, not full reward pool)
           // Use BigInt arithmetic to avoid precision loss
           const unclaimedRewards = BigInt(rewardPoolAmount) - BigInt(rewardsClaimed)
 
@@ -147,8 +147,8 @@ export async function GET(request: NextRequest) {
             action: "burned_missed_reminder",
             user,
             farcasterUsername: farcasterUsername || "wallet user",
-            commitmentBurned: ethers.formatUnits(commitAmount, 18), // 30% of total (V4)
-            rewardPoolTotal: ethers.formatUnits(rewardPoolAmount, 18), // 70% of total (V4)
+            commitmentBurned: ethers.formatUnits(commitAmount, 18), // 30% of total (V5)
+            rewardPoolTotal: ethers.formatUnits(rewardPoolAmount, 18), // 70% of total (V5)
             rewardsClaimed: ethers.formatUnits(rewardsClaimed, 18),
             rewardPoolReturned: ethers.formatUnits(unclaimedRewards, 18), // Unclaimed portion returned
             helpersCount: Number(totalReminders),
