@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import * as React from "react";
 import { useWriteContract, usePublicClient } from "wagmi";
 import { parseUnits } from "viem";
 import { CONTRACTS, REMINDER_VAULT_ABI, COMMIT_TOKEN_ABI } from "@/lib/contracts/config";
 import { useToast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 interface UseReminderActionsProps {
@@ -27,6 +29,67 @@ export function useReminderActions({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txStatus, setTxStatus] = useState<string>("");
   const { toast } = useToast();
+
+  // Share reminder function - opens Farcaster composer with template text
+  const shareReminder = async (description: string, deadline: string) => {
+    try {
+      // Format deadline for display
+      const deadlineDate = new Date(deadline);
+      const formattedDeadline = deadlineDate.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      // Create share text template
+      const shareText = `Help me reach my goal and get rewarded!
+I just created reminder for ${description} please remind me so I don't miss it on ${formattedDeadline}, you can help remind me when the deadline is near!⏰
+https://remindersbase.vercel.app/`;
+
+      // Check if in miniapp environment
+      const isMiniApp = typeof window !== 'undefined' && (window as any).Farcaster?.sdk;
+      
+      if (isMiniApp) {
+        try {
+          const sdk = (window as any).Farcaster.sdk;
+          if (sdk.actions && sdk.actions.openComposer) {
+            await sdk.actions.openComposer({
+              text: shareText,
+            });
+          } else {
+            // Fallback: Open Warpcast URL
+            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
+            const newWindow = window.open(warpcastUrl, '_blank');
+            if (!newWindow) {
+              console.warn('[ShareReminder] ⚠️ Popup blocked');
+            }
+          }
+        } catch (postError: any) {
+          console.warn("Farcaster posting error (non-critical):", postError);
+          // Fallback: Open Warpcast URL
+          const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
+          window.open(warpcastUrl, '_blank');
+        }
+      } else {
+        // Web browser: Open Warpcast in new tab
+        const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
+        const newWindow = window.open(warpcastUrl, '_blank');
+        if (!newWindow) {
+          console.warn('[ShareReminder] ⚠️ Popup blocked');
+        }
+      }
+    } catch (error: any) {
+      console.error('[ShareReminder] Error sharing reminder:', error);
+      toast({
+        variant: "destructive",
+        title: "Failed to Share",
+        description: "Unable to open Farcaster composer. Please try again.",
+      });
+    }
+  };
 
   // Create reminder function (V5)
   const createReminder = async (desc: string, amt: string, dl: string) => {
@@ -339,7 +402,34 @@ export function useReminderActions({
         setTxStatus("");
         setIsSubmitting(false);
         
-        // No toast notification here - FloatingCreate component shows success animation with clock icon
+        // Format deadline for share text
+        const deadlineDate = new Date(dl);
+        const formattedDeadline = deadlineDate.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        // Show toast notification with Share button
+        toast({
+          variant: "default",
+          title: "✅ Reminder Created!",
+          description: "Your reminder has been created successfully.",
+          action: React.createElement(
+            ToastAction,
+            {
+              altText: "Share your Reminder",
+              onClick: () => shareReminder(desc, dl),
+              className: "bg-[#4f46e5] hover:bg-[#4338ca] text-white border-0"
+            },
+            "Share your Reminder"
+          ),
+          duration: 10000, // Show for 10 seconds to give user time to click share
+        });
+        
         // Wait for blockchain state to update (optimized to save quota)
         // Only refresh once after transaction confirmation
         setTimeout(() => {
