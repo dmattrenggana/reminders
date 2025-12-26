@@ -12,7 +12,7 @@ export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 30000; // Minimum 30 seconds between fetches (reduced from 60 seconds for faster updates)
+  const MIN_FETCH_INTERVAL = 15000; // Minimum 15 seconds between fetches (reduced for faster Public feed updates)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchReminders = useCallback(async (force = false) => {
