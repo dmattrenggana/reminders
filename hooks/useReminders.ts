@@ -138,16 +138,16 @@ export function useReminders() {
             console.log(`[useReminders] V5 deadline converted to Number:`, deadlineValue);
             
             // V5: Determine isCompleted based on whether reminder was reclaimed (confirmed) or burned
-            // Since V5 contract doesn't have separate 'confirmed' field, we infer from rewards:
-            // - If resolved = true and rewardsClaimed < rewardPoolAmount, it was likely reclaimed (confirmed) at T-1 hour
-            //   (reclaimReminder returns 30% + unclaimed rewards, so some rewards may remain unclaimed)
-            // - If resolved = true and rewardsClaimed >= rewardPoolAmount, it was likely burned after deadline
-            //   (burnMissedReminder burns 30% and returns unclaimed rewards, so rewardsClaimed should be close to rewardPoolAmount)
-            const rewardPoolAmount = Number(ethers.formatUnits(r.rewardPoolAmount, 18));
-            const rewardsClaimed = Number(ethers.formatUnits(r.rewardsClaimed, 18));
-            // If resolved and there are still unclaimed rewards (rewardsClaimed < rewardPoolAmount), it's likely confirmed (reclaimed)
-            // This is because reclaimReminder returns unclaimed portion, so some helpers may not have claimed yet
-            const isCompleted = r.resolved && rewardsClaimed < rewardPoolAmount;
+            // Logic:
+            // - reclaimReminder: Called by creator at T-1 hour (before deadline) → "Confirmed"
+            // - burnMissedReminder: Called by cron job after deadline → "Burned"
+            // Since V5 contract doesn't have separate 'confirmed' field, we use timing:
+            // - If resolved = true and current time < deadline, it was likely reclaimed (confirmed) at T-1 hour
+            // - If resolved = true and current time >= deadline, it was likely burned after deadline
+            const now = Math.floor(Date.now() / 1000);
+            // If resolved and current time is before deadline, it was reclaimed (confirmed) at T-1 hour
+            // If resolved and current time is after deadline, it was burned
+            const isCompleted = r.resolved && now < deadlineValue;
             
             reminderData = {
               id: id,
