@@ -218,7 +218,24 @@ export function useReminders() {
           });
 
         // Urutkan dari yang terbaru (ID terbesar di atas)
-        setActiveReminders(items.reverse());
+        const sortedItems = items.reverse();
+        console.log(`[useReminders] ✅ Fetched ${sortedItems.length} reminders, updating state`);
+        setActiveReminders(sortedItems);
+      } else {
+        // No new data fetched, but update timeLeft for existing cached data
+        const nowTimestamp = Math.floor(Date.now() / 1000);
+        const updatedItems = cachedReminders
+          .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
+          .map((r: any) => {
+            const timeLeft = r.deadline - nowTimestamp;
+            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+            const isExpired = !r.isResolved && timeLeft <= 0;
+            return { ...r, timeLeft, isDangerZone, isExpired };
+          });
+        if (updatedItems.length > 0) {
+          console.log(`[useReminders] ✅ Updated ${updatedItems.length} cached reminders with fresh timeLeft`);
+          setActiveReminders(updatedItems.reverse());
+        }
       }
       // If error but we have cached data, keep using cached data (don't clear)
     } catch (error: any) {
@@ -227,6 +244,21 @@ export function useReminders() {
       // Only set empty if we have no cached data
       if (reminderCache.size === 0) {
         setActiveReminders([]);
+      } else {
+        // Update timeLeft for cached data even on error
+        const nowTimestamp = Math.floor(Date.now() / 1000);
+        const cachedItems = Array.from(reminderCache.values())
+          .map((cached) => cached.data)
+          .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
+          .map((r: any) => {
+            const timeLeft = r.deadline - nowTimestamp;
+            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+            const isExpired = !r.isResolved && timeLeft <= 0;
+            return { ...r, timeLeft, isDangerZone, isExpired };
+          });
+        if (cachedItems.length > 0) {
+          setActiveReminders(cachedItems.reverse());
+        }
       }
     } finally {
       setLoading(false);
