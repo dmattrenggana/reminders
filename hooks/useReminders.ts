@@ -266,28 +266,42 @@ export function useReminders() {
     }
   }, []);
 
-  // Real-time update for timeLeft without fetching (runs every 10 seconds)
+  // Real-time update for timeLeft without fetching (runs every 5 seconds for better UX)
   useEffect(() => {
     const updateTimeLeft = () => {
-      if (reminderCache.size > 0) {
-        const nowTimestamp = Math.floor(Date.now() / 1000);
-        const cachedItems = Array.from(reminderCache.values())
-          .map((cached) => cached.data)
-          .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
-          .map((r: any) => {
-            const timeLeft = r.deadline - nowTimestamp;
-            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-            const isExpired = !r.isResolved && timeLeft <= 0;
-            return { ...r, timeLeft, isDangerZone, isExpired };
-          });
-        if (cachedItems.length > 0) {
-          setActiveReminders(cachedItems.reverse());
+      // Always update timeLeft using functional setState to preserve current reminders
+      const nowTimestamp = Math.floor(Date.now() / 1000);
+      
+      setActiveReminders((currentReminders) => {
+        // If state is empty but cache has data, use cache
+        if (currentReminders.length === 0 && reminderCache.size > 0) {
+          const cachedItems = Array.from(reminderCache.values())
+            .map((cached) => cached.data)
+            .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
+            .map((r: any) => {
+              const timeLeft = r.deadline - nowTimestamp;
+              const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+              const isExpired = !r.isResolved && timeLeft <= 0;
+              return { ...r, timeLeft, isDangerZone, isExpired };
+            });
+          return cachedItems.length > 0 ? cachedItems.reverse() : currentReminders;
         }
-      }
+        
+        // Update timeLeft for current reminders (preserve all other data)
+        const updatedReminders = currentReminders.map((r: any) => {
+          if (!r || !r.deadline) return r;
+          const timeLeft = r.deadline - nowTimestamp;
+          const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+          const isExpired = !r.isResolved && timeLeft <= 0;
+          return { ...r, timeLeft, isDangerZone, isExpired };
+        });
+        
+        return updatedReminders;
+      });
     };
 
-    // Update timeLeft every 10 seconds for real-time countdown
-    const timeLeftInterval = setInterval(updateTimeLeft, 10000);
+    // Update timeLeft every 5 seconds for real-time countdown (reduced from 10s for better UX)
+    const timeLeftInterval = setInterval(updateTimeLeft, 5000);
 
     return () => {
       clearInterval(timeLeftInterval);
