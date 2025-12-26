@@ -383,7 +383,7 @@ export default function DashboardClient() {
 
   // Refresh handler with debouncing to save quota
   const lastRefreshRef = useRef<number>(0);
-  const REFRESH_COOLDOWN = 10000; // 10 seconds cooldown between manual refreshes
+  const REFRESH_COOLDOWN = 5000; // 5 seconds cooldown between manual refreshes (reduced for better UX)
   
   const handleRefresh = () => {
     const now = Date.now();
@@ -392,10 +392,12 @@ export default function DashboardClient() {
         variant: "default",
         title: "Please wait",
         description: `Wait ${Math.ceil((REFRESH_COOLDOWN - (now - lastRefreshRef.current)) / 1000)}s before refreshing again`,
+        duration: 2000,
       });
       return;
     }
     lastRefreshRef.current = now;
+    // Force refresh (bypasses cache and throttle)
     refreshReminders();
     refreshBalance();
   };
