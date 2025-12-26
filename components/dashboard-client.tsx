@@ -72,6 +72,7 @@ export default function DashboardClient() {
   // Reminder actions hook
   const {
     createReminder,
+    shareReminder,
     confirmReminder,
     helpRemind,
     isSubmitting,
@@ -457,6 +458,7 @@ export default function DashboardClient() {
         isSubmitting={isSubmitting} 
         onConfirm={createReminder}
         status={txStatus}
+        onShare={shareReminder}
       />
     </div>
   );

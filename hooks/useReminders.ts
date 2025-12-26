@@ -137,6 +137,16 @@ export function useReminders() {
             const deadlineValue = Number(r.deadline);
             console.log(`[useReminders] V5 deadline converted to Number:`, deadlineValue);
             
+            // V5: Determine isCompleted based on whether reminder was reclaimed (confirmed) or burned
+            // Since V5 contract doesn't have separate 'confirmed' field, we need to infer:
+            // - If resolved = true and current time < deadline, it was likely reclaimed (confirmed) at T-1 hour
+            // - If resolved = true and current time >= deadline, it was likely burned after deadline
+            // Note: This is an approximation - ideally contract should have separate confirmed field
+            const now = Math.floor(Date.now() / 1000);
+            // If resolved and current time is before deadline, it was reclaimed (confirmed) at T-1 hour
+            // If resolved and current time is after deadline, it was burned
+            const isCompleted = r.resolved && now < deadlineValue;
+            
             reminderData = {
               id: id,
               creator: r.user,
@@ -144,7 +154,7 @@ export function useReminders() {
               deadline: deadlineValue,
               reminderTime: deadlineValue, // V5: use deadline as reminderTime for compatibility
               isResolved: r.resolved,
-              isCompleted: false, // V5: no confirmed field
+              isCompleted: isCompleted, // V5: true if reclaimed (confirmed), false if burned
               description: r.description,
               farcasterUsername: r.farcasterUsername,
               commitAmount: ethers.formatUnits(r.commitAmount, 18),

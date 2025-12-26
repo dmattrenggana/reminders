@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import * as React from "react";
 import { useWriteContract, usePublicClient } from "wagmi";
 import { parseUnits } from "viem";
 import { CONTRACTS, REMINDER_VAULT_ABI, COMMIT_TOKEN_ABI } from "@/lib/contracts/config";
 import { useToast } from "@/components/ui/use-toast";
-import { ToastAction, type ToastActionElement } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 interface UseReminderActionsProps {
@@ -402,36 +400,7 @@ https://remindersbase.vercel.app/`;
         setTxStatus("");
         setIsSubmitting(false);
         
-        // Format deadline for share text
-        const deadlineDate = new Date(dl);
-        const formattedDeadline = deadlineDate.toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        });
-        
-        // Show toast notification with Share button
-        // Note: FloatingCreate component still shows success animation (pop up lama tetap tampil)
-        const shareAction: ToastActionElement = React.createElement(
-          ToastAction,
-          {
-            altText: "Share your Reminder",
-            onClick: () => shareReminder(desc, dl),
-            className: "bg-[#4f46e5] hover:bg-[#4338ca] text-white border-0"
-          },
-          "Share your Reminder"
-        ) as unknown as ToastActionElement;
-        
-        toast({
-          variant: "default",
-          title: "✅ Reminder Created!",
-          description: "Your reminder has been created successfully.",
-          action: shareAction,
-          duration: 10000, // Show for 10 seconds to give user time to click share
-        });
+        // No toast notification - FloatingCreate component shows success animation with Share button
         
         // Wait for blockchain state to update (optimized to save quota)
         // Only refresh once after transaction confirmation
@@ -1178,6 +1147,7 @@ https://remindersbase.vercel.app/`;
     createReminder,
     confirmReminder,
     helpRemind,
+    shareReminder,
     isSubmitting,
     txStatus,
     setTxStatus,

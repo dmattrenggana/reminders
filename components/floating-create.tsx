@@ -13,9 +13,10 @@ interface FloatingCreateProps {
   isSubmitting: boolean;
   onConfirm: (desc: string, amt: string, dl: string) => Promise<any>;
   status?: string;
+  onShare?: (desc: string, dl: string) => void;
 }
 
-export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: FloatingCreateProps) {
+export function FloatingCreate({ symbol, isSubmitting, onConfirm, status, onShare }: FloatingCreateProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -90,7 +91,7 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
         <Card className={`p-6 rounded-[2.5rem] shadow-2xl border-slate-100 bg-white animate-in slide-in-from-bottom-10 duration-500 relative overflow-hidden ${showSuccess ? "bg-gradient-to-br from-green-50 to-white border-green-200" : ""}`}>
           {/* Success Animation Overlay */}
           {showSuccess && (
-            <div className="absolute inset-0 bg-gradient-to-br from-green-50/90 to-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center animate-in fade-in duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-50/90 to-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center animate-in fade-in duration-300 p-6">
               {/* Animated Alarm Clock Icon */}
               <div className="relative mb-4">
                 <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center animate-bounce">
@@ -102,9 +103,20 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status }: Floa
               <h3 className="text-2xl font-black text-green-700 mb-2 animate-in slide-in-from-bottom-4 duration-500">
                 Reminder Created! ⏰
               </h3>
-              <p className="text-sm font-bold text-green-600 animate-in slide-in-from-bottom-4 duration-700">
+              <p className="text-sm font-bold text-green-600 animate-in slide-in-from-bottom-4 duration-700 mb-4">
                 Your reminder is locked and ready
               </p>
+              {/* Share Button */}
+              {onShare && (
+                <Button
+                  onClick={() => {
+                    onShare(description, deadline);
+                  }}
+                  className="bg-[#4f46e5] hover:bg-[#4338ca] text-white font-bold px-6 py-2 rounded-xl shadow-lg animate-in slide-in-from-bottom-4 duration-700"
+                >
+                  Share your Reminder
+                </Button>
+              )}
             </div>
           )}
           
