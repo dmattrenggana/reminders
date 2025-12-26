@@ -5,7 +5,7 @@ import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
 
 // Cache untuk mengurangi RPC calls - Optimized for QuickNode quota
 const reminderCache = new Map<number, { data: any; timestamp: number }>();
-const CACHE_DURATION = 60000; // 60 seconds cache (reduced from 5 minutes for faster updates)
+const CACHE_DURATION = 30000; // 30 seconds cache (reduced for faster updates)
 let globalFetchInProgress = false; // Prevent multiple simultaneous fetches
 
 export function useReminders() {
@@ -137,15 +137,17 @@ export function useReminders() {
           // Logic:
           // - reclaimReminder: Called by creator at T-1 hour (before deadline) → "Confirmed"
           // - burnMissedReminder: Called by cron job after deadline → "Burned"
-          // Since V5 contract doesn't have separate 'confirmed' field, we use timing:
-          // - reclaimReminder can only be called before deadline (T-1 hour to deadline)
-          // - burnMissedReminder can only be called after deadline
-          // So if resolved = true and current time < deadline, it was likely reclaimed (confirmed)
-          // If resolved = true and current time >= deadline, it was likely burned
+          // Since V5 contract doesn't have separate 'confirmed' field, we use:
+          // 1. rewardsClaimed > 0: If there are claimed rewards, it means helpers helped, so it was likely reclaimed (confirmed)
+          // 2. Timing: If resolved and current time < deadline, it was likely reclaimed (confirmed)
+          // 3. If resolved and rewardsClaimed = 0 and now >= deadline, it was likely burned
           const now = Math.floor(Date.now() / 1000);
-          // If resolved and current time is before deadline, it was reclaimed (confirmed) at T-1 hour
-          // If resolved and current time is after deadline, it was burned
-          const isCompleted = r.resolved && now < deadlineValue;
+          const rewardsClaimedValue = Number(ethers.formatUnits(r.rewardsClaimed, 18));
+          
+          // If resolved and rewards were claimed, it was likely reclaimed (confirmed) - helpers got rewards
+          // OR if resolved and current time is before deadline, it was reclaimed (confirmed) at T-1 hour
+          // Otherwise, if resolved and no rewards claimed and deadline passed, it was burned
+          const isCompleted = r.resolved && (rewardsClaimedValue > 0 || now < deadlineValue);
           
           reminderData = {
             id: id,
@@ -243,10 +245,10 @@ export function useReminders() {
       fetchReminders();
     }, 100);
     
-    // Refresh otomatis setiap 5 menit untuk mengupdate status (optimized for quota)
+    // Refresh otomatis setiap 1 menit untuk mengupdate status (optimized for faster updates)
     const interval = setInterval(() => {
       fetchReminders();
-    }, 300000); // 5 minutes (increased to save QuickNode quota)
+    }, 60000); // 1 minute (reduced from 5 minutes for faster Public feed updates)
 
     return () => {
       if (fetchTimeoutRef.current) {
