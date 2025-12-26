@@ -46,20 +46,11 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status, onShar
       // Call onConfirm and wait for result
       const result = await onConfirm(description, amount, deadline);
       
-      // If successful, show success animation and close
+      // If successful, show success animation
       // Don't wait for toast - it's non-blocking
       if (result?.success) {
         setShowSuccess(true);
-        
-        // Close form after success animation (non-blocking)
-        setTimeout(() => {
-          setIsOpen(false);
-          setShowSuccess(false);
-          // Reset form
-          setDescription("");
-          setAmount("");
-          setDeadline("");
-        }, 2000); // Show success for 2 seconds
+        // Don't auto-close - let user close manually with close icon
       }
     } catch (error) {
       // Error handling is done in onConfirm via toast
@@ -92,6 +83,23 @@ export function FloatingCreate({ symbol, isSubmitting, onConfirm, status, onShar
           {/* Success Animation Overlay */}
           {showSuccess && (
             <div className="absolute inset-0 bg-gradient-to-br from-green-50/90 to-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center animate-in fade-in duration-300 p-6">
+              {/* Close Icon - Top Right */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsOpen(false);
+                  setShowSuccess(false);
+                  // Reset form
+                  setDescription("");
+                  setAmount("");
+                  setDeadline("");
+                }}
+                className="absolute top-4 right-4 rounded-full hover:bg-green-100 text-green-600 hover:text-green-700 h-8 w-8"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+              
               {/* Animated Alarm Clock Icon */}
               <div className="relative mb-4">
                 <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center animate-bounce">
