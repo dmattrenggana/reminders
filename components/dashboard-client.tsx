@@ -75,9 +75,13 @@ export default function DashboardClient() {
     shareReminder,
     confirmReminder,
     helpRemind,
+    claimReward,
     isSubmitting,
     txStatus,
     setTxStatus,
+    showClaimPopup,
+    setShowClaimPopup,
+    claimPopupData,
   } = useReminderActions({
     address,
     isConnected,

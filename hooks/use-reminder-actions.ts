@@ -26,6 +26,12 @@ export function useReminderActions({
   const publicClient = usePublicClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txStatus, setTxStatus] = useState<string>("");
+  const [showClaimPopup, setShowClaimPopup] = useState(false);
+  const [claimPopupData, setClaimPopupData] = useState<{
+    estimatedReward: string;
+    neynarScore: number;
+    reminderId: number;
+  } | null>(null);
   const { toast } = useToast();
 
   // Share reminder function - opens Farcaster composer with template text
@@ -828,27 +834,27 @@ https://remindersbase.vercel.app/`;
       }
 
       // Step 4: Now post to Farcaster
-      // Step 4: Now post to Farcaster
+      // Note: openComposer in miniapp opens composer overlay without closing the miniapp
       if (isMiniApp && typeof window !== 'undefined' && (window as any).Farcaster?.sdk) {
         try {
-          setTxStatus("Opening Farcaster to post...");
+          setTxStatus("Opening Farcaster composer...");
           const sdk = (window as any).Farcaster.sdk;
           
-          // Use Farcaster SDK to open composer
+          // Use Farcaster SDK to open composer (doesn't close miniapp, just opens overlay)
           if (sdk.actions && sdk.actions.openComposer) {
             await sdk.actions.openComposer({
               text: postText,
             });
             
-            setTxStatus("Waiting for you to post and return...");
+            setTxStatus("Waiting for your post...");
             toast({
               variant: "default",
               title: "Post in Farcaster",
-              description: "Please post the reminder and mention the creator, then return to this app.",
+              description: "Please post the reminder and mention the creator. The app will verify automatically.",
             });
             
-            // Wait a bit for user to post
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // Wait a bit for user to post (miniapp stays open, composer is overlay)
+            await new Promise(resolve => setTimeout(resolve, 2000));
           } else {
             // Fallback: Open Warpcast URL
             try {
@@ -1052,80 +1058,16 @@ https://remindersbase.vercel.app/`;
       
       const data = verificationData;
 
-      // Step 6: Get signature and claim reward directly (V5 contract)
-      setTxStatus("✅ Post verified! Getting claim signature...");
-      if (!publicClient) {
-        throw new Error("Public client not available");
-      }
-
-      // Neynar score is 0-1.0, contract expects 0-100 (multiply by 100)
-      const neynarScore = Math.floor((data.neynarScore || 0.5) * 100);
-      
-      // Get signature from backend
-      let signature: string;
-      try {
-        const signResponse = await fetch("/api/sign-claim", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            helperAddress: address,
-            reminderId: reminder.id,
-            neynarScore: neynarScore,
-          }),
-        });
-
-        if (!signResponse.ok) {
-          let errorData: any = {};
-          try {
-            errorData = await signResponse.json();
-          } catch (parseError) {
-            console.error('[HelpRemind] Failed to parse sign error response:', parseError);
-          }
-          throw new Error(errorData.message || errorData.error || `Failed to get signature: HTTP ${signResponse.status}`);
-        }
-
-        const signData = await signResponse.json();
-        if (!signData.success || !signData.signature) {
-          throw new Error(signData.message || signData.error || "Invalid signature response");
-        }
-
-        signature = signData.signature;
-        console.log('[HelpRemind] ✅ Got claim signature from backend');
-      } catch (signError: any) {
-        console.error('[HelpRemind] Failed to get signature:', signError);
-        throw new Error(`Failed to get claim signature: ${signError.message || signError}`);
-      }
-
-      // Call claimReward with signature (V5 contract)
-      setTxStatus("Claiming reward... Please confirm in wallet.");
-      
-      const claimTxHash = await writeContractAsync({
-        address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
-        abi: REMINDER_VAULT_ABI,
-        functionName: 'claimReward',
-        args: [BigInt(reminder.id), BigInt(neynarScore), signature as `0x${string}`],
-        chainId: 8453,
+      // Step 6: Show popup for claim reward instead of auto-claiming
+      setTxStatus("");
+      setClaimPopupData({
+        estimatedReward: data.estimatedReward || "0",
+        neynarScore: data.neynarScore || 0.5,
+        reminderId: reminder.id,
       });
-
-      setTxStatus("Confirming claim transaction...");
-      const claimReceipt = await publicClient.waitForTransactionReceipt({
-        hash: claimTxHash,
-        timeout: 120000,
-      });
-
-      if (claimReceipt.status === "success") {
-        setTxStatus("");
-        toast({
-          variant: "default",
-          title: "✅ Reward claimed!",
-          description: `Post verified and reward claimed successfully!`,
-          duration: 2000,
-        });
-        refreshReminders();
-        refreshBalance();
-      } else {
-        throw new Error("Claim reward transaction failed");
-      }
+      setShowClaimPopup(true);
+      
+      // Don't auto-claim - wait for user to click claim button in popup
     } catch (error: any) {
       console.error("Help remind error:", error);
       setTxStatus("");
@@ -1147,13 +1089,94 @@ https://remindersbase.vercel.app/`;
     }
   };
 
+  // Claim reward function (called from popup)
+  const claimReward = async (reminderId: number, neynarScore: number) => {
+    if (!publicClient) {
+      throw new Error("Public client not available");
+    }
+
+    setTxStatus("Getting claim signature...");
+    
+    // Get signature from backend
+    let signature: string;
+    try {
+      const signResponse = await fetch("/api/sign-claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          helperAddress: address,
+          reminderId: reminderId,
+          neynarScore: neynarScore,
+        }),
+      });
+
+      if (!signResponse.ok) {
+        let errorData: any = {};
+        try {
+          errorData = await signResponse.json();
+        } catch (parseError) {
+          console.error('[ClaimReward] Failed to parse sign error response:', parseError);
+        }
+        throw new Error(errorData.message || errorData.error || `Failed to get signature: HTTP ${signResponse.status}`);
+      }
+
+      const signData = await signResponse.json();
+      if (!signData.success || !signData.signature) {
+        throw new Error(signData.message || signData.error || "Invalid signature response");
+      }
+
+      signature = signData.signature;
+      console.log('[ClaimReward] ✅ Got claim signature from backend');
+    } catch (signError: any) {
+      console.error('[ClaimReward] Failed to get signature:', signError);
+      throw new Error(`Failed to get claim signature: ${signError.message || signError}`);
+    }
+
+    // Call claimReward with signature (V5 contract)
+    setTxStatus("Claiming reward... Please confirm in wallet.");
+    
+    const claimTxHash = await writeContractAsync({
+      address: CONTRACTS.REMINDER_VAULT as `0x${string}`,
+      abi: REMINDER_VAULT_ABI,
+      functionName: 'claimReward',
+      args: [BigInt(reminderId), BigInt(neynarScore), signature as `0x${string}`],
+      chainId: 8453,
+    });
+
+    setTxStatus("Confirming claim transaction...");
+    const claimReceipt = await publicClient.waitForTransactionReceipt({
+      hash: claimTxHash,
+      timeout: 120000,
+    });
+
+    if (claimReceipt.status === "success") {
+      setTxStatus("");
+      setShowClaimPopup(false);
+      setClaimPopupData(null);
+      toast({
+        variant: "default",
+        title: "✅ Reward claimed!",
+        description: `Post verified and reward claimed successfully!`,
+        duration: 2000,
+      });
+      refreshReminders();
+      refreshBalance();
+    } else {
+      throw new Error("Claim reward transaction failed");
+    }
+  };
+
   return {
     createReminder,
     confirmReminder,
     helpRemind,
     shareReminder,
+    claimReward,
     isSubmitting,
     txStatus,
     setTxStatus,
+    showClaimPopup,
+    setShowClaimPopup,
+    claimPopupData,
   };
 }
