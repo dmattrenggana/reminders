@@ -423,7 +423,7 @@ https://remindersbase.vercel.app/`;
             className: "bg-[#4f46e5] hover:bg-[#4338ca] text-white border-0"
           },
           "Share your Reminder"
-        ) as ToastActionElement;
+        ) as unknown as ToastActionElement;
         
         toast({
           variant: "default",
