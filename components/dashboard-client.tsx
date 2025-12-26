@@ -20,6 +20,7 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { TabsHeader } from "@/components/dashboard/TabsHeader";
 import { ReminderList } from "@/components/dashboard/ReminderList";
 import { FloatingCreate } from "@/components/floating-create";
+import { ClaimRewardPopup } from "@/components/claim-reward-popup";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
