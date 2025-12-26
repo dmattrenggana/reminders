@@ -465,6 +465,25 @@ export default function DashboardClient() {
         status={txStatus}
         onShare={shareReminder}
       />
+      
+      {/* Claim Reward Popup */}
+      {showClaimPopup && claimPopupData && (
+        <ClaimRewardPopup
+          isOpen={showClaimPopup}
+          onClose={() => {
+            setShowClaimPopup(false);
+            setClaimPopupData(null);
+            setTxStatus("");
+          }}
+          onClaim={async () => {
+            const neynarScore = Math.floor((claimPopupData.neynarScore || 0.5) * 100);
+            await claimReward(claimPopupData.reminderId, neynarScore);
+          }}
+          estimatedReward={claimPopupData.estimatedReward}
+          neynarScore={claimPopupData.neynarScore}
+          isClaiming={isSubmitting && txStatus.includes("Claiming")}
+        />
+      )}
     </div>
   );
 }
