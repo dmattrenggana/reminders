@@ -29,20 +29,30 @@ export async function GET(request: NextRequest) {
       try {
         console.log(`[API] Fetching reminder with ID: ${id}`)
         const reminderData = await vaultContract.reminders(id)
-        const canRemindNow = await vaultContract.canRemind(id)
+        
+        // V5: Check if claim window is open using isClaimWindowOpen
+        let canRemindNow = false
+        try {
+          canRemindNow = await vaultContract.isClaimWindowOpen(id)
+        } catch (error) {
+          console.log(`[API] Could not check claim window for reminder ${id}:`, error)
+        }
 
+        // V5: Check if user has claimed using hasClaimed
         let hasRecorded = false
         if (walletAddress) {
           try {
-            const claimData = await vaultContract.remindClaims(id, walletAddress)
-            hasRecorded = claimData.claimed
+            hasRecorded = await vaultContract.hasClaimed(id, walletAddress)
           } catch (error) {
             console.log(`[API] Could not check claim status for ${walletAddress}:`, error)
           }
         }
 
-        // V5: farcasterUsername at index 7
-        const rawFarcasterUsername = reminderData[8]
+        // V5 contract format (8 fields):
+        // address user, uint256 commitAmount, uint256 rewardPoolAmount, uint256 deadline,
+        // bool resolved, uint256 rewardsClaimed, string description, string farcasterUsername
+        // V5: farcasterUsername at index 7, description at index 6
+        const rawFarcasterUsername = reminderData[7]
         const farcasterUsername =
           rawFarcasterUsername && rawFarcasterUsername.trim() !== ""
             ? rawFarcasterUsername
@@ -51,17 +61,17 @@ export async function GET(request: NextRequest) {
         console.log(`[API] Reminder ${id} data loaded:`, {
           id,
           farcasterUsername,
-          description: reminderData[7],
+          description: reminderData[6],
         })
 
         reminders.push({
           id: id, // Use the converted number directly
           user: reminderData[0],
           farcasterUsername,
-          description: reminderData[7],
-          reminderTime: new Date(Number(reminderData[3]) * 1000),
+          description: reminderData[6], // V5: description at index 6
+          reminderTime: new Date(Number(reminderData[3]) * 1000), // V5: deadline at index 3
           rewardPoolAmount: Number(ethers.formatUnits(reminderData[2], 18)),
-          totalReminders: Number(reminderData[9]),
+          totalReminders: 0, // V5: no totalReminders field
           canRemind: canRemindNow,
           hasRecorded,
         })

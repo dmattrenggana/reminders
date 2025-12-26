@@ -61,51 +61,31 @@ export async function GET(request: NextRequest) {
       try {
         const reminder = await vaultContract.reminders(i)
 
-        let user,
+        // V5 contract format (8 fields):
+        // address user, uint256 commitAmount, uint256 rewardPoolAmount, uint256 deadline,
+        // bool resolved, uint256 rewardsClaimed, string description, string farcasterUsername
+        if (reminder.length !== 8) {
+          console.warn(`[v0] Cron: Reminder ${i} has unexpected length ${reminder.length}, expected 8 (V5 format). Skipping.`);
+          continue;
+        }
+
+        const [
+          user,
           commitAmount,
           rewardPoolAmount,
-          reminderTime,
-          confirmationDeadline,
-          confirmed,
-          burned,
+          deadline,
+          resolved,
+          rewardsClaimed,
           description,
           farcasterUsername,
-          totalReminders,
-          rewardsClaimed,
-          confirmationTime
+        ] = reminder
 
-        if (reminder.length === 12) {
-          // V5 contract format (8 fields)
-          ;[
-            user,
-            commitAmount,
-            rewardPoolAmount,
-            reminderTime,
-            confirmationDeadline,
-            confirmed,
-            burned,
-            description,
-            farcasterUsername,
-            totalReminders,
-            rewardsClaimed,
-            confirmationTime,
-          ] = reminder
-        } else {
-          // V5 contract format (8 fields)
-          ;[
-            user,
-            commitAmount,
-            rewardPoolAmount,
-            reminderTime,
-            confirmationDeadline,
-            confirmed,
-            burned,
-            description,
-            farcasterUsername,
-            totalReminders,
-            rewardsClaimed,
-          ] = reminder
-        }
+        // V5: Use deadline for both reminderTime and confirmationDeadline
+        const reminderTime = deadline
+        const confirmationDeadline = deadline
+        const confirmed = false // V5: no confirmed field
+        const burned = resolved // V5: resolved field (true if reclaimed or burned)
+        const totalReminders = 0 // V5: no totalReminders field
 
         // Skip already processed reminders
         if (confirmed || burned) continue

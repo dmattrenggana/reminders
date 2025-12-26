@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         const reminder = await vaultContract.reminders(reminderId);
         const rewardPoolAmount = reminder.rewardPoolAmount || BigInt(0);
         
-        // Calculate reward based on tier (V4 contract logic)
+        // Calculate reward based on tier (V5 contract logic)
         let rewardPercentage = 300; // 3% default (TIER_LOW)
         const scorePercent = Math.floor(normalizedScore * 100);
         if (scorePercent >= 90) {
