@@ -1149,21 +1149,27 @@ https://remindersbase.vercel.app/`;
       timeout: 120000,
     });
 
-    if (claimReceipt.status === "success") {
-      setTxStatus("");
-      setShowClaimPopup(false);
-      setClaimPopupData(null);
-      toast({
-        variant: "default",
-        title: "✅ Reward claimed!",
-        description: `Post verified and reward claimed successfully!`,
-        duration: 2000,
-      });
-      refreshReminders();
-      refreshBalance();
-    } else {
-      throw new Error("Claim reward transaction failed");
-    }
+      if (claimReceipt.status === "success") {
+        setTxStatus("");
+        setShowClaimPopup(false);
+        setClaimPopupData(null);
+        toast({
+          variant: "default",
+          title: "✅ Reward claimed!",
+          description: `Post verified and reward claimed successfully!`,
+          duration: 2000,
+        });
+        // Force refresh to update feed immediately
+        refreshReminders();
+        refreshBalance();
+        // Additional refresh after delay to catch blockchain updates
+        setTimeout(() => {
+          refreshReminders();
+          refreshBalance();
+        }, 5000);
+      } else {
+        throw new Error("Claim reward transaction failed");
+      }
   };
 
   return {

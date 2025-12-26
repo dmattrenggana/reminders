@@ -5,14 +5,14 @@ import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
 
 // Cache untuk mengurangi RPC calls - Optimized for QuickNode quota
 const reminderCache = new Map<number, { data: any; timestamp: number }>();
-const CACHE_DURATION = 120000; // 2 minutes cache (increased to reduce RPC calls and prevent 429 errors)
+const CACHE_DURATION = 60000; // 60 seconds cache (balanced: prevents 429 errors but allows reasonable updates)
 let globalFetchInProgress = false; // Prevent multiple simultaneous fetches
 
 export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 60000; // Minimum 60 seconds between fetches (increased to prevent 429 rate limit errors)
+  const MIN_FETCH_INTERVAL = 30000; // Minimum 30 seconds between fetches (balanced: prevents rate limiting but allows updates)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchReminders = useCallback(async (force = false) => {
@@ -234,6 +234,34 @@ export function useReminders() {
     }
   }, []);
 
+  // Real-time update for timeLeft without fetching (runs every 10 seconds)
+  useEffect(() => {
+    const updateTimeLeft = () => {
+      if (reminderCache.size > 0) {
+        const nowTimestamp = Math.floor(Date.now() / 1000);
+        const cachedItems = Array.from(reminderCache.values())
+          .map((cached) => cached.data)
+          .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
+          .map((r: any) => {
+            const timeLeft = r.deadline - nowTimestamp;
+            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+            const isExpired = !r.isResolved && timeLeft <= 0;
+            return { ...r, timeLeft, isDangerZone, isExpired };
+          });
+        if (cachedItems.length > 0) {
+          setActiveReminders(cachedItems.reverse());
+        }
+      }
+    };
+
+    // Update timeLeft every 10 seconds for real-time countdown
+    const timeLeftInterval = setInterval(updateTimeLeft, 10000);
+
+    return () => {
+      clearInterval(timeLeftInterval);
+    };
+  }, []); // Empty deps - only run once on mount
+
   useEffect(() => {
     // Clear any pending timeout
     if (fetchTimeoutRef.current) {
@@ -245,10 +273,10 @@ export function useReminders() {
       fetchReminders();
     }, 100);
     
-    // Refresh otomatis setiap 2 menit untuk mengupdate status (optimized to prevent 429 errors)
+    // Refresh otomatis setiap 90 detik untuk mengupdate status (balanced: prevents 429 errors but keeps feed fresh)
     const interval = setInterval(() => {
       fetchReminders();
-    }, 120000); // 2 minutes (increased to reduce RPC calls and prevent 429 rate limit errors)
+    }, 90000); // 90 seconds (balanced to prevent rate limiting while keeping feed updated)
 
     return () => {
       if (fetchTimeoutRef.current) {
