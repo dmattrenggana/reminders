@@ -6,7 +6,7 @@ import { useWriteContract, usePublicClient } from "wagmi";
 import { parseUnits } from "viem";
 import { CONTRACTS, REMINDER_VAULT_ABI, COMMIT_TOKEN_ABI } from "@/lib/contracts/config";
 import { useToast } from "@/components/ui/use-toast";
-import { ToastAction } from "@/components/ui/toast";
+import { ToastAction, type ToastActionElement } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 interface UseReminderActionsProps {
@@ -414,19 +414,22 @@ https://remindersbase.vercel.app/`;
         });
         
         // Show toast notification with Share button
+        // Note: FloatingCreate component still shows success animation (pop up lama tetap tampil)
+        const shareAction: ToastActionElement = React.createElement(
+          ToastAction,
+          {
+            altText: "Share your Reminder",
+            onClick: () => shareReminder(desc, dl),
+            className: "bg-[#4f46e5] hover:bg-[#4338ca] text-white border-0"
+          },
+          "Share your Reminder"
+        ) as ToastActionElement;
+        
         toast({
           variant: "default",
           title: "✅ Reminder Created!",
           description: "Your reminder has been created successfully.",
-          action: React.createElement(
-            ToastAction,
-            {
-              altText: "Share your Reminder",
-              onClick: () => shareReminder(desc, dl),
-              className: "bg-[#4f46e5] hover:bg-[#4338ca] text-white border-0"
-            },
-            "Share your Reminder"
-          ),
+          action: shareAction,
           duration: 10000, // Show for 10 seconds to give user time to click share
         });
         
