@@ -171,15 +171,16 @@ export function useReminders() {
             // V3/V4 format (backward compatibility) - use named properties
             console.log(`[useReminders] ✅ Detected V3/V4 format for reminder ${id}`);
             // For V4: reclaimReminder sets burned=true (not confirmed), burnMissedReminder also sets burned=true
-            // We need to differentiate: if burned=true and current time < deadline, it was likely reclaimed (confirmed)
-            // If burned=true and current time >= deadline, it was likely burned by cron
-            const now = Math.floor(Date.now() / 1000);
-            const deadlineValue = Number(r.reminderTime);
+            // We need to differentiate using rewards comparison:
+            // - If confirmed = true, it's definitely confirmed
+            // - If burned = true but not confirmed, check rewards:
+            //   - If rewardsClaimed < 90% of rewardPoolAmount, it was likely reclaimed (confirmed) at T-1 hour
+            //   - If rewardsClaimed >= 90% of rewardPoolAmount, it was likely burned after deadline
+            const rewardPoolAmount = Number(ethers.formatUnits(r.rewardPoolAmount, 18));
+            const rewardsClaimed = Number(ethers.formatUnits(r.rewardsClaimed, 18));
             // If confirmed = true, it's definitely confirmed
-            // If burned = true but not confirmed, check timing:
-            // - If current time < deadline, it was likely reclaimed (confirmed) at T-1 hour
-            // - If current time >= deadline, it was likely burned after deadline
-            const isCompleted = r.confirmed || (r.burned && now < deadlineValue);
+            // If burned = true but not confirmed, use rewards comparison
+            const isCompleted = r.confirmed || (r.burned && rewardsClaimed < rewardPoolAmount * 0.9);
             
             reminderData = {
               id: id,
