@@ -141,16 +141,15 @@ export function useReminders() {
             // Logic:
             // - reclaimReminder: Called by creator at T-1 hour (before deadline) → "Confirmed"
             // - burnMissedReminder: Called by cron job after deadline → "Burned"
-            // Since V5 contract doesn't have separate 'confirmed' field, we use rewards comparison:
-            // - If resolved = true and rewardsClaimed < rewardPoolAmount, it was likely reclaimed (confirmed)
-            //   (reclaimReminder returns unclaimed rewards, so some may remain unclaimed)
-            // - If resolved = true and rewardsClaimed >= rewardPoolAmount, it was likely burned
-            //   (burnMissedReminder returns all unclaimed rewards, so rewardsClaimed should be close to rewardPoolAmount)
-            const rewardPoolAmount = Number(ethers.formatUnits(r.rewardPoolAmount, 18));
-            const rewardsClaimed = Number(ethers.formatUnits(r.rewardsClaimed, 18));
-            // If resolved and there are still unclaimed rewards, it's likely confirmed (reclaimed)
-            // This is because reclaimReminder returns unclaimed portion, so some helpers may not have claimed yet
-            const isCompleted = r.resolved && rewardsClaimed < rewardPoolAmount * 0.9; // 90% threshold to account for rounding
+            // Since V5 contract doesn't have separate 'confirmed' field, we use timing:
+            // - reclaimReminder can only be called before deadline (T-1 hour to deadline)
+            // - burnMissedReminder can only be called after confirmationDeadline
+            // So if resolved = true and current time < deadline, it was likely reclaimed (confirmed)
+            // If resolved = true and current time >= deadline, it was likely burned
+            const now = Math.floor(Date.now() / 1000);
+            // If resolved and current time is before deadline, it was reclaimed (confirmed) at T-1 hour
+            // If resolved and current time is after deadline, it was burned
+            const isCompleted = r.resolved && now < deadlineValue;
             
             reminderData = {
               id: id,
@@ -171,16 +170,18 @@ export function useReminders() {
             // V3/V4 format (backward compatibility) - use named properties
             console.log(`[useReminders] ✅ Detected V3/V4 format for reminder ${id}`);
             // For V4: reclaimReminder sets burned=true (not confirmed), burnMissedReminder also sets burned=true
-            // We need to differentiate using rewards comparison:
-            // - If confirmed = true, it's definitely confirmed
-            // - If burned = true but not confirmed, check rewards:
-            //   - If rewardsClaimed < 90% of rewardPoolAmount, it was likely reclaimed (confirmed) at T-1 hour
-            //   - If rewardsClaimed >= 90% of rewardPoolAmount, it was likely burned after deadline
-            const rewardPoolAmount = Number(ethers.formatUnits(r.rewardPoolAmount, 18));
-            const rewardsClaimed = Number(ethers.formatUnits(r.rewardsClaimed, 18));
-            // If confirmed = true, it's definitely confirmed
-            // If burned = true but not confirmed, use rewards comparison
-            const isCompleted = r.confirmed || (r.burned && rewardsClaimed < rewardPoolAmount * 0.9);
+            // We need to differentiate using timing:
+            // - reclaimReminder can only be called before deadline (T-1 hour to deadline)
+            // - burnMissedReminder can only be called after confirmationDeadline
+            // So if burned = true and current time < deadline, it was likely reclaimed (confirmed)
+            // If burned = true and current time >= deadline, it was likely burned
+            const now = Math.floor(Date.now() / 1000);
+            const deadlineValue = Number(r.reminderTime);
+            // If confirmed = true, it's definitely confirmed (from confirmReminder)
+            // If burned = true but not confirmed, check timing:
+            // - If current time < deadline, it was likely reclaimed (confirmed) at T-1 hour
+            // - If current time >= deadline, it was likely burned after deadline
+            const isCompleted = r.confirmed || (r.burned && now < deadlineValue);
             
             reminderData = {
               id: id,
