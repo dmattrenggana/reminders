@@ -7,16 +7,33 @@ import { CONTRACTS } from "@/lib/contracts/config";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
 import { createImageErrorHandler } from "@/lib/utils/image-error-handler";
+import { useAccount, useConnect } from "wagmi";
+import { findFarcasterConnector, detectEnvironment } from "@/lib/utils/farcaster-connector";
 
 interface HeaderBuyButtonProps {
   isMiniApp: boolean;
+  isConnected?: boolean;
+  address?: string;
+  onConnect?: () => void;
 }
 
-export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
+export function HeaderBuyButton({ 
+  isMiniApp, 
+  isConnected: propIsConnected, 
+  address: propAddress,
+  onConnect: propOnConnect 
+}: HeaderBuyButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const { toast } = useToast();
   const handleLogoError = createImageErrorHandler(setLogoError, { suppressConsole: true });
+  
+  // Get wallet connection state (use props if provided, otherwise use hooks)
+  const { address: hookAddress, isConnected: hookIsConnected } = useAccount();
+  const { connect, connectors, isPending: isConnecting } = useConnect();
+  
+  const isConnected = propIsConnected ?? hookIsConnected;
+  const address = propAddress ?? hookAddress;
 
   const handleBuyClick = async () => {
     if (!CONTRACTS.COMMIT_TOKEN) {
@@ -31,6 +48,81 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
     setIsLoading(true);
 
     try {
+      // ✅ STEP 1: Check wallet connection first (like eth_accounts)
+      console.log("[HeaderBuyButton] Checking wallet connection:", {
+        isConnected,
+        address,
+        isMiniApp,
+      });
+
+      // If not connected, try to connect wallet first (especially in miniapp)
+      if (!isConnected) {
+        console.log("[HeaderBuyButton] Wallet not connected, attempting to connect...");
+        
+        // In miniapp, try to connect using Farcaster connector
+        if (isMiniApp) {
+          const fcConnector = findFarcasterConnector(connectors);
+          
+          if (fcConnector) {
+            try {
+              console.log("[HeaderBuyButton] Connecting wallet via Farcaster connector...");
+              connect({ connector: fcConnector });
+              
+              // Wait a bit for connection to establish
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              // Use prop onConnect if available, otherwise show message
+              if (propOnConnect) {
+                propOnConnect();
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+              
+              console.log("[HeaderBuyButton] Wallet connection initiated, proceeding with swap...");
+              // Continue to swap - connection will be established by the time swap is called
+            } catch (connectError: any) {
+              console.error("[HeaderBuyButton] Wallet connection error:", connectError);
+              toast({
+                variant: "destructive",
+                title: "Wallet Connection Required",
+                description: "Please connect your wallet first to use the swap feature.",
+                duration: 4000,
+              });
+              setIsLoading(false);
+              return;
+            }
+          } else {
+            // If no Farcaster connector, use prop onConnect if available
+            if (propOnConnect) {
+              propOnConnect();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              console.log("[HeaderBuyButton] Wallet connection initiated via prop...");
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Wallet Connection Required",
+                description: "Please connect your wallet first to use the swap feature.",
+                duration: 4000,
+              });
+              setIsLoading(false);
+              return;
+            }
+          }
+        } else {
+          // In browser, show message to connect wallet
+          toast({
+            variant: "default",
+            title: "Wallet Connection Required",
+            description: "Please connect your wallet first to use the swap feature.",
+            duration: 4000,
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // ✅ STEP 2: Proceed with swap (wallet is now connected)
+      console.log("[HeaderBuyButton] ✅ Wallet connected, proceeding with swap");
+
       // Base chain ID: 8453
       // Format CAIP-19: eip155:8453/erc20:0x...
       const buyToken = `eip155:8453/erc20:${CONTRACTS.COMMIT_TOKEN}`;
@@ -42,6 +134,8 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
         buyToken,
         sellToken,
         isMiniApp,
+        address,
+        isConnected,
         userAgent: navigator.userAgent,
       });
 

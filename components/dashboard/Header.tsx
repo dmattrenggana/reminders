@@ -68,7 +68,12 @@ export function Header({
       
       {/* Buy Button - positioned top right on desktop */}
       <div className="flex items-center w-full md:w-auto justify-end md:absolute md:top-6 md:right-6">
-        <HeaderBuyButton isMiniApp={isMiniApp} />
+        <HeaderBuyButton 
+          isMiniApp={isMiniApp}
+          isConnected={isConnected}
+          address={address}
+          onConnect={onConnect}
+        />
       </div>
     </header>
   );
