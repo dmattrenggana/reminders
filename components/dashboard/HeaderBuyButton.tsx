@@ -174,80 +174,53 @@ export function HeaderBuyButton({
           userAgent: navigator.userAgent.includes('Warpcast') || navigator.userAgent.includes('Farcaster'),
         });
 
-        // ✅ FIX: Use openUrl to request parent to open overlay
-        // sdk.actions.openUrl() -> Meminta parent membuka overlay (tidak membuka tab baru)
-        // Strategy: Try openUrl first (requests parent to open overlay), fallback to swapToken
-        if (sdk?.actions?.openUrl) {
-          try {
-            // Use wallet swap URL - openUrl will request parent to open as overlay
-            const swapUrl = `https://wallet.farcaster.xyz/swap?to=${CONTRACTS.COMMIT_TOKEN}&chain=base`;
-            
-            console.log("[HeaderBuyButton] Using openUrl to request parent open overlay:", swapUrl);
-            
-            await sdk.actions.openUrl(swapUrl);
-            
-            console.log("[HeaderBuyButton] ✅ Successfully requested parent to open wallet swap overlay");
-            
+        // ✅ FIX: Only use swapToken - opens wallet in different iframe (overlay) on same page
+        // swapToken opens wallet swap in overlay iframe (same page, different iframe)
+        // openUrl opens new tab (not desired)
+        if (!sdk?.actions?.swapToken) {
+          throw new Error("Swap functionality not available. Please open this app in Farcaster mobile app.");
+        }
+
+        try {
+          console.log("[HeaderBuyButton] Attempting swapToken with:", { buyToken, sellToken });
+          
+          const result = await sdk.actions.swapToken({
+            buyToken, // RMND token on Base
+            sellToken, // Native ETH (optional - user can change)
+          });
+
+          console.log("[HeaderBuyButton] swapToken result:", result);
+
+          if (result.success) {
+            console.log("[HeaderBuyButton] Swap successful:", result.swap);
             toast({
               variant: "default",
-              title: "Opening Swap",
-              description: "Opening Farcaster wallet swap...",
-              duration: 2000,
+              title: "Swap Completed",
+              description: "Your tokens have been swapped successfully!",
+              duration: 3000,
             });
             setIsLoading(false);
             return;
-          } catch (urlError: any) {
-            console.warn("[HeaderBuyButton] openUrl failed, will try swapToken fallback:", urlError);
-            // Don't return, try swapToken fallback below
+          } else if (result.reason === "rejected_by_user") {
+            console.log("[HeaderBuyButton] Swap cancelled by user");
+            setIsLoading(false);
+            return;
+          } else {
+            // swapToken failed for other reasons
+            console.error("[HeaderBuyButton] swapToken failed:", result);
+            throw new Error(result.reason || "Swap failed. Please try again.");
           }
-        }
-
-        // Fallback: Try swapToken if openUrl not available or failed
-        if (sdk?.actions?.swapToken) {
-          try {
-            console.log("[HeaderBuyButton] Attempting swapToken fallback with:", { buyToken, sellToken });
-            
-            const result = await sdk.actions.swapToken({
-              buyToken, // RMND token on Base
-              sellToken, // Native ETH (optional - user can change)
-            });
-
-            console.log("[HeaderBuyButton] swapToken result:", result);
-
-            if (result.success) {
-              console.log("[HeaderBuyButton] Swap successful:", result.swap);
-              toast({
-                variant: "default",
-                title: "Swap Completed",
-                description: "Your tokens have been swapped successfully!",
-                duration: 3000,
-              });
-              setIsLoading(false);
-              return;
-            } else if (result.reason === "rejected_by_user") {
-              console.log("[HeaderBuyButton] Swap cancelled by user");
-              setIsLoading(false);
-              return;
-            } else {
-              // swapToken failed for other reasons
-              console.error("[HeaderBuyButton] swapToken failed:", result);
-              throw new Error(result.reason || "Swap failed. Please try again.");
-            }
-          } catch (swapError: any) {
-            console.error("[HeaderBuyButton] swapToken error:", swapError);
-            
-            // Don't show error if user rejected
-            if (swapError.message?.includes("rejected") || swapError.message?.includes("cancelled")) {
-              setIsLoading(false);
-              return;
-            }
-            
-            throw new Error(swapError.message || "Failed to open swap interface. Please try again.");
+        } catch (swapError: any) {
+          console.error("[HeaderBuyButton] swapToken error:", swapError);
+          
+          // Don't show error if user rejected
+          if (swapError.message?.includes("rejected") || swapError.message?.includes("cancelled")) {
+            setIsLoading(false);
+            return;
           }
+          
+          throw new Error(swapError.message || "Failed to open swap interface. Please try again.");
         }
-
-        // If we got here, neither method is available
-        throw new Error("Swap functionality not available. Please open this app in Farcaster mobile app.");
 
       } catch (sdkError: any) {
         // If SDK not available or all methods failed
