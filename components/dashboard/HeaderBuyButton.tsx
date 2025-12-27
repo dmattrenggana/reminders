@@ -45,7 +45,7 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
         userAgent: navigator.userAgent,
       });
 
-      // Try to use Farcaster SDK swapToken
+      // Try to use Farcaster SDK - prefer openUrl to Warpcast swap for better compatibility
       try {
         const { sdk } = await import("@farcaster/miniapp-sdk");
         
@@ -53,17 +53,38 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
           hasSDK: !!sdk,
           hasActions: !!sdk?.actions,
           hasSwapToken: !!sdk?.actions?.swapToken,
+          hasOpenUrl: !!sdk?.actions?.openUrl,
           context: sdk?.context,
         });
 
-        if (sdk?.actions?.swapToken) {
+        // For better compatibility, use openUrl to Warpcast wallet swap
+        // This ensures swap opens in Farcaster wallet instead of in-app
+        if (sdk?.actions?.openUrl) {
+          // Use Warpcast/Farcaster wallet swap URL
+          const swapUrl = `https://warpcast.com/~/wallet/swap?to=${CONTRACTS.COMMIT_TOKEN}`;
+          console.log("[HeaderBuyButton] Opening swap URL:", swapUrl);
+          
+          const urlResult = await sdk.actions.openUrl(swapUrl);
+          console.log("[HeaderBuyButton] openUrl result:", urlResult);
+          
+          if (urlResult.success) {
+            toast({
+              variant: "default",
+              title: "Opening Swap",
+              description: "Opening Farcaster wallet swap...",
+              duration: 2000,
+            });
+          }
+          
+          setIsLoading(false);
+          return;
+        } else if (sdk?.actions?.swapToken) {
+          // Fallback to swapToken if openUrl not available
           console.log("[HeaderBuyButton] Calling swapToken with:", { buyToken, sellToken });
           
-          // Use Farcaster SDK swapToken
           const result = await sdk.actions.swapToken({
             buyToken, // RMND token on Base
             sellToken, // Native ETH (optional - user can change)
-            // sellAmount is optional - user can set amount in swap UI
           });
 
           console.log("[HeaderBuyButton] swapToken result:", result);
@@ -82,45 +103,24 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
             if (result.reason === "rejected_by_user") {
               console.log("[HeaderBuyButton] Swap cancelled by user");
               setIsLoading(false);
-              return; // Exit early on user cancellation
+              return;
             } else {
               console.error("[HeaderBuyButton] Swap failed with reason:", result.reason, result.error);
               throw new Error(result.error?.message || `Swap failed: ${result.reason}`);
             }
           }
         } else {
-          // If swapToken not available, try fallback to openUrl with Warpcast swap
-          console.warn("[HeaderBuyButton] swapToken not available, trying openUrl fallback");
-          
-          if (sdk?.actions?.openUrl) {
-            // Use Warpcast/Farcaster wallet swap URL as fallback
-            const swapUrl = `https://warpcast.com/~/wallet/swap?to=${CONTRACTS.COMMIT_TOKEN}`;
-            console.log("[HeaderBuyButton] Opening swap URL:", swapUrl);
-            
-            const urlResult = await sdk.actions.openUrl(swapUrl);
-            console.log("[HeaderBuyButton] openUrl result:", urlResult);
-            
-            toast({
-              variant: "default",
-              title: "Opening Swap",
-              description: "Opening Farcaster wallet swap interface...",
-              duration: 3000,
-            });
-            setIsLoading(false);
-            return;
-          } else {
-            throw new Error("Neither swapToken nor openUrl available in SDK");
-          }
+          throw new Error("Neither openUrl nor swapToken available in SDK");
         }
       } catch (sdkError: any) {
-        // If SDK not available or swapToken not supported
+        // If SDK not available or methods not supported
         console.error("[HeaderBuyButton] SDK error:", sdkError);
         
         // Show helpful message
         toast({
           variant: "default",
           title: "Swap Not Available",
-          description: "Please use Farcaster wallet to swap tokens manually. The swap feature may not be available on this platform.",
+          description: "Please open Farcaster wallet manually to swap tokens.",
           duration: 5000,
         });
         setIsLoading(false);
@@ -146,41 +146,48 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
   };
 
   return (
-    <Button
-      onClick={handleBuyClick}
-      disabled={isLoading}
-      className="
-        flex items-center gap-1.5 h-8 px-3 rounded-lg
-        bg-[#4f46e5] hover:bg-[#4338ca] text-white
-        font-bold text-xs shadow-sm transition-all active:scale-95
-        disabled:opacity-50 disabled:cursor-not-allowed
-      "
-    >
-      {isLoading ? (
-        <>
-          <Loader2 className="w-3 h-3 animate-spin" />
-        </>
-      ) : (
-        <>
-          <div className="relative w-4 h-4 rounded overflow-hidden flex-shrink-0">
-            {!logoError ? (
-              <Image
-                src="/logo.jpg"
-                alt="RMND"
-                fill
-                className="object-cover"
-                onError={handleLogoError}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-indigo-200">
-                <span className="text-indigo-700 font-bold text-[10px]">R</span>
-              </div>
-            )}
-          </div>
-          <span>Buy</span>
-        </>
-      )}
-    </Button>
+    <div className="
+      flex items-center gap-0 bg-slate-50 p-0.5 rounded-full 
+      border border-slate-200 shadow-sm
+    ">
+      <Button
+        onClick={handleBuyClick}
+        disabled={isLoading}
+        variant="ghost"
+        className="
+          flex items-center gap-1.5 h-9 px-3 rounded-full
+          bg-white hover:bg-slate-50
+          font-bold text-xs transition-all active:scale-95
+          disabled:opacity-50 disabled:cursor-not-allowed p-0 px-2.5
+        "
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#4f46e5]" />
+            <span className="text-xs font-bold text-slate-600">Opening...</span>
+          </>
+        ) : (
+          <>
+            <div className="relative w-5 h-5 rounded-lg overflow-hidden flex-shrink-0">
+              {!logoError ? (
+                <Image
+                  src="/logo.jpg"
+                  alt="RMND"
+                  fill
+                  className="object-cover"
+                  onError={handleLogoError}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-indigo-200">
+                  <span className="text-indigo-700 font-bold text-xs">R</span>
+                </div>
+              )}
+            </div>
+            <span className="text-xs font-black text-slate-700">Buy RMND</span>
+          </>
+        )}
+      </Button>
+    </div>
   );
 }
 
