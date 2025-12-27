@@ -42,19 +42,31 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
         buyToken,
         sellToken,
         isMiniApp,
+        userAgent: navigator.userAgent,
       });
 
-      // Always try to use Farcaster SDK swapToken (works in both miniapp and web if SDK is available)
+      // Try to use Farcaster SDK swapToken
       try {
         const { sdk } = await import("@farcaster/miniapp-sdk");
         
+        console.log("[HeaderBuyButton] SDK loaded:", {
+          hasSDK: !!sdk,
+          hasActions: !!sdk?.actions,
+          hasSwapToken: !!sdk?.actions?.swapToken,
+          context: sdk?.context,
+        });
+
         if (sdk?.actions?.swapToken) {
+          console.log("[HeaderBuyButton] Calling swapToken with:", { buyToken, sellToken });
+          
           // Use Farcaster SDK swapToken
           const result = await sdk.actions.swapToken({
             buyToken, // RMND token on Base
             sellToken, // Native ETH (optional - user can change)
             // sellAmount is optional - user can set amount in swap UI
           });
+
+          console.log("[HeaderBuyButton] swapToken result:", result);
 
           if (result.success) {
             console.log("[HeaderBuyButton] Swap successful:", result.swap);
@@ -72,19 +84,43 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
               setIsLoading(false);
               return; // Exit early on user cancellation
             } else {
-              throw new Error(result.error?.message || "Swap failed");
+              console.error("[HeaderBuyButton] Swap failed with reason:", result.reason, result.error);
+              throw new Error(result.error?.message || `Swap failed: ${result.reason}`);
             }
           }
         } else {
-          throw new Error("swapToken action not available in SDK");
+          // If swapToken not available, try fallback to openUrl with Warpcast swap
+          console.warn("[HeaderBuyButton] swapToken not available, trying openUrl fallback");
+          
+          if (sdk?.actions?.openUrl) {
+            // Use Warpcast/Farcaster wallet swap URL as fallback
+            const swapUrl = `https://warpcast.com/~/wallet/swap?to=${CONTRACTS.COMMIT_TOKEN}`;
+            console.log("[HeaderBuyButton] Opening swap URL:", swapUrl);
+            
+            const urlResult = await sdk.actions.openUrl(swapUrl);
+            console.log("[HeaderBuyButton] openUrl result:", urlResult);
+            
+            toast({
+              variant: "default",
+              title: "Opening Swap",
+              description: "Opening Farcaster wallet swap interface...",
+              duration: 3000,
+            });
+            setIsLoading(false);
+            return;
+          } else {
+            throw new Error("Neither swapToken nor openUrl available in SDK");
+          }
         }
       } catch (sdkError: any) {
-        // If SDK not available or swapToken not supported, show helpful message
-        console.warn("[HeaderBuyButton] SDK swapToken not available:", sdkError);
+        // If SDK not available or swapToken not supported
+        console.error("[HeaderBuyButton] SDK error:", sdkError);
+        
+        // Show helpful message
         toast({
           variant: "default",
           title: "Swap Not Available",
-          description: "Please use Farcaster wallet to swap tokens. The swap feature is only available in Farcaster miniapp.",
+          description: "Please use Farcaster wallet to swap tokens manually. The swap feature may not be available on this platform.",
           duration: 5000,
         });
         setIsLoading(false);

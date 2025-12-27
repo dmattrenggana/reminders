@@ -50,7 +50,7 @@ export function Header({
       bg-white p-4 md:p-6 rounded-[2rem] border border-slate-200 shadow-sm
     ">
       {/* LEFT: Logo + Title + Tagline, then Wallet below */}
-      <div className="flex flex-col gap-3 w-full md:w-auto">
+      <div className="flex flex-col gap-3 w-full md:w-auto md:min-w-[280px]">
         <HeaderLogo />
         <HeaderWallet
           isConnected={isConnected}
@@ -67,7 +67,7 @@ export function Header({
       </div>
       
       {/* RIGHT: Buy Button (top right) */}
-      <div className="flex items-start md:items-center w-full md:w-auto justify-end">
+      <div className="flex items-start md:items-center w-full md:w-auto justify-end md:absolute md:top-6 md:right-6">
         <HeaderBuyButton isMiniApp={isMiniApp} />
       </div>
     </header>
