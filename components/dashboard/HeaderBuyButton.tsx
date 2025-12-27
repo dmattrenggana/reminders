@@ -196,12 +196,24 @@ export function HeaderBuyButton({
         if (sdk?.actions?.openUrl && (!swapAttempted || !sdk?.actions?.swapToken)) {
           console.log("[HeaderBuyButton] Using openUrl fallback");
           
-          // Use Warpcast wallet swap URL
-          const swapUrl = `https://warpcast.com/~/wallet/swap?to=${CONTRACTS.COMMIT_TOKEN}`;
-          console.log("[HeaderBuyButton] Opening swap URL:", swapUrl);
+          // Use Farcaster wallet swap URL (wallet.farcaster.xyz)
+          // Try both URL formats for compatibility
+          // Include chain parameter for Base (8453)
+          const swapUrl = `https://wallet.farcaster.xyz/swap?to=${CONTRACTS.COMMIT_TOKEN}&chain=base`;
+          const fallbackSwapUrl = `https://warpcast.com/~/wallet/swap?to=${CONTRACTS.COMMIT_TOKEN}&chain=base`;
+          
+          console.log("[HeaderBuyButton] Opening swap URL:", {
+            primary: swapUrl,
+            fallback: fallbackSwapUrl,
+            isMiniApp,
+            userAgent: navigator.userAgent,
+          });
           
           try {
+            // Try primary wallet URL first
             await sdk.actions.openUrl(swapUrl);
+            
+            console.log("[HeaderBuyButton] ✅ Successfully opened wallet swap URL");
             
             toast({
               variant: "default",
@@ -212,8 +224,28 @@ export function HeaderBuyButton({
             setIsLoading(false);
             return;
           } catch (urlError: any) {
-            console.error("[HeaderBuyButton] openUrl error:", urlError);
-            throw new Error("Failed to open swap interface");
+            console.warn("[HeaderBuyButton] Primary URL failed, trying fallback:", urlError);
+            
+            // Try fallback URL
+            try {
+              await sdk.actions.openUrl(fallbackSwapUrl);
+              console.log("[HeaderBuyButton] ✅ Successfully opened fallback swap URL");
+              
+              toast({
+                variant: "default",
+                title: "Opening Swap",
+                description: "Opening Farcaster wallet swap...",
+                duration: 2000,
+              });
+              setIsLoading(false);
+              return;
+            } catch (fallbackError: any) {
+              console.error("[HeaderBuyButton] Both URLs failed:", {
+                primary: urlError,
+                fallback: fallbackError,
+              });
+              throw new Error("Failed to open swap interface");
+            }
           }
         }
 
