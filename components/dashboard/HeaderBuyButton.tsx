@@ -64,17 +64,14 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
           const swapUrl = `https://warpcast.com/~/wallet/swap?to=${CONTRACTS.COMMIT_TOKEN}`;
           console.log("[HeaderBuyButton] Opening swap URL:", swapUrl);
           
-          const urlResult = await sdk.actions.openUrl(swapUrl);
-          console.log("[HeaderBuyButton] openUrl result:", urlResult);
+          await sdk.actions.openUrl(swapUrl);
           
-          if (urlResult.success) {
-            toast({
-              variant: "default",
-              title: "Opening Swap",
-              description: "Opening Farcaster wallet swap...",
-              duration: 2000,
-            });
-          }
+          toast({
+            variant: "default",
+            title: "Opening Swap",
+            description: "Opening Farcaster wallet swap...",
+            duration: 2000,
+          });
           
           setIsLoading(false);
           return;
@@ -155,16 +152,15 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
         disabled={isLoading}
         variant="ghost"
         className="
-          flex items-center gap-1.5 h-9 px-3 rounded-full
+          flex items-center gap-1 h-9 px-2.5 rounded-full
           bg-white hover:bg-slate-50
           font-bold text-xs transition-all active:scale-95
-          disabled:opacity-50 disabled:cursor-not-allowed p-0 px-2.5
+          disabled:opacity-50 disabled:cursor-not-allowed p-0
         "
       >
         {isLoading ? (
           <>
             <Loader2 className="w-3.5 h-3.5 animate-spin text-[#4f46e5]" />
-            <span className="text-xs font-bold text-slate-600">Opening...</span>
           </>
         ) : (
           <>
@@ -183,7 +179,7 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
                 </div>
               )}
             </div>
-            <span className="text-xs font-black text-slate-700">Buy RMND</span>
+            <span className="text-xs font-black text-slate-700">Buy</span>
           </>
         )}
       </Button>
