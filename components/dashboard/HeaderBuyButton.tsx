@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { CONTRACTS } from "@/lib/contracts/config";
@@ -18,7 +18,7 @@ interface HeaderBuyButtonProps {
 }
 
 export function HeaderBuyButton({ 
-  isMiniApp, 
+  isMiniApp: propIsMiniApp, 
   isConnected: propIsConnected, 
   address: propAddress,
   onConnect: propOnConnect 
@@ -34,6 +34,28 @@ export function HeaderBuyButton({
   
   const isConnected = propIsConnected ?? hookIsConnected;
   const address = propAddress ?? hookAddress;
+  
+  // ✅ FIX: Detect miniapp directly as fallback (for browser miniapp detection)
+  const detectedEnvironment = detectEnvironment();
+  const detectedIsMiniApp = detectedEnvironment === 'farcaster-miniapp' || detectedEnvironment === 'base-app';
+  
+  // Use detected value if prop is false but we detect miniapp (fallback for browser miniapp)
+  const isMiniApp = propIsMiniApp || detectedIsMiniApp;
+  
+  // Debug logging for environment detection
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log("[HeaderBuyButton] Environment detection:", {
+        propIsMiniApp,
+        detectedEnvironment,
+        detectedIsMiniApp,
+        finalIsMiniApp: isMiniApp,
+        hasFarcaster: 'Farcaster' in window,
+        hasFarcasterWindow: !!(window as any).Farcaster,
+        userAgent: navigator.userAgent,
+      });
+    }
+  }, [propIsMiniApp, detectedEnvironment, detectedIsMiniApp, isMiniApp]);
 
   const handleBuyClick = async () => {
     if (!CONTRACTS.COMMIT_TOKEN) {
@@ -178,12 +200,11 @@ export function HeaderBuyButton({
               });
               setIsLoading(false);
               return;
-            } else if (result.reason === "rejected_by_user") {
-              console.log("[HeaderBuyButton] Swap cancelled by user");
-              setIsLoading(false);
-              return;
             } else {
-              console.warn("[HeaderBuyButton] swapToken failed, will try openUrl fallback:", result);
+              // ✅ FIX: If swapToken fails (including "rejected_by_user"), 
+              // it might be because swapToken is not fully supported in browser miniapp.
+              // Fallback to openUrl which should work better.
+              console.warn("[HeaderBuyButton] swapToken failed, reason:", result.reason, "- Will try openUrl fallback");
               // Don't return, try openUrl fallback below
             }
           } catch (swapError: any) {
@@ -193,7 +214,8 @@ export function HeaderBuyButton({
         }
 
         // Fallback: Try openUrl if swapToken failed or not available
-        if (sdk?.actions?.openUrl && (!swapAttempted || !sdk?.actions?.swapToken)) {
+        // ✅ FIX: Always try openUrl if available, especially if swapToken failed
+        if (sdk?.actions?.openUrl) {
           console.log("[HeaderBuyButton] Using openUrl fallback");
           
           // Use Farcaster wallet swap URL (wallet.farcaster.xyz)
