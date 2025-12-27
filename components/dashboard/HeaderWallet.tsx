@@ -58,20 +58,14 @@ export function HeaderWallet({
     return (
       <div className="
         flex items-center gap-2 bg-slate-50 p-1 rounded-full 
-        border border-slate-200 shadow-sm
+        border border-slate-200 shadow-sm w-full md:w-auto
       ">
-        <div className="
-          px-4 py-1.5 text-xs font-bold text-[#4f46e5] 
-          border-r border-slate-200 whitespace-nowrap
-        ">
-          {formattedBalance || "0.00"} <span className="text-[10px] opacity-75">{symbol || "RMND"}</span>
-        </div>
         <Button 
           variant="ghost" 
           onClick={onDisconnect} 
           className="
             flex items-center gap-2 h-9 px-3 rounded-full 
-            bg-white transition-all shadow-sm
+            bg-white transition-all shadow-sm flex-1 md:flex-none
           "
         >
           {displayPfpUrl && !pfpError ? (
@@ -92,6 +86,12 @@ export function HeaderWallet({
           <span className="text-xs font-black">
             {displayUsername ? `@${displayUsername}` : `${address?.slice(0, 4)}...`}
           </span>
+          <div className="
+            ml-auto md:ml-2 px-2 py-0.5 text-xs font-bold text-[#4f46e5] 
+            whitespace-nowrap
+          ">
+            {formattedBalance || "0.00"} <span className="text-[10px] opacity-75">{symbol || "RMND"}</span>
+          </div>
           <LogOut className="h-3 w-3 opacity-20 ml-1" />
         </Button>
       </div>

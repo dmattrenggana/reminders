@@ -46,14 +46,12 @@ export function Header({
 
   return (
     <header className="
-      flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 
+      flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 
       bg-white p-4 md:p-6 rounded-[2rem] border border-slate-200 shadow-sm
     ">
-      {/* LEFT: Logo + Title + Tagline */}
-      <HeaderLogo />
-      
-      {/* RIGHT: Wallet + Buy Button (stacked on desktop) */}
-      <div className="flex flex-col items-end gap-2 md:gap-3 w-full md:w-auto">
+      {/* LEFT: Logo + Title + Tagline, then Wallet below */}
+      <div className="flex flex-col gap-3 w-full md:w-auto">
+        <HeaderLogo />
         <HeaderWallet
           isConnected={isConnected}
           formattedBalance={formattedBalance}
@@ -66,6 +64,10 @@ export function Header({
           onConnect={onConnect}
           onDisconnect={onDisconnect}
         />
+      </div>
+      
+      {/* RIGHT: Buy Button (top right) */}
+      <div className="flex items-start md:items-center w-full md:w-auto justify-end">
         <HeaderBuyButton isMiniApp={isMiniApp} />
       </div>
     </header>
