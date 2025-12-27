@@ -8,12 +8,63 @@ const reminderCache = new Map<number, { data: any; timestamp: number }>();
 const CACHE_DURATION = 60000; // 60 seconds cache (balanced: prevents 429 errors but allows reasonable updates)
 let globalFetchInProgress = false; // Prevent multiple simultaneous fetches
 
+// Helper function to create stable reminder data with computed fields
+function createReminderItem(r: any, nowTimestamp: number) {
+  const timeLeft = r.deadline - nowTimestamp;
+  const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
+  const isExpired = !r.isResolved && timeLeft <= 0;
+  return {
+    ...r,
+    timeLeft,
+    isDangerZone,
+    isExpired,
+  };
+}
+
+// Helper function to sort reminders by ID (descending - newest first)
+function sortRemindersByNewest(reminders: any[]): any[] {
+  return [...reminders].sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+}
+
+// Helper function to compare two reminder arrays for equality (by ID and key fields)
+function areRemindersEqual(oldReminders: any[], newReminders: any[]): boolean {
+  if (oldReminders.length !== newReminders.length) return false;
+  
+  // Create maps for quick lookup
+  const oldMap = new Map(oldReminders.map(r => [r.id, r]));
+  const newMap = new Map(newReminders.map(r => [r.id, r]));
+  
+  // Check if all IDs match
+  if (oldMap.size !== newMap.size) return false;
+  
+  // Check each reminder for changes in key fields
+  for (const [id, oldR] of oldMap) {
+    const newR = newMap.get(id);
+    if (!newR) return false;
+    
+    // Compare key fields that affect display
+    if (
+      oldR.isResolved !== newR.isResolved ||
+      oldR.isCompleted !== newR.isCompleted ||
+      oldR.rewardPool !== newR.rewardPool ||
+      oldR.deadline !== newR.deadline ||
+      oldR.description !== newR.description ||
+      oldR.creator !== newR.creator
+    ) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
 export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
   const MIN_FETCH_INTERVAL = 30000; // Minimum 30 seconds between fetches (balanced: prevents rate limiting but allows updates)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastDataRef = useRef<any[]>([]); // Store last set data to compare before updating
 
   const fetchReminders = useCallback(async (force = false) => {
     try {
@@ -28,18 +79,19 @@ export function useReminders() {
       if (!force && now - lastFetchRef.current < MIN_FETCH_INTERVAL && reminderCache.size > 0) {
         console.log("[useReminders] Throttled: Using cached data");
         // Update timeLeft for cached data without fetching
+        const nowTimestamp = Math.floor(Date.now() / 1000);
         const cachedItems = Array.from(reminderCache.values())
           .filter((cached) => now - cached.timestamp < CACHE_DURATION)
           .map((cached) => cached.data)
           .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
-          .map((r: any) => {
-            const timeLeft = r.deadline - Math.floor(Date.now() / 1000);
-            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-            const isExpired = !r.isResolved && timeLeft <= 0;
-            return { ...r, timeLeft, isDangerZone, isExpired };
-          });
-        if (cachedItems.length > 0) {
-          setActiveReminders(cachedItems.reverse());
+          .map((r: any) => createReminderItem(r, nowTimestamp));
+        
+        const sortedItems = sortRemindersByNewest(cachedItems);
+        
+        // Only update state if data actually changed
+        if (!areRemindersEqual(lastDataRef.current, sortedItems)) {
+          setActiveReminders(sortedItems);
+          lastDataRef.current = sortedItems;
         }
         return;
       }
@@ -84,13 +136,15 @@ export function useReminders() {
         console.log("[useReminders] Using cached data for all reminders");
         const items = cachedReminders
           .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
-          .map((r: any) => {
-            const timeLeft = r.deadline - nowTimestamp;
-            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-            const isExpired = !r.isResolved && timeLeft <= 0;
-            return { ...r, timeLeft, isDangerZone, isExpired };
-          });
-        setActiveReminders(items.reverse());
+          .map((r: any) => createReminderItem(r, nowTimestamp));
+        
+        const sortedItems = sortRemindersByNewest(items);
+        
+        // Only update state if data actually changed
+        if (!areRemindersEqual(lastDataRef.current, sortedItems)) {
+          setActiveReminders(sortedItems);
+          lastDataRef.current = sortedItems;
+        }
         setLoading(false);
         globalFetchInProgress = false;
         return;
@@ -141,13 +195,13 @@ export function useReminders() {
           // 1. rewardsClaimed > 0: If there are claimed rewards, it means helpers helped, so it was likely reclaimed (confirmed)
           // 2. Timing: If resolved and current time < deadline, it was likely reclaimed (confirmed)
           // 3. If resolved and rewardsClaimed = 0 and now >= deadline, it was likely burned
-          const now = Math.floor(Date.now() / 1000);
+          const nowSeconds = Math.floor(Date.now() / 1000);
           const rewardsClaimedValue = Number(ethers.formatUnits(r.rewardsClaimed, 18));
           
           // If resolved and rewards were claimed, it was likely reclaimed (confirmed) - helpers got rewards
           // OR if resolved and current time is before deadline, it was reclaimed (confirmed) at T-1 hour
           // Otherwise, if resolved and no rewards claimed and deadline passed, it was burned
-          const isCompleted = r.resolved && (rewardsClaimedValue > 0 || now < deadlineValue);
+          const isCompleted = r.resolved && (rewardsClaimedValue > 0 || nowSeconds < deadlineValue);
           
           reminderData = {
             id: id,
@@ -167,8 +221,8 @@ export function useReminders() {
           
           console.log(`[useReminders] Final reminderData for ${id}:`, reminderData);
           
-          // Only cache valid data
-          reminderCache.set(id, { data: reminderData, timestamp: now });
+          // Only cache valid data - use Date.now() (milliseconds) for cache timestamp
+          reminderCache.set(id, { data: reminderData, timestamp: Date.now() });
           return reminderData;
         } catch (e: any) {
           // Silently skip errors for non-existent reminders
@@ -200,41 +254,35 @@ export function useReminders() {
         // Filter data valid dan tambahkan metadata workflow
         const items = allResults
           .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
-          .map((r: any) => {
-            const timeLeft = r.deadline - nowTimestamp;
-            
-            // Logika Workflow: Danger Zone adalah -1 jam (3600 detik) sebelum deadline
-            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-            
-            // Logika Workflow: Expired jika deadline lewat tapi belum resolved
-            const isExpired = !r.isResolved && timeLeft <= 0;
-
-            return {
-              ...r,
-              timeLeft,
-              isDangerZone,
-              isExpired,
-            };
-          });
+          .map((r: any) => createReminderItem(r, nowTimestamp));
 
         // Urutkan dari yang terbaru (ID terbesar di atas)
-        const sortedItems = items.reverse();
-        console.log(`[useReminders] ✅ Fetched ${sortedItems.length} reminders, updating state`);
-        setActiveReminders(sortedItems);
+        const sortedItems = sortRemindersByNewest(items);
+        console.log(`[useReminders] ✅ Fetched ${sortedItems.length} reminders, checking if update needed`);
+        
+        // Only update state if data actually changed
+        if (!areRemindersEqual(lastDataRef.current, sortedItems)) {
+          console.log(`[useReminders] Data changed, updating state`);
+          setActiveReminders(sortedItems);
+          lastDataRef.current = sortedItems;
+        } else {
+          console.log(`[useReminders] Data unchanged, skipping state update`);
+        }
       } else {
         // No new data fetched, but update timeLeft for existing cached data
-        const nowTimestamp = Math.floor(Date.now() / 1000);
         const updatedItems = cachedReminders
           .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
-          .map((r: any) => {
-            const timeLeft = r.deadline - nowTimestamp;
-            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-            const isExpired = !r.isResolved && timeLeft <= 0;
-            return { ...r, timeLeft, isDangerZone, isExpired };
-          });
-        if (updatedItems.length > 0) {
-          console.log(`[useReminders] ✅ Updated ${updatedItems.length} cached reminders with fresh timeLeft`);
-          setActiveReminders(updatedItems.reverse());
+          .map((r: any) => createReminderItem(r, nowTimestamp));
+        
+        const sortedItems = sortRemindersByNewest(updatedItems);
+        
+        if (sortedItems.length > 0) {
+          console.log(`[useReminders] ✅ Updated ${sortedItems.length} cached reminders with fresh timeLeft`);
+          // Only update if data actually changed
+          if (!areRemindersEqual(lastDataRef.current, sortedItems)) {
+            setActiveReminders(sortedItems);
+            lastDataRef.current = sortedItems;
+          }
         }
       }
       // If error but we have cached data, keep using cached data (don't clear)
@@ -244,20 +292,23 @@ export function useReminders() {
       // Only set empty if we have no cached data
       if (reminderCache.size === 0) {
         setActiveReminders([]);
+        lastDataRef.current = [];
       } else {
         // Update timeLeft for cached data even on error
         const nowTimestamp = Math.floor(Date.now() / 1000);
         const cachedItems = Array.from(reminderCache.values())
           .map((cached) => cached.data)
           .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
-          .map((r: any) => {
-            const timeLeft = r.deadline - nowTimestamp;
-            const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-            const isExpired = !r.isResolved && timeLeft <= 0;
-            return { ...r, timeLeft, isDangerZone, isExpired };
-          });
-        if (cachedItems.length > 0) {
-          setActiveReminders(cachedItems.reverse());
+          .map((r: any) => createReminderItem(r, nowTimestamp));
+        
+        const sortedItems = sortRemindersByNewest(cachedItems);
+        
+        if (sortedItems.length > 0) {
+          // Only update if data actually changed
+          if (!areRemindersEqual(lastDataRef.current, sortedItems)) {
+            setActiveReminders(sortedItems);
+            lastDataRef.current = sortedItems;
+          }
         }
       }
     } finally {
@@ -272,30 +323,32 @@ export function useReminders() {
       // Always update timeLeft using functional setState to preserve current reminders
       const nowTimestamp = Math.floor(Date.now() / 1000);
       
-      setActiveReminders((currentReminders) => {
+      setActiveReminders((currentReminders: any[]) => {
         // If state is empty but cache has data, use cache
         if (currentReminders.length === 0 && reminderCache.size > 0) {
           const cachedItems = Array.from(reminderCache.values())
             .map((cached) => cached.data)
             .filter((r) => r !== null && r.creator !== ethers.ZeroAddress)
-            .map((r: any) => {
-              const timeLeft = r.deadline - nowTimestamp;
-              const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-              const isExpired = !r.isResolved && timeLeft <= 0;
-              return { ...r, timeLeft, isDangerZone, isExpired };
-            });
-          return cachedItems.length > 0 ? cachedItems.reverse() : currentReminders;
+            .map((r: any) => createReminderItem(r, nowTimestamp));
+          
+          const sortedItems = sortRemindersByNewest(cachedItems);
+          // Update ref
+          if (sortedItems.length > 0) {
+            lastDataRef.current = sortedItems;
+            return sortedItems;
+          }
+          return currentReminders;
         }
         
         // Update timeLeft for current reminders (preserve all other data)
+        // Only update timeLeft-related fields, keep all other data the same
         const updatedReminders = currentReminders.map((r: any) => {
           if (!r || !r.deadline) return r;
-          const timeLeft = r.deadline - nowTimestamp;
-          const isDangerZone = !r.isResolved && timeLeft <= 3600 && timeLeft > 0;
-          const isExpired = !r.isResolved && timeLeft <= 0;
-          return { ...r, timeLeft, isDangerZone, isExpired };
+          return createReminderItem(r, nowTimestamp);
         });
         
+        // Update ref for comparison (preserve sort order - already sorted)
+        lastDataRef.current = updatedReminders;
         return updatedReminders;
       });
     };

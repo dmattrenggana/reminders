@@ -211,14 +211,16 @@ export default function DashboardClient() {
     }
   }, [balance, isConnected, address, isLoadingBalance]);
 
-  // Stats calculation
+  // Stats calculation - memoized to prevent unnecessary recalculations
   const stats = useMemo(() => {
     const safeReminders = Array.isArray(reminders) ? reminders : [];
     
     // Public Feed: semua reminder yang belum resolved dari semua user (termasuk milik kita)
+    // Create stable array reference
     const publicFeed = safeReminders.filter(r => !r.isResolved);
     
     // My Feed: semua reminder yang dibuat oleh user yang sedang terkoneksi (resolved atau belum)
+    // Create stable array reference
     const myFeed = safeReminders.filter(
       r => address && r.creator?.toLowerCase() === address.toLowerCase()
     );
@@ -245,7 +247,7 @@ export default function DashboardClient() {
       publicFeed,
       myFeed
     };
-  }, [reminders, address]);
+  }, [reminders, address]); // Only recalculate when reminders or address changes
 
 
   // Connect handler
