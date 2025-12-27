@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { HeaderLogo } from "./HeaderLogo";
 import { HeaderWallet } from "./HeaderWallet";
+import { HeaderBuyButton } from "./HeaderBuyButton";
 
 interface HeaderProps {
   isConnected: boolean;
@@ -45,12 +46,14 @@ export function Header({
 
   return (
     <header className="
-      flex flex-col md:flex-row items-center justify-between gap-6 
-      bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm
+      flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 
+      bg-white p-4 md:p-6 rounded-[2rem] border border-slate-200 shadow-sm
     ">
+      {/* LEFT: Logo + Title + Tagline */}
       <HeaderLogo />
       
-      <div className="flex items-center gap-3">
+      {/* RIGHT: Wallet + Buy Button (stacked on desktop) */}
+      <div className="flex flex-col items-end gap-2 md:gap-3 w-full md:w-auto">
         <HeaderWallet
           isConnected={isConnected}
           formattedBalance={formattedBalance}
@@ -63,6 +66,7 @@ export function Header({
           onConnect={onConnect}
           onDisconnect={onDisconnect}
         />
+        <HeaderBuyButton isMiniApp={isMiniApp} />
       </div>
     </header>
   );
