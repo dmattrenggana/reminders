@@ -57,12 +57,12 @@ export function HeaderWallet({
     
     return (
       <div className="
-        inline-flex items-center gap-0 bg-slate-50 p-1 rounded-full 
+        inline-flex items-center gap-0 bg-slate-50 p-0.5 rounded-full 
         border border-slate-200 shadow-sm
       ">
         {/* User Info Section */}
         <div className="
-          flex items-center gap-2 h-9 px-3 rounded-full 
+          flex items-center gap-1.5 h-9 px-2.5 rounded-full 
           bg-white cursor-pointer transition-all
         "
         onClick={onDisconnect}
@@ -88,11 +88,11 @@ export function HeaderWallet({
         </div>
         
         {/* Divider */}
-        <div className="w-px h-6 bg-slate-200 mx-1" />
+        <div className="w-px h-6 bg-slate-200 mx-0.5" />
         
         {/* Balance Section */}
         <div className="
-          flex items-center gap-1 h-9 px-3 rounded-full 
+          flex items-center gap-1 h-9 px-2.5 rounded-full 
           bg-white cursor-pointer transition-all
         "
         onClick={onDisconnect}
@@ -103,7 +103,7 @@ export function HeaderWallet({
           <span className="text-[10px] font-bold text-slate-400">
             {symbol || "RMND"}
           </span>
-          <LogOut className="h-3 w-3 opacity-20 ml-1" />
+          <LogOut className="h-3 w-3 opacity-20 ml-0.5" />
         </div>
       </div>
     );
@@ -137,7 +137,7 @@ export function HeaderWallet({
       onClick={onConnect} 
       className="
         rounded-full bg-[#4f46e5] hover:opacity-90 font-bold 
-        text-white h-12 px-8 shadow-lg transition-all active:scale-95
+        text-white h-10 px-6 shadow-lg transition-all active:scale-95
       "
     >
       {shouldShowUserInfo ? (
