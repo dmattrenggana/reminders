@@ -174,105 +174,52 @@ export function HeaderBuyButton({
           userAgent: navigator.userAgent.includes('Warpcast') || navigator.userAgent.includes('Farcaster'),
         });
 
-        // Strategy: Try swapToken first, fallback to openUrl if not available
-        let swapAttempted = false;
-
-        // Try swapToken for in-app swap
-        if (sdk?.actions?.swapToken) {
-          try {
-            console.log("[HeaderBuyButton] Attempting swapToken with:", { buyToken, sellToken });
-            
-            const result = await sdk.actions.swapToken({
-              buyToken, // RMND token on Base
-              sellToken, // Native ETH (optional - user can change)
-            });
-
-            swapAttempted = true;
-            console.log("[HeaderBuyButton] swapToken result:", result);
-
-            if (result.success) {
-              console.log("[HeaderBuyButton] Swap successful:", result.swap);
-              toast({
-                variant: "default",
-                title: "Swap Completed",
-                description: "Your tokens have been swapped successfully!",
-                duration: 3000,
-              });
-              setIsLoading(false);
-              return;
-            } else {
-              // ✅ FIX: If swapToken fails (including "rejected_by_user"), 
-              // it might be because swapToken is not fully supported in browser miniapp.
-              // Fallback to openUrl which should work better.
-              console.warn("[HeaderBuyButton] swapToken failed, reason:", result.reason, "- Will try openUrl fallback");
-              // Don't return, try openUrl fallback below
-            }
-          } catch (swapError: any) {
-            console.warn("[HeaderBuyButton] swapToken error, will try openUrl fallback:", swapError);
-            // Don't return, try openUrl fallback below
-          }
+        // ✅ FIX: Only use swapToken, no fallback to openUrl (which opens new tab)
+        // swapToken opens wallet swap in-app, openUrl opens new tab (not desired)
+        if (!sdk?.actions?.swapToken) {
+          throw new Error("Swap functionality not available. Please open this app in Farcaster mobile app.");
         }
 
-        // Fallback: Try openUrl if swapToken failed or not available
-        // ✅ FIX: Always try openUrl if available, especially if swapToken failed
-        if (sdk?.actions?.openUrl) {
-          console.log("[HeaderBuyButton] Using openUrl fallback");
+        try {
+          console.log("[HeaderBuyButton] Attempting swapToken with:", { buyToken, sellToken });
           
-          // Use Farcaster wallet swap URL (wallet.farcaster.xyz)
-          // Try both URL formats for compatibility
-          // Include chain parameter for Base (8453)
-          const swapUrl = `https://wallet.farcaster.xyz/swap?to=${CONTRACTS.COMMIT_TOKEN}&chain=base`;
-          const fallbackSwapUrl = `https://warpcast.com/~/wallet/swap?to=${CONTRACTS.COMMIT_TOKEN}&chain=base`;
-          
-          console.log("[HeaderBuyButton] Opening swap URL:", {
-            primary: swapUrl,
-            fallback: fallbackSwapUrl,
-            isMiniApp,
-            userAgent: navigator.userAgent,
+          const result = await sdk.actions.swapToken({
+            buyToken, // RMND token on Base
+            sellToken, // Native ETH (optional - user can change)
           });
-          
-          try {
-            // Try primary wallet URL first
-            await sdk.actions.openUrl(swapUrl);
-            
-            console.log("[HeaderBuyButton] ✅ Successfully opened wallet swap URL");
-            
+
+          console.log("[HeaderBuyButton] swapToken result:", result);
+
+          if (result.success) {
+            console.log("[HeaderBuyButton] Swap successful:", result.swap);
             toast({
               variant: "default",
-              title: "Opening Swap",
-              description: "Opening Farcaster wallet swap...",
-              duration: 2000,
+              title: "Swap Completed",
+              description: "Your tokens have been swapped successfully!",
+              duration: 3000,
             });
             setIsLoading(false);
             return;
-          } catch (urlError: any) {
-            console.warn("[HeaderBuyButton] Primary URL failed, trying fallback:", urlError);
-            
-            // Try fallback URL
-            try {
-              await sdk.actions.openUrl(fallbackSwapUrl);
-              console.log("[HeaderBuyButton] ✅ Successfully opened fallback swap URL");
-              
-              toast({
-                variant: "default",
-                title: "Opening Swap",
-                description: "Opening Farcaster wallet swap...",
-                duration: 2000,
-              });
-              setIsLoading(false);
-              return;
-            } catch (fallbackError: any) {
-              console.error("[HeaderBuyButton] Both URLs failed:", {
-                primary: urlError,
-                fallback: fallbackError,
-              });
-              throw new Error("Failed to open swap interface");
-            }
+          } else if (result.reason === "rejected_by_user") {
+            console.log("[HeaderBuyButton] Swap cancelled by user");
+            setIsLoading(false);
+            return;
+          } else {
+            // swapToken failed for other reasons
+            console.error("[HeaderBuyButton] swapToken failed:", result);
+            throw new Error(result.reason || "Swap failed. Please try again.");
           }
+        } catch (swapError: any) {
+          console.error("[HeaderBuyButton] swapToken error:", swapError);
+          
+          // Don't show error if user rejected
+          if (swapError.message?.includes("rejected") || swapError.message?.includes("cancelled")) {
+            setIsLoading(false);
+            return;
+          }
+          
+          throw new Error(swapError.message || "Failed to open swap interface. Please try again.");
         }
-
-        // If we got here, neither method worked
-        throw new Error("No swap method available in SDK");
 
       } catch (sdkError: any) {
         // If SDK not available or all methods failed
