@@ -67,6 +67,7 @@ export function useReminders() {
   const MIN_FETCH_INTERVAL = 60000; // Minimum 60 seconds between fetches (1 minute - reduced to prevent 429 errors)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastDataRef = useRef<any[]>([]); // Store last set data to compare before updating
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout untuk mencegah loading stuck
 
   const fetchReminders = useCallback(async (force = false) => {
     try {
@@ -75,12 +76,19 @@ export function useReminders() {
       // Global rate limiting: Prevent any fetch if cooldown hasn't passed (unless force)
       if (!force && now - lastGlobalFetchTime < GLOBAL_FETCH_COOLDOWN) {
         console.log("[useReminders] Global cooldown active, skipping...");
+        // Ensure loading is false if we're not fetching
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+        setLoading(false);
         return;
       }
       
       // Prevent multiple simultaneous fetches
       if (globalFetchInProgress) {
         console.log("[useReminders] Fetch already in progress, skipping...");
+        // Don't set loading to false here, let the existing fetch handle it
         return;
       }
 
@@ -102,6 +110,12 @@ export function useReminders() {
           setActiveReminders(sortedItems);
           lastDataRef.current = sortedItems;
         }
+        // Clear timeout and ensure loading is false when using cache
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+        setLoading(false);
         return;
       }
       lastFetchRef.current = now;
@@ -110,9 +124,23 @@ export function useReminders() {
 
       setLoading(true);
       
+      // Set timeout to ensure loading state doesn't get stuck (max 30 seconds)
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+      loadingTimeoutRef.current = setTimeout(() => {
+        console.warn("[useReminders] Loading timeout, resetting loading state");
+        setLoading(false);
+        globalFetchInProgress = false;
+      }, 30000); // 30 seconds max
+      
       // Check if contract address is configured
       if (!VAULT_ADDRESS || VAULT_ADDRESS === "") {
         console.warn("Vault contract address not configured");
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
         setActiveReminders([]);
         setLoading(false);
         globalFetchInProgress = false;
@@ -154,6 +182,11 @@ export function useReminders() {
         if (!areRemindersEqual(lastDataRef.current, sortedItems)) {
           setActiveReminders(sortedItems);
           lastDataRef.current = sortedItems;
+        }
+        // Clear timeout
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
         }
         setLoading(false);
         globalFetchInProgress = false;
@@ -322,6 +355,11 @@ export function useReminders() {
         }
       }
     } finally {
+      // Clear loading timeout if it exists
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
       setLoading(false);
       globalFetchInProgress = false;
     }

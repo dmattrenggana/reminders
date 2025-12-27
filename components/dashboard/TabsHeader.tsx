@@ -58,22 +58,28 @@ export function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
         onClick={onRefresh}
         disabled={loadingReminders}
         className="
-          h-10 w-10 md:h-11 md:w-11 rounded-xl md:rounded-2xl 
-          text-[#4f46e5] hover:text-[#6366f1] 
+          h-10 w-10 md:h-11 md:w-11 
+          rounded-xl md:rounded-2xl 
+          text-[#4f46e5] 
           bg-slate-50 hover:bg-slate-100 
           border border-slate-200/80
           transition-all duration-200
-          hover:shadow-md hover:shadow-indigo-500/20
+          hover:border-indigo-300 hover:shadow-md hover:shadow-indigo-500/20
+          hover:text-[#6366f1]
           active:scale-95
-          disabled:opacity-50 disabled:cursor-not-allowed
+          disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-slate-50
+          disabled:hover:border-slate-200/80 disabled:hover:shadow-none
           flex-shrink-0
+          relative
         "
-        aria-label="Sync Network"
-        title="Sync Network"
+        aria-label={loadingReminders ? "Syncing..." : "Refresh data"}
+        title={loadingReminders ? "Syncing..." : "Refresh data"}
       >
         <RefreshCw 
-          className={`h-4 w-4 md:h-5 md:w-5 transition-transform duration-200 ${
-            loadingReminders ? 'animate-spin' : 'hover:rotate-180'
+          className={`h-4 w-4 md:h-5 md:w-5 transition-all duration-200 ${
+            loadingReminders 
+              ? 'animate-spin text-[#4f46e5]' 
+              : 'text-[#4f46e5] hover:rotate-180'
           }`} 
         /> 
       </Button>
