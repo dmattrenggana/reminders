@@ -104,8 +104,8 @@ export async function executeRpcCall<T>(
   options: RpcCallOptions = {}
 ): Promise<T> {
   const {
-    maxRetries = 3, // Increased from 2 to 3 for better reliability
-    retryDelay = 1000, // Increased from 500ms to 1000ms for better stability
+    maxRetries = 2, // Reduced from 3 to 2 to fail faster on rate limits and avoid more 429 errors
+    retryDelay = 2000, // Increased from 1000ms to 2000ms (2 seconds) for better stability
     timeout = 20000, // Increased from 15s to 20s for better reliability
   } = options;
 
@@ -157,9 +157,12 @@ export async function executeRpcCall<T>(
 
         // If rate limit, wait longer before retrying or trying next endpoint
         if (isRateLimit) {
-          console.warn(`[RPC] Rate limit (429) detected on ${endpoint}, waiting before retry...`);
-          // Wait longer for rate limit (exponential backoff: 2s, 4s, 8s)
-          const rateLimitDelay = 2000 * Math.pow(2, attempt);
+          // Only log once per call, not for every retry attempt (to reduce console spam)
+          if (attempt === 0) {
+            console.warn(`[RPC] Rate limit (429) detected, will retry with backoff...`);
+          }
+          // Wait longer for rate limit (exponential backoff: 5s, 10s, 20s)
+          const rateLimitDelay = 5000 * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, rateLimitDelay));
           
           // If last attempt on this endpoint, try next endpoint
@@ -199,9 +202,9 @@ export async function batchRpcCalls<T>(
   options: RpcCallOptions & { batchSize?: number; batchDelay?: number; maxParallel?: number } = {}
 ): Promise<T[]> {
   const {
-    batchSize = 5, // Reduced from 10 to 5 to prevent 429 rate limit errors
-    batchDelay = 500, // Increased from 100ms to 500ms to prevent rate limiting
-    maxParallel = 3, // Reduced from 5 to 3 to prevent overwhelming RPC endpoint
+    batchSize = 3, // Reduced from 5 to 3 to prevent 429 rate limit errors
+    batchDelay = 1000, // Increased from 500ms to 1000ms (1 second) to prevent rate limiting
+    maxParallel = 2, // Reduced from 3 to 2 to prevent overwhelming RPC endpoint
   } = options;
 
   const results: (T | null)[] = [];
@@ -216,11 +219,11 @@ export async function batchRpcCalls<T>(
     for (let j = 0; j < batch.length; j += maxParallel) {
       const parallelChunk = batch.slice(j, j + maxParallel);
       
-      // Execute parallel chunk with staggered delays (100ms between requests for better throughput)
+      // Execute parallel chunk with staggered delays (500ms between requests to prevent 429 errors)
       const chunkPromises = parallelChunk.map(async (call, index) => {
-        // Stagger requests: first request immediate, others with 200ms delay to prevent rate limiting
+        // Stagger requests: first request immediate, others with 500ms delay to prevent rate limiting
         if (index > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 200)); // Increased to prevent 429 errors
+          await new Promise((resolve) => setTimeout(resolve, 500)); // Increased to 500ms to prevent 429 errors
         }
         
         try {

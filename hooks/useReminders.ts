@@ -5,8 +5,10 @@ import { executeRpcCall, batchRpcCalls } from "@/lib/utils/rpc-provider";
 
 // Cache untuk mengurangi RPC calls - Optimized for QuickNode quota
 const reminderCache = new Map<number, { data: any; timestamp: number }>();
-const CACHE_DURATION = 60000; // 60 seconds cache (balanced: prevents 429 errors but allows reasonable updates)
+const CACHE_DURATION = 120000; // 120 seconds cache (2 minutes - reduced RPC calls to prevent 429 errors)
 let globalFetchInProgress = false; // Prevent multiple simultaneous fetches
+let lastGlobalFetchTime = 0; // Track last global fetch to prevent rapid successive fetches
+const GLOBAL_FETCH_COOLDOWN = 5000; // 5 seconds minimum between any fetch operations
 
 // Helper function to create stable reminder data with computed fields
 function createReminderItem(r: any, nowTimestamp: number) {
@@ -62,12 +64,20 @@ export function useReminders() {
   const [activeReminders, setActiveReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const MIN_FETCH_INTERVAL = 30000; // Minimum 30 seconds between fetches (balanced: prevents rate limiting but allows updates)
+  const MIN_FETCH_INTERVAL = 60000; // Minimum 60 seconds between fetches (1 minute - reduced to prevent 429 errors)
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastDataRef = useRef<any[]>([]); // Store last set data to compare before updating
 
   const fetchReminders = useCallback(async (force = false) => {
     try {
+      const now = Date.now();
+      
+      // Global rate limiting: Prevent any fetch if cooldown hasn't passed (unless force)
+      if (!force && now - lastGlobalFetchTime < GLOBAL_FETCH_COOLDOWN) {
+        console.log("[useReminders] Global cooldown active, skipping...");
+        return;
+      }
+      
       // Prevent multiple simultaneous fetches
       if (globalFetchInProgress) {
         console.log("[useReminders] Fetch already in progress, skipping...");
@@ -75,7 +85,6 @@ export function useReminders() {
       }
 
       // Throttle: Don't fetch if last fetch was too recent (unless force refresh)
-      const now = Date.now();
       if (!force && now - lastFetchRef.current < MIN_FETCH_INTERVAL && reminderCache.size > 0) {
         console.log("[useReminders] Throttled: Using cached data");
         // Update timeLeft for cached data without fetching
@@ -96,6 +105,7 @@ export function useReminders() {
         return;
       }
       lastFetchRef.current = now;
+      lastGlobalFetchTime = now; // Update global fetch time
       globalFetchInProgress = true;
 
       setLoading(true);
@@ -234,13 +244,13 @@ export function useReminders() {
         }
       });
 
-      // Execute batch calls with improved settings for better connectivity
+      // Execute batch calls with conservative settings to prevent 429 errors
       const fetchedResults = await batchRpcCalls(fetchCalls, {
-        batchSize: 10, // Increased from 5 to 10 for faster processing
-        batchDelay: 100, // Reduced from 150ms to 100ms
-        maxParallel: 5, // Increased from 3 to 5 for more concurrent requests
-        maxRetries: 3, // Increased from 2 to 3 for better reliability
-        retryDelay: 1000, // Increased from 500ms to 1000ms for stability
+        batchSize: 3, // Reduced from 10 to 3 to prevent rate limiting
+        batchDelay: 1000, // Increased from 100ms to 1000ms (1 second) to prevent 429 errors
+        maxParallel: 2, // Reduced from 5 to 2 to prevent overwhelming RPC endpoint
+        maxRetries: 1, // Reduced to 1 to fail faster and avoid more 429 errors
+        retryDelay: 3000, // Increased to 3000ms (3 seconds) for better stability on rate limits
       });
 
       // Only update state if we got valid results
@@ -370,12 +380,12 @@ export function useReminders() {
     // Initial fetch with small delay to avoid race conditions
     fetchTimeoutRef.current = setTimeout(() => {
       fetchReminders();
-    }, 100);
+    }, 500); // Increased from 100ms to 500ms for better stability
     
-    // Refresh otomatis setiap 90 detik untuk mengupdate status (balanced: prevents 429 errors but keeps feed fresh)
+    // Refresh otomatis setiap 180 detik (3 menit) untuk mengupdate status (reduced frequency to prevent 429 errors)
     const interval = setInterval(() => {
       fetchReminders();
-    }, 90000); // 90 seconds (balanced to prevent rate limiting while keeping feed updated)
+    }, 180000); // 180 seconds (3 minutes - reduced frequency to prevent rate limiting)
 
     return () => {
       if (fetchTimeoutRef.current) {

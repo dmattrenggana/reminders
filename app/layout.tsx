@@ -43,9 +43,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   errorMessage.includes('Too Many Requests') ||
                   errorMessage.includes('rate limit') ||
                   errorStack.includes('429') ||
-                  errorStack.includes('quiknode')
+                  errorStack.includes('quiknode') ||
+                  errorStack.includes('Too Many Requests')
                 ) {
-                  console.debug('[Suppressed] 429 rate limit error (handled by RPC provider with retry)');
+                  console.debug('[Suppressed] 429 rate limit error (handled by RPC provider with retry and backoff)');
                   event.preventDefault();
                   return false;
                 }
@@ -71,6 +72,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               console.error = function(...args) {
                 const errorStr = args.join(' ');
                 const firstArg = args[0];
+                
+                // Suppress 429 rate limit errors in console.error
+                if (
+                  errorStr.includes('429') ||
+                  errorStr.includes('Too Many Requests') ||
+                  errorStr.includes('rate limit') ||
+                  (errorStr.includes('quiknode.pro') && (errorStr.includes('429') || errorStr.includes('Too Many Requests')))
+                ) {
+                  console.debug('[Suppressed] 429 rate limit error in console.error (handled by RPC provider)');
+                  return;
+                }
                 
                 // Check if this is an Event object (image loading error)
                 if (firstArg && typeof firstArg === 'object' && firstArg.type === 'error' && firstArg.target && firstArg.target.tagName === 'IMG') {
@@ -116,9 +128,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   errorMessage.includes('429') ||
                   errorMessage.includes('Too Many Requests') ||
                   errorMessage.includes('rate limit') ||
-                  errorSrc.includes('quiknode.pro') && errorMessage.includes('429')
+                  (errorSrc.includes('quiknode.pro') && (errorMessage.includes('429') || errorMessage.includes('Too Many Requests'))) ||
+                  errorTarget?.href?.includes('quiknode.pro') ||
+                  errorTarget?.src?.includes('quiknode.pro')
                 ) {
-                  console.debug('[Suppressed] 429 rate limit error (handled by RPC provider)');
+                  console.debug('[Suppressed] 429 rate limit error (handled by RPC provider with retry and backoff)');
                   event.preventDefault();
                   return false;
                 }
