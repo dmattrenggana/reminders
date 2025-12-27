@@ -46,18 +46,12 @@ export function Header({
 
   return (
     <header className="
-      flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 
+      relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6 
       bg-white p-4 md:p-6 rounded-[2rem] border border-slate-200 shadow-sm
     ">
       {/* LEFT: Logo + Title + Tagline, then Wallet below */}
       <div className="flex flex-col gap-3 w-full md:w-auto md:min-w-[280px]">
-        <div className="flex items-center justify-between w-full">
-          <HeaderLogo />
-          {/* Buy Button aligned with logo/title on desktop */}
-          <div className="hidden md:block">
-            <HeaderBuyButton isMiniApp={isMiniApp} />
-          </div>
-        </div>
+        <HeaderLogo />
         <HeaderWallet
           isConnected={isConnected}
           formattedBalance={formattedBalance}
@@ -72,8 +66,8 @@ export function Header({
         />
       </div>
       
-      {/* Buy Button on mobile (below wallet) */}
-      <div className="flex items-center w-full md:hidden justify-end">
+      {/* Buy Button - positioned top right on desktop */}
+      <div className="flex items-center w-full md:w-auto justify-end md:absolute md:top-6 md:right-6">
         <HeaderBuyButton isMiniApp={isMiniApp} />
       </div>
     </header>

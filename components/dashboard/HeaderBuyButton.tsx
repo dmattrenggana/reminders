@@ -45,7 +45,7 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
         userAgent: navigator.userAgent,
       });
 
-      // Try to use Farcaster SDK - prefer openUrl to Warpcast swap for better compatibility
+      // Try to use Farcaster SDK - prioritize swapToken to avoid opening new tabs
       try {
         const { sdk } = await import("@farcaster/miniapp-sdk");
         
@@ -57,26 +57,8 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
           context: sdk?.context,
         });
 
-        // For better compatibility, use openUrl to Warpcast wallet swap
-        // This ensures swap opens in Farcaster wallet instead of in-app
-        if (sdk?.actions?.openUrl) {
-          // Use Warpcast/Farcaster wallet swap URL
-          const swapUrl = `https://warpcast.com/~/wallet/swap?to=${CONTRACTS.COMMIT_TOKEN}`;
-          console.log("[HeaderBuyButton] Opening swap URL:", swapUrl);
-          
-          await sdk.actions.openUrl(swapUrl);
-          
-          toast({
-            variant: "default",
-            title: "Opening Swap",
-            description: "Opening Farcaster wallet swap...",
-            duration: 2000,
-          });
-          
-          setIsLoading(false);
-          return;
-        } else if (sdk?.actions?.swapToken) {
-          // Fallback to swapToken if openUrl not available
+        // Prioritize swapToken - this keeps user in-app and opens wallet swap UI
+        if (sdk?.actions?.swapToken) {
           console.log("[HeaderBuyButton] Calling swapToken with:", { buyToken, sellToken });
           
           const result = await sdk.actions.swapToken({
@@ -107,17 +89,17 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
             }
           }
         } else {
-          throw new Error("Neither openUrl nor swapToken available in SDK");
+          throw new Error("swapToken not available in SDK");
         }
       } catch (sdkError: any) {
-        // If SDK not available or methods not supported
+        // If SDK not available or swapToken not supported
         console.error("[HeaderBuyButton] SDK error:", sdkError);
         
         // Show helpful message
         toast({
           variant: "default",
           title: "Swap Not Available",
-          description: "Please open Farcaster wallet manually to swap tokens.",
+          description: "Please open Farcaster app to use the swap feature.",
           duration: 5000,
         });
         setIsLoading(false);
@@ -144,7 +126,7 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
 
   return (
     <div className="
-      flex items-center gap-0 bg-slate-50 p-0.5 rounded-full 
+      inline-flex items-center gap-0 bg-slate-50 p-1 rounded-full 
       border border-slate-200 shadow-sm
     ">
       <Button
@@ -152,18 +134,20 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
         disabled={isLoading}
         variant="ghost"
         className="
-          flex items-center gap-1 h-9 px-2.5 rounded-full
+          flex items-center gap-2 h-9 px-3 rounded-full
           bg-white hover:bg-slate-50
           font-bold text-xs transition-all active:scale-95
-          disabled:opacity-50 disabled:cursor-not-allowed p-0
+          disabled:opacity-50 disabled:cursor-not-allowed
         "
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#4f46e5]" />
+            <Loader2 className="w-4 h-4 animate-spin text-[#4f46e5]" />
+            <span className="text-xs font-bold text-slate-600">Opening...</span>
           </>
         ) : (
           <>
+            <span className="text-xs font-black text-slate-700">Buy</span>
             <div className="relative w-5 h-5 rounded-lg overflow-hidden flex-shrink-0">
               {!logoError ? (
                 <Image
@@ -179,7 +163,6 @@ export function HeaderBuyButton({ isMiniApp }: HeaderBuyButtonProps) {
                 </div>
               )}
             </div>
-            <span className="text-xs font-black text-slate-700">Buy</span>
           </>
         )}
       </Button>
