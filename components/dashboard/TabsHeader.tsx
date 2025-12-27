@@ -76,9 +76,9 @@ export function TabsHeader({ loadingReminders, onRefresh }: TabsHeaderProps) {
         title={loadingReminders ? "Syncing..." : "Refresh data"}
       >
         <RefreshCw 
-          className={`h-4 w-4 md:h-5 md:w-5 transition-all duration-200 ${
+          className={`h-4 w-4 md:h-5 md:w-5 transition-all duration-300 ${
             loadingReminders 
-              ? 'animate-spin text-[#4f46e5]' 
+              ? 'animate-spin-sync text-[#4f46e5]' 
               : 'text-[#4f46e5] hover:rotate-180'
           }`} 
         /> 
