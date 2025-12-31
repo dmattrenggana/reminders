@@ -4,33 +4,32 @@ import "./globals.css";
 import { Providers } from "./providers";
 import Script from 'next/script';
 
+const inter = Inter({ subsets: ["latin"] });
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* Kode Suppression Error Bawaan Anda Tetap Di Sini */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               window.addEventListener('unhandledrejection', function(event) {
                 const errorMessage = event.reason?.message || event.reason?.toString() || '';
-                const errorStack = event.reason?.stack || '';
-                if (errorMessage.includes('CSP') || errorStack.includes('privy')) {
+                if (errorMessage.includes('CSP') || errorMessage.includes('privy')) {
                   event.preventDefault();
                   return false;
                 }
               });
-              // ... (Sisa kode suppression Anda tetap aman di sini)
             `,
           }}
         />
       </head>
-      <body>
+      <body className={inter.className}>
         <Providers>
           {children}
 
           {/* --- ONCHAT WIDGET START --- */}
-          <div id="onchat-custom-container" style={{ position: 'fixed', bottom: '20px', right: '20px', z-index: 10000 }}>
+          <div id="onchat-custom-container" style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 10000 }}>
             {/* Window Chat */}
             <div id="chat-window" style={{ display: 'none', width: '350px', height: '500px', maxHeight: '70vh', background: 'white', borderRadius: '15px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', overflow: 'hidden', marginBottom: '15px', border: '1px solid #e0e0e0' }}>
               <div id="onchat-widget"></div>
@@ -52,29 +51,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             src="https://onchat.sebayaki.com/widget.js"
             strategy="afterInteractive"
             onLoad={() => {
+              // Inisialisasi widget
               // @ts-ignore
-              OnChat.mount('#onchat-widget', {
-                channel: 'reminders',
-                theme: 'base-blue',
-                hideMobileTabs: true,
-                hideBrand: true
-              });
+              if (typeof OnChat !== 'undefined') {
+                // @ts-ignore
+                OnChat.mount('#onchat-widget', {
+                  channel: 'reminders',
+                  theme: 'base-blue',
+                  hideMobileTabs: true,
+                  hideBrand: true
+                });
+              }
 
-              // Logic toggle
-              const trigger = document.getElementById('onchat-trigger');
-              const chatWin = document.getElementById('chat-window');
+              // Event listener untuk tombol buka/tutup
+              const btn = document.getElementById('onchat-trigger');
+              const win = document.getElementById('chat-window');
               const icon = document.getElementById('chat-icon-svg');
-              const close = document.getElementById('close-icon-text');
+              const closeTxt = document.getElementById('close-icon-text');
 
-              trigger?.addEventListener('click', () => {
-                if (chatWin?.style.display === 'none') {
-                  chatWin.style.display = 'block';
+              btn?.addEventListener('click', () => {
+                if (win && win.style.display === 'none') {
+                  win.style.display = 'block';
                   if (icon) icon.style.display = 'none';
-                  if (close) close.style.display = 'block';
-                } else {
-                  if (chatWin) chatWin.style.display = 'none';
+                  if (closeTxt) closeTxt.style.display = 'block';
+                } else if (win) {
+                  win.style.display = 'none';
                   if (icon) icon.style.display = 'block';
-                  if (close) close.style.display = 'none';
+                  if (closeTxt) closeTxt.style.display = 'none';
                 }
               });
             }}
@@ -91,7 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-const inter = Inter({ subsets: ["latin"] });
+// URL aplikasi Anda
 const appUrl = "https://remindersbase.vercel.app";
 
 export const metadata: Metadata = {
