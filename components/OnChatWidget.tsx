@@ -44,7 +44,19 @@ export default function OnChatWidget() {
         {/* Floating Button Biru */}
         <button 
           id="onchat-trigger"
-          style={{ float: 'right', width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#3b82f6', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)', display: 'flex', alignHover: 'pointer', alignItems: 'center', justifyContent: 'center' }}
+          style={{ 
+            float: 'right', 
+            width: '60px', 
+            height: '60px', 
+            borderRadius: '50%', 
+            backgroundColor: '#3b82f6', 
+            border: 'none', 
+            cursor: 'pointer', 
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center' 
+          }}
         >
           <svg id="chat-icon-svg" width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
